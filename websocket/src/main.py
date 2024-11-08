@@ -1,33 +1,29 @@
 #!/usr/bin/env python3
 
-import asyncio
 import obj.chess as chess
-from websockets.asyncio.server import serve
 
+from flask import Flask
+from flask_socketio import SocketIO
 
-DEV_MODE = True
+app = Flask(__name__)
+app.config["SECRET_KEY"] = "secret!"
+socketio = SocketIO(app)
 
-
-async def echo(websocket):
-    async for message in websocket:
-        await websocket.send(message)
-
-
-async def main():
-    print("Server started")
+if __name__ == "__main__":
     board = chess.Board()
     board.reset_board()
+    board.move("a2", "a4")
+    print(board.get_available_moves("a1"))
+    board.move("a1", "a3")
+    print(board.get_available_moves("b1"))
+    board.move("b1", "c3")
+    print(board.get_available_moves("c3"))
+    board.move("d2", "d4")
+    print(board.get_available_moves("c1"))
+    board.move("c1", "f4")
+    print(board.get_available_moves("f4"))
+    board.move("f4", "e5")
+    print(board.get_available_moves("e5"))
+
     board.print_board()
-    async with serve(echo, "localhost", 8765):
-        try:
-            await asyncio.get_running_loop().create_future()  # run forever
-        except asyncio.exceptions.CancelledError as e:
-            if DEV_MODE:
-                print("DEVELOPMENT - Restarting")
-            else:
-                raise e
-        except Exception as e:
-            raise e
-
-
-asyncio.run(main())
+    socketio.run(app, host="0.0.0.0")

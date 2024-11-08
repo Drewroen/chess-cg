@@ -6,7 +6,8 @@ authors = ["drewroen <drewroen@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-websockets = "^13.1"
+flask = "^3.0.3"
+flask-socketio = "^5.4.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^6.0.0"
