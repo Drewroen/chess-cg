@@ -2,12 +2,26 @@
 
 import obj.chess as chess
 
-from flask import Flask
-from flask_socketio import SocketIO
+from flask import Flask, request
+from flask_socketio import SocketIO, emit
+
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "secret!"
 socketio = SocketIO(app)
+socketio.init_app(app, cors_allowed_origins="*", allow_eio3=True)
+
+
+@socketio.on("connect")
+def test_connect(auth):
+    print(request.sid + " connected")
+    emit("newConnection", request.sid, broadcast=True)
+
+
+@socketio.on("disconnect")
+def test_disconnect():
+    print("Client disconnected")
+    emit("newDisconnection", request.sid, broadcast=True)
+
 
 if __name__ == "__main__":
     board = chess.Board()
