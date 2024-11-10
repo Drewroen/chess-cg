@@ -39,8 +39,18 @@ class King(Piece):
 
 
 class Board:
+    def get_squares(self):
+        return [
+            [
+                {"type": piece.type, "color": piece.color} if piece else None
+                for piece in row
+            ]
+            for row in self.squares
+        ]
+
     def __init__(self):
         self.squares: list[list[Piece]] = [[None] * 8 for _ in range(8)]
+        self.initialize_board()
 
     def _letter_to_index(self, letter: str):
         return ord(letter) - 97
@@ -330,7 +340,7 @@ class Board:
 
         return moves
 
-    def reset_board(self):
+    def initialize_board(self):
         for i in range(8):
             self.squares[1][i] = Pawn("black")
             self.squares[6][i] = Pawn("white")

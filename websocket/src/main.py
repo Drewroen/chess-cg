@@ -5,39 +5,32 @@ import obj.chess as chess
 from flask import Flask, request
 from flask_socketio import SocketIO, emit
 
-
 app = Flask(__name__)
 socketio = SocketIO(app)
 socketio.init_app(app, cors_allowed_origins="*", allow_eio3=True)
 
 
+board = chess.Board()
+
+
 @socketio.on("connect")
-def test_connect(auth):
+def test_connect():
     print(request.sid + " connected")
-    emit("newConnection", request.sid, broadcast=True)
+    emit("board", {"squares": board.get_squares()}, broadcast=True)
 
 
 @socketio.on("disconnect")
 def test_disconnect():
     print("Client disconnected")
-    emit("newDisconnection", request.sid, broadcast=True)
+
+
+@socketio.on("move")
+def move(data):
+    start = data["start"]
+    end = data["end"]
+    board.move(start, end)
+    emit("board", {"squares": board.get_squares()}, broadcast=True)
 
 
 if __name__ == "__main__":
-    board = chess.Board()
-    board.reset_board()
-    board.move("a2", "a4")
-    print(board.get_available_moves("a1"))
-    board.move("a1", "a3")
-    print(board.get_available_moves("b1"))
-    board.move("b1", "c3")
-    print(board.get_available_moves("c3"))
-    board.move("d2", "d4")
-    print(board.get_available_moves("c1"))
-    board.move("c1", "f4")
-    print(board.get_available_moves("f4"))
-    board.move("f4", "e5")
-    print(board.get_available_moves("e5"))
-
-    board.print_board()
     socketio.run(app, host="0.0.0.0")
