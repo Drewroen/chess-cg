@@ -38,6 +38,14 @@ class King(Piece):
         super().__init__(color, "king")
 
 
+class ChessMove:
+    def __init__(self, position_to_move, position_to_capture=None):
+        self.position_to_move = position_to_move
+        self.position_to_capture = (
+            position_to_capture if position_to_capture else position_to_move
+        )
+
+
 class Board:
     def get_squares(self):
         return [
@@ -50,6 +58,7 @@ class Board:
 
     def __init__(self):
         self.squares: list[list[Piece]] = [[None] * 8 for _ in range(8)]
+        self.last_move = None
         self.initialize_board()
 
     def _letter_to_index(self, letter: str):
@@ -59,16 +68,29 @@ class Board:
         """
         Move a piece from the first position to the second position
         """
-        piece = self.piece_from_chess_notation(first_position)
-        self.squares[8 - int(second_position[1])][
-            self._letter_to_index(second_position[0])
-        ] = piece
-        self.squares[8 - int(first_position[1])][
-            self._letter_to_index(first_position[0])
-        ] = None
-        piece.mark_moved()
+        available_moves: list[ChessMove] = self._get_available_moves(first_position)
+        move: ChessMove = next(
+            filter(
+                lambda move: move.position_to_move == second_position, available_moves
+            ),
+            None,
+        )
 
-    def get_available_moves(self, position: str):
+        if move:
+            initial_position = self.index_from_chess_notation(first_position)
+            position_to_move = self.index_from_chess_notation(move.position_to_move)
+            position_to_capture = self.index_from_chess_notation(
+                move.position_to_capture
+            )
+
+            piece = self.piece_from_chess_notation(first_position)
+            self.squares[position_to_capture[0]][position_to_capture[1]] = None
+            self.squares[position_to_move[0]][position_to_move[1]] = piece
+            self.squares[initial_position[0]][initial_position[1]] = None
+            piece.mark_moved()
+            self.last_move = (first_position, second_position)
+
+    def _get_available_moves(self, position: str) -> list[ChessMove]:
         """
         Get the available moves for a piece in the given position
         """
@@ -90,37 +112,148 @@ class Board:
             moves = self._get_king_moves(position)
         return moves
 
-    def _get_pawn_moves(self, position: str):
+    def chess_notation_from_index(self, row: int, col: int):
+        return f"{chr(97+col)}{8-row}"
+
+    def index_from_chess_notation(self, notation: str):
+        return 8 - int(notation[1]), self._letter_to_index(notation[0])
+
+    def _get_pawn_moves(self, position: str) -> list[ChessMove]:
         """
         Get the available moves for a pawn in the given position
         """
         piece = self.piece_from_chess_notation(position)
         moves = []
+        row, col = 8 - int(position[1]), self._letter_to_index(position[0])
+
+        # Check moves for white pawns
         if piece.color == "white":
-            if position[1] == "2":
-                if self.squares[5][self._letter_to_index(position[0])] is None:
-                    moves.append(f"{position[0]}4")
+            # If the pawn is in its initial position, it can move two squares forward
+            if row == 6:
+                if self.squares[4][col] is None and self.squares[5][col] is None:
+                    moves.append(ChessMove(self.chess_notation_from_index(4, col)))
+            # Move one square forward if the square is empty
+            if self.squares[row - 1][col] is None:
+                moves.append(ChessMove(self.chess_notation_from_index(row - 1, col)))
+            # Capture diagonally
             if (
-                self.squares[8 - int(position[1]) - 1][
-                    self._letter_to_index(position[0])
-                ]
-                is None
+                col - 1 >= 0
+                and self.squares[row - 1][col - 1] is not None
+                and self.squares[row - 1][col - 1].color != piece.color
             ):
-                moves.append(f"{position[0]}{int(position[1]) + 1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - 1, col - 1))
+                )
+            if (
+                col + 1 < 8
+                and self.squares[row - 1][col + 1] is not None
+                and self.squares[row - 1][col + 1].color != piece.color
+            ):
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - 1, col + 1))
+                )
+            # En passant
+            if row == 3:
+                if (
+                    col - 1 >= 0
+                    and self.squares[row][col - 1] is not None
+                    and self.squares[row][col - 1].type == "pawn"
+                    and self.squares[row][col - 1].color != piece.color
+                    and self.last_move
+                    == (
+                        self.chess_notation_from_index(row - 2, col - 1),
+                        self.chess_notation_from_index(row, col - 1),
+                    )
+                ):
+                    moves.append(
+                        ChessMove(
+                            self.chess_notation_from_index(row - 1, col - 1),
+                            self.chess_notation_from_index(row, col - 1),
+                        )
+                    )
+                if (
+                    col + 1 < 8
+                    and self.squares[row][col + 1] is not None
+                    and self.squares[row][col + 1].type == "pawn"
+                    and self.squares[row][col + 1].color != piece.color
+                    and self.last_move
+                    == (
+                        self.chess_notation_from_index(row - 2, col + 1),
+                        self.chess_notation_from_index(row, col + 1),
+                    )
+                ):
+                    moves.append(
+                        ChessMove(
+                            self.chess_notation_from_index(row - 1, col + 1),
+                            self.chess_notation_from_index(row, col + 1),
+                        )
+                    )
         else:
-            if position[1] == "7":
-                if self.squares[2][self._letter_to_index(position[0])] is None:
-                    moves.append(f"{position[0]}5")
+            # Check moves for black pawns
+            # If the pawn is in its initial position, it can move two squares forward
+            if row == 1:
+                if self.squares[3][col] is None and self.squares[2][col] is None:
+                    moves.append(ChessMove(self.chess_notation_from_index(3, col)))
+            # Move one square forward if the square is empty
+            if self.squares[row + 1][col] is None:
+                moves.append(ChessMove(self.chess_notation_from_index(row + 1, col)))
+            # Capture diagonally
             if (
-                self.squares[8 - int(position[1]) - 1][
-                    self._letter_to_index(position[0])
-                ]
-                is None
+                col - 1 >= 0
+                and self.squares[row + 1][col - 1] is not None
+                and self.squares[row + 1][col - 1].color != piece.color
             ):
-                moves.append(f"{position[0]}{int(position[1]) - 1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + 1, col - 1))
+                )
+            if (
+                col + 1 < 8
+                and self.squares[row + 1][col + 1] is not None
+                and self.squares[row + 1][col + 1].color != piece.color
+            ):
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + 1, col + 1))
+                )
+            # En passant
+            if row == 4:
+                if (
+                    col - 1 >= 0
+                    and self.squares[row][col - 1] is not None
+                    and self.squares[row][col - 1].type == "pawn"
+                    and self.squares[row][col - 1].color != piece.color
+                    and self.last_move
+                    == (
+                        self.chess_notation_from_index(row + 2, col - 1),
+                        self.chess_notation_from_index(row, col - 1),
+                    )
+                ):
+                    moves.append(
+                        ChessMove(
+                            self.chess_notation_from_index(row + 1, col - 1),
+                            self.chess_notation_from_index(row, col - 1),
+                        )
+                    )
+                if (
+                    col + 1 < 8
+                    and self.squares[row][col + 1] is not None
+                    and self.squares[row][col + 1].type == "pawn"
+                    and self.squares[row][col + 1].color != piece.color
+                    and self.last_move
+                    == (
+                        self.chess_notation_from_index(row + 2, col + 1),
+                        self.chess_notation_from_index(row, col + 1),
+                    )
+                ):
+                    moves.append(
+                        ChessMove(
+                            self.chess_notation_from_index(row + 1, col + 1),
+                            self.chess_notation_from_index(row, col + 1),
+                        )
+                    )
+
         return moves
 
-    def _get_rook_moves(self, position: str):
+    def _get_rook_moves(self, position: str) -> list[ChessMove]:
         """
         Get the available moves for a rook in the given position
         """
@@ -130,42 +263,42 @@ class Board:
         # Check moves to the right
         for i in range(col + 1, 8):
             if self.squares[row][i] is None:
-                moves.append(f"{chr(97+i)}{8-row}")
+                moves.append(ChessMove(self.chess_notation_from_index(row, i)))
             else:
                 if self.squares[row][i].color != self.squares[row][col].color:
-                    moves.append(f"{chr(97+i)}{8-row}")
+                    moves.append(ChessMove(self.chess_notation_from_index(row, i)))
                 break
 
         # Check moves to the left
         for i in range(col - 1, -1, -1):
             if self.squares[row][i] is None:
-                moves.append(f"{chr(97+i)}{8-row}")
+                moves.append(ChessMove(self.chess_notation_from_index(row, i)))
             else:
                 if self.squares[row][i].color != self.squares[row][col].color:
-                    moves.append(f"{chr(97+i)}{8-row}")
+                    moves.append(ChessMove(self.chess_notation_from_index(row, i)))
                 break
 
         # Check moves upwards
         for i in range(row - 1, -1, -1):
             if self.squares[i][col] is None:
-                moves.append(f"{chr(97+col)}{8-i}")
+                moves.append(ChessMove(self.chess_notation_from_index(i, col)))
             else:
                 if self.squares[i][col].color != self.squares[row][col].color:
-                    moves.append(f"{chr(97+col)}{8-i}")
+                    moves.append(ChessMove(self.chess_notation_from_index(i, col)))
                 break
 
         # Check moves downwards
         for i in range(row + 1, 8):
             if self.squares[i][col] is None:
-                moves.append(f"{chr(97+col)}{8-i}")
+                moves.append(ChessMove(self.chess_notation_from_index(i, col)))
             else:
                 if self.squares[i][col].color != self.squares[row][col].color:
-                    moves.append(f"{chr(97+col)}{8-i}")
+                    moves.append(ChessMove(self.chess_notation_from_index(i, col)))
                 break
 
         return moves
 
-    def _get_knight_moves(self, position: str):
+    def _get_knight_moves(self, position: str) -> list[ChessMove]:
         """
         Get the available moves for a knight in the given position
         """
@@ -178,13 +311,17 @@ class Board:
                 self.squares[row - 2][col + 1] is None
                 or self.squares[row - 2][col + 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col+1)}{8-row+2}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - 2, col + 1))
+                )
         if row - 1 >= 0 and col + 2 < 8:
             if (
                 self.squares[row - 1][col + 2] is None
                 or self.squares[row - 1][col + 2].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col+2)}{8-row+1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - 1, col + 2))
+                )
 
         # Check moves in the second quadrant
         if row - 2 >= 0 and col - 1 >= 0:
@@ -192,13 +329,17 @@ class Board:
                 self.squares[row - 2][col - 1] is None
                 or self.squares[row - 2][col - 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col-1)}{8-row+2}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - 2, col - 1))
+                )
         if row - 1 >= 0 and col - 2 >= 0:
             if (
                 self.squares[row - 1][col - 2] is None
                 or self.squares[row - 1][col - 2].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col-2)}{8-row+1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - 1, col - 2))
+                )
 
         # Check moves in the third quadrant
         if row + 1 < 8 and col - 2 >= 0:
@@ -206,13 +347,17 @@ class Board:
                 self.squares[row + 1][col - 2] is None
                 or self.squares[row + 1][col - 2].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col-2)}{8-row-1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + 1, col - 2))
+                )
         if row + 2 < 8 and col - 1 >= 0:
             if (
                 self.squares[row + 2][col - 1] is None
                 or self.squares[row + 2][col - 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col-1)}{8-row-2}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + 2, col - 1))
+                )
 
         # Check moves in the fourth quadrant
         if row + 1 < 8 and col + 2 < 8:
@@ -220,17 +365,21 @@ class Board:
                 self.squares[row + 1][col + 2] is None
                 or self.squares[row + 1][col + 2].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col+2)}{8-row-1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + 1, col + 2))
+                )
         if row + 2 < 8 and col + 1 < 8:
             if (
                 self.squares[row + 2][col + 1] is None
                 or self.squares[row + 2][col + 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col+1)}{8-row-2}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + 2, col + 1))
+                )
 
         return moves
 
-    def _get_bishop_moves(self, position: str):
+    def _get_bishop_moves(self, position: str) -> list[ChessMove]:
         """
         Get the available moves for a bishop in the given position
         """
@@ -240,42 +389,58 @@ class Board:
         # Check moves in the first quadrant
         for i in range(1, min(8 - row, 8 - col)):
             if self.squares[row + i][col + i] is None:
-                moves.append(f"{chr(97+col+i)}{8-row-i}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + i, col + i))
+                )
             else:
                 if self.squares[row + i][col + i].color != self.squares[row][col].color:
-                    moves.append(f"{chr(97+col+i)}{8-row-i}")
+                    moves.append(
+                        ChessMove(self.chess_notation_from_index(row + i, col + i))
+                    )
                 break
 
         # Check moves in the second quadrant
         for i in range(1, min(8 - row, col + 1)):
             if self.squares[row + i][col - i] is None:
-                moves.append(f"{chr(97+col-i)}{8-row-i}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + i, col - i))
+                )
             else:
                 if self.squares[row + i][col - i].color != self.squares[row][col].color:
-                    moves.append(f"{chr(97+col-i)}{8-row-i}")
+                    moves.append(
+                        ChessMove(self.chess_notation_from_index(row + i, col - i))
+                    )
                 break
 
         # Check moves in the third quadrant
         for i in range(1, min(row + 1, col + 1)):
             if self.squares[row - i][col - i] is None:
-                moves.append(f"{chr(97+col-i)}{8-row+i}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - i, col - i))
+                )
             else:
                 if self.squares[row - i][col - i].color != self.squares[row][col].color:
-                    moves.append(f"{chr(97+col-i)}{8-row+i}")
+                    moves.append(
+                        ChessMove(self.chess_notation_from_index(row - i, col - i))
+                    )
                 break
 
         # Check moves in the fourth quadrant
         for i in range(1, min(row + 1, 8 - col)):
             if self.squares[row - i][col + i] is None:
-                moves.append(f"{chr(97+col+i)}{8-row+i}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - i, col + i))
+                )
             else:
                 if self.squares[row - i][col + i].color != self.squares[row][col].color:
-                    moves.append(f"{chr(97+col+i)}{8-row+i}")
+                    moves.append(
+                        ChessMove(self.chess_notation_from_index(row - i, col + i))
+                    )
                 break
 
         return moves
 
-    def _get_king_moves(self, position: str):
+    def _get_king_moves(self, position: str) -> list[ChessMove]:
         """
         Get the available moves for a king in the given position
         """
@@ -288,13 +453,15 @@ class Board:
                 self.squares[row - 1][col + 1] is None
                 or self.squares[row - 1][col + 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col+1)}{8-row+1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - 1, col + 1))
+                )
         if row - 1 >= 0:
             if (
                 self.squares[row - 1][col] is None
                 or self.squares[row - 1][col].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col)}{8-row+1}")
+                moves.append(ChessMove(self.chess_notation_from_index(row - 1, col)))
 
         # Check moves in the second quadrant
         if row - 1 >= 0 and col - 1 >= 0:
@@ -302,13 +469,15 @@ class Board:
                 self.squares[row - 1][col - 1] is None
                 or self.squares[row - 1][col - 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col-1)}{8-row+1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row - 1, col - 1))
+                )
         if col - 1 >= 0:
             if (
                 self.squares[row][col - 1] is None
                 or self.squares[row][col - 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col-1)}{8-row}")
+                moves.append(ChessMove(self.chess_notation_from_index(row, col - 1)))
 
         # Check moves in the third quadrant
         if row + 1 < 8 and col - 1 >= 0:
@@ -316,13 +485,15 @@ class Board:
                 self.squares[row + 1][col - 1] is None
                 or self.squares[row + 1][col - 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col-1)}{8-row-1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + 1, col - 1))
+                )
         if row + 1 < 8:
             if (
                 self.squares[row + 1][col] is None
                 or self.squares[row + 1][col].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col)}{8-row-1}")
+                moves.append(ChessMove(self.chess_notation_from_index(row + 1, col)))
 
         # Check moves in the fourth quadrant
         if row + 1 < 8 and col + 1 < 8:
@@ -330,13 +501,15 @@ class Board:
                 self.squares[row + 1][col + 1] is None
                 or self.squares[row + 1][col + 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col+1)}{8-row-1}")
+                moves.append(
+                    ChessMove(self.chess_notation_from_index(row + 1, col + 1))
+                )
         if col + 1 < 8:
             if (
                 self.squares[row][col + 1] is None
                 or self.squares[row][col + 1].color != self.squares[row][col].color
             ):
-                moves.append(f"{chr(97+col+1)}{8-row}")
+                moves.append(ChessMove(self.chess_notation_from_index(row, col + 1)))
 
         return moves
 
