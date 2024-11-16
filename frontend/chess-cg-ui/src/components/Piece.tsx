@@ -19,13 +19,11 @@ export function Piece({
   color,
   x,
   y,
-  size,
 }: {
   type: string;
   color: string;
   x: number;
   y: number;
-  size: number;
 }) {
   function getSvg(type: string, color: string) {
     if (type === "pawn" && color === "white") return WhitePawn;
@@ -49,10 +47,10 @@ export function Piece({
           src={LightSquare}
           style={{
             position: "absolute",
-            top: size * x,
-            left: size * y,
-            width: size,
-            height: size,
+            top: 12.5 * x + "%",
+            left: 12.5 * y + "%",
+            width: "12.5%",
+            height: "12.5%",
           }}
           alt=""
         />
@@ -60,10 +58,10 @@ export function Piece({
           src={getSvg(type, color)}
           style={{
             position: "absolute",
-            top: size * x,
-            left: size * y,
-            width: size,
-            height: size,
+            top: 12.5 * x + "%",
+            left: 12.5 * y + "%",
+            width: "12.5%",
+            height: "12.5%",
           }}
           alt=""
         />
@@ -75,10 +73,10 @@ export function Piece({
         src={DarkSquare}
         style={{
           position: "absolute",
-          top: size * x,
-          left: size * y,
-          width: size,
-          height: size,
+          top: 12.5 * x + "%",
+          left: 12.5 * y + "%",
+          width: "12.5%",
+          height: "12.5%",
         }}
         alt=""
       />
@@ -86,10 +84,10 @@ export function Piece({
         src={getSvg(type, color)}
         style={{
           position: "absolute",
-          top: size * x,
-          left: size * y,
-          width: size,
-          height: size,
+          top: 12.5 * x + "%",
+          left: 12.5 * y + "%",
+          width: "12.5%",
+          height: "12.5%",
         }}
         alt=""
       />
