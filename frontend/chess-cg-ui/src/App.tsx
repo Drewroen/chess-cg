@@ -5,7 +5,9 @@ import { Board } from "./components/Board";
 
 export default function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
-  const [chessBoard, setChessBoard] = useState<ChessBoard | null>(null);
+  const [chessBoard, setChessBoard] = useState<ChessBoard | undefined>(
+    undefined
+  );
   const [coord1, setCoord1] = useState("");
   const [coord2, setCoord2] = useState("");
 
@@ -17,7 +19,7 @@ export default function App() {
 
     function onDisconnect() {
       setIsConnected(false);
-      setChessBoard(null);
+      setChessBoard(undefined);
     }
 
     function onBoard(data: ChessBoard) {

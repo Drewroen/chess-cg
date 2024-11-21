@@ -11,36 +11,17 @@ import WhiteBishop from "../assets/white_bishop.svg";
 import WhiteKnight from "../assets/white_knight.svg";
 import WhitePawn from "../assets/white_pawn.svg";
 import Empty from "../assets/empty.svg";
-import LightSquare from "../assets/light_square.svg";
-import DarkSquare from "../assets/dark_square.svg";
 import { CSSProperties } from "react";
 
 export function Piece({
   type,
   color,
-  x,
-  y,
-  isActive,
+  style,
 }: {
   type: string;
   color: string;
-  x: number;
-  y: number;
-  isActive: boolean;
+  style: CSSProperties;
 }) {
-  const pieceStyle: CSSProperties = {
-    position: "absolute",
-    top: 12.5 * x + "%",
-    left: 12.5 * y + "%",
-    width: "12.5%",
-    height: "12.5%",
-  };
-
-  const shadedStyle: CSSProperties = {
-    ...pieceStyle,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-  };
-
   function getSvg(type: string, color: string) {
     if (type === "pawn" && color === "white") return WhitePawn;
     if (type === "knight" && color === "white") return WhiteKnight;
@@ -56,15 +37,6 @@ export function Piece({
     if (type === "king" && color === "black") return BlackKing;
     return Empty;
   }
-  return (
-    <>
-      <img
-        src={(x + y) % 2 === 0 ? LightSquare : DarkSquare}
-        style={pieceStyle}
-        alt=""
-      />
-      <img src={getSvg(type, color)} style={pieceStyle} alt="" />
-      {isActive && <div style={shadedStyle}></div>}
-    </>
-  );
+
+  return <img src={getSvg(type, color)} alt="" style={style} />;
 }

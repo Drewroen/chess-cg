@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { ChessBoard } from "../obj/ChessBoard";
-import { Piece } from "./Piece";
+import { Tile } from "./Tile";
 
-export function Board({ board }: { board: ChessBoard | null }) {
+export function Board({ board }: { board?: ChessBoard }) {
   const [activeSquare, setActiveSquare] = useState<[number, number] | null>(
     null
   );
@@ -24,7 +24,7 @@ export function Board({ board }: { board: ChessBoard | null }) {
               style={{ cursor: "pointer" }}
               onClick={() => setActiveSquare([i, j])}
             >
-              <Piece
+              <Tile
                 type={square?.type}
                 color={square?.color}
                 x={i}
