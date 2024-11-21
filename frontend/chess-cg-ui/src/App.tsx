@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { socket } from "./socket";
-import { ConnectionState } from "./components/ConnectionState";
-import { ConnectionManager } from "./components/ConnectionManager";
 import { ChessBoard } from "./obj/ChessBoard";
 import { Board } from "./components/Board";
 
@@ -39,8 +37,6 @@ export default function App() {
 
   return (
     <div className="App">
-      <ConnectionState isConnected={isConnected} />
-      <ConnectionManager />
       {isConnected && <Board board={chessBoard} />}
       <input value={coord1} onChange={(e) => setCoord1(e.target.value)}></input>
       <input value={coord2} onChange={(e) => setCoord2(e.target.value)}></input>

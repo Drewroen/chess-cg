@@ -13,18 +13,34 @@ import WhitePawn from "../assets/white_pawn.svg";
 import Empty from "../assets/empty.svg";
 import LightSquare from "../assets/light_square.svg";
 import DarkSquare from "../assets/dark_square.svg";
+import { CSSProperties } from "react";
 
 export function Piece({
   type,
   color,
   x,
   y,
+  isActive,
 }: {
   type: string;
   color: string;
   x: number;
   y: number;
+  isActive: boolean;
 }) {
+  const pieceStyle: CSSProperties = {
+    position: "absolute",
+    top: 12.5 * x + "%",
+    left: 12.5 * y + "%",
+    width: "12.5%",
+    height: "12.5%",
+  };
+
+  const shadedStyle: CSSProperties = {
+    ...pieceStyle,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  };
+
   function getSvg(type: string, color: string) {
     if (type === "pawn" && color === "white") return WhitePawn;
     if (type === "knight" && color === "white") return WhiteKnight;
@@ -40,57 +56,15 @@ export function Piece({
     if (type === "king" && color === "black") return BlackKing;
     return Empty;
   }
-  if ((x + y) % 2 === 0)
-    return (
-      <>
-        <img
-          src={LightSquare}
-          style={{
-            position: "absolute",
-            top: 12.5 * x + "%",
-            left: 12.5 * y + "%",
-            width: "12.5%",
-            height: "12.5%",
-          }}
-          alt=""
-        />
-        <img
-          src={getSvg(type, color)}
-          style={{
-            position: "absolute",
-            top: 12.5 * x + "%",
-            left: 12.5 * y + "%",
-            width: "12.5%",
-            height: "12.5%",
-          }}
-          alt=""
-        />
-      </>
-    );
   return (
     <>
       <img
-        src={DarkSquare}
-        style={{
-          position: "absolute",
-          top: 12.5 * x + "%",
-          left: 12.5 * y + "%",
-          width: "12.5%",
-          height: "12.5%",
-        }}
+        src={(x + y) % 2 === 0 ? LightSquare : DarkSquare}
+        style={pieceStyle}
         alt=""
       />
-      <img
-        src={getSvg(type, color)}
-        style={{
-          position: "absolute",
-          top: 12.5 * x + "%",
-          left: 12.5 * y + "%",
-          width: "12.5%",
-          height: "12.5%",
-        }}
-        alt=""
-      />
+      <img src={getSvg(type, color)} style={pieceStyle} alt="" />
+      {isActive && <div style={shadedStyle}></div>}
     </>
   );
 }
