@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import obj.chess as chess
+from obj.objects import Piece, Position
 
 from flask import Flask, request
 from flask_socketio import SocketIO, emit
@@ -21,13 +22,21 @@ def test_connect():
 
 @socketio.on("disconnect")
 def test_disconnect():
-    print("Client disconnected")
+    print(request.sid + " disconnected")
 
 
-@socketio.on("move")
-def move(data):
-    start = data["start"]
-    end = data["end"]
+@socketio.on("tileClicked")
+def tileClicked(data):
+    row, col = data
+    notation = chr(col + ord("a")) + str(8 - row)
+    moves = board.get_available_moves(notation)
+    emit("tileClicked", [move.to_dict() for move in moves], broadcast=True)
+
+
+@socketio.on("movePiece")
+def movePiece(data):
+    start = Position(data["from"][0], data["from"][1])
+    end = Position(data["to"][0], data["to"][1])
     board.move(start, end)
     emit("board", {"squares": board.get_squares()}, broadcast=True)
 

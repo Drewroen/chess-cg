@@ -8,12 +8,9 @@ export default function App() {
   const [chessBoard, setChessBoard] = useState<ChessBoard | undefined>(
     undefined
   );
-  const [coord1, setCoord1] = useState("");
-  const [coord2, setCoord2] = useState("");
 
   useEffect(() => {
     function onConnect() {
-      console.log("BBBBB");
       setIsConnected(true);
     }
 
@@ -26,32 +23,24 @@ export default function App() {
       setChessBoard(data);
     }
 
+    function onTileClick(data: any) {
+      console.log("Tile clicked", data);
+    }
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("board", onBoard);
+    socket.on("tileClick", onTileClick);
 
     return () => {
       socket.off("connect");
       socket.off("disconnect");
       socket.off("board");
+      socket.off("tileClick");
     };
   }, []);
 
   return (
-    <div className="App">
-      {isConnected && <Board board={chessBoard} />}
-      <input value={coord1} onChange={(e) => setCoord1(e.target.value)}></input>
-      <input value={coord2} onChange={(e) => setCoord2(e.target.value)}></input>
-      <button
-        onClick={() =>
-          socket.emit("move", {
-            start: coord1,
-            end: coord2,
-          })
-        }
-      >
-        Move
-      </button>
-    </div>
+    <div className="App">{isConnected && <Board board={chessBoard} />}</div>
   );
 }

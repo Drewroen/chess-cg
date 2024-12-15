@@ -8,6 +8,7 @@ export function Tile({
   x,
   y,
   isActive,
+  isPossibleMove,
 }: {
   type: string;
   color: string;
@@ -28,22 +29,23 @@ export function Tile({
     <>
       <div>
         <Square light={(x + y) % 2 === 0} style={pieceStyle}></Square>
-        <Piece type={type} color={color} style={pieceStyle} />
         {isActive && (
           <div
             style={{ ...pieceStyle, backgroundColor: "rgba(20, 85, 30, .5)" }}
           ></div>
         )}
+        <Piece type={type} color={color} style={pieceStyle} />
       </div>
-
+      {isPossibleMove && (
+        <div
+          style={{
+            ...pieceStyle,
+            background:
+              "radial-gradient(rgba(20, 85, 30, 0.5) 19%, rgba(0, 0, 0, 0) 20%)",
+          }}
+        ></div>
+      )}
       {/* <div
-        style={{
-          ...pieceStyle,
-          background:
-            "radial-gradient(rgba(20, 85, 30, 0.5) 19%, rgba(0, 0, 0, 0) 20%)",
-        }}
-      ></div>
-      <div
         style={{
           ...pieceStyle,
           background:
