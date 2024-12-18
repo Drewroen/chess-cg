@@ -28,13 +28,22 @@ export function Tile({
   return (
     <>
       <div>
-        <Square light={(x + y) % 2 === 0} style={pieceStyle}></Square>
+        <Square
+          light={(x + y) % 2 === 0}
+          style={pieceStyle}
+          key={`square-${x}-${y}`}
+        ></Square>
         {isActive && (
           <div
             style={{ ...pieceStyle, backgroundColor: "rgba(20, 85, 30, .5)" }}
           ></div>
         )}
-        <Piece type={type} color={color} style={pieceStyle} />
+        <Piece
+          type={type}
+          color={color}
+          style={pieceStyle}
+          key={`piece-${x}-${y}`}
+        />
       </div>
       {isPossibleMove && (
         <div

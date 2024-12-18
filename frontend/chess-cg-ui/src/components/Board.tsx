@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
-import { ChessBoard } from "../obj/ChessBoard";
+import { ChessBoard, ChessGame } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { socket } from "../socket";
 
-export function Board({ board }: { board?: ChessBoard }) {
+export function Board({
+  game,
+  updatePossibleMoves,
+}: {
+  game: ChessGame;
+  updatePossibleMoves: (moves: Array<[number, number]>) => void;
+}) {
   const [activeSquare, setActiveSquare] = useState<[number, number] | null>(
     null
   );
-  const [possibleMoves, setPossibleMoves] = useState<Array<
-    [number, number]
-  > | null>(null);
+
+  console.log(game.possibleMoves);
+  console.log("WHAT");
 
   function onSquareClicked(coords: [number, number]) {
     if (isPossibleMove(coords)) {
@@ -18,12 +24,12 @@ export function Board({ board }: { board?: ChessBoard }) {
         to: coords,
       });
       setActiveSquare(null);
-      setPossibleMoves(null);
+      updatePossibleMoves([]);
       return;
     }
-    if (board?.squares![coords[0]][coords[1]] === null) {
+    if (game.board?.squares![coords[0]][coords[1]] === null) {
       setActiveSquare(null);
-      setPossibleMoves(null);
+      updatePossibleMoves([]);
       return;
     }
     setActiveSquare(coords);
@@ -32,26 +38,11 @@ export function Board({ board }: { board?: ChessBoard }) {
 
   function isPossibleMove(coords: [number, number]) {
     return (
-      possibleMoves?.find(
+      game.possibleMoves?.find(
         (move) => move[0] === coords[0] && move[1] === coords[1]
       ) !== undefined
     );
   }
-
-  useEffect(() => {
-    function onTileClick(data: any) {
-      const moves: Array<any> = data.map((move: any) => {
-        const position = move.position_to_move;
-        return [position.row, position.col];
-      });
-      setPossibleMoves(moves);
-    }
-    socket.on("tileClicked", onTileClick);
-
-    return () => {
-      socket.off("tileClicked");
-    };
-  }, []);
 
   return (
     <div
@@ -63,12 +54,13 @@ export function Board({ board }: { board?: ChessBoard }) {
         margin: 0,
       }}
     >
-      {board?.squares &&
-        board.squares.map((row, i) =>
+      {game.board?.squares &&
+        game.board.squares.map((row, i) =>
           row.map((square, j) => (
             <div
               style={{ cursor: "pointer" }}
               onClick={() => onSquareClicked([i, j])}
+              key={`tile-div-${i}-${j}`}
             >
               <Tile
                 type={square?.type}
@@ -77,11 +69,11 @@ export function Board({ board }: { board?: ChessBoard }) {
                 y={j}
                 isActive={activeSquare?.[0] === i && activeSquare?.[1] === j}
                 isPossibleMove={
-                  possibleMoves?.find(
+                  game.possibleMoves?.find(
                     (move) => move[0] === i && move[1] === j
                   ) !== undefined
                 }
-                key={`${i}-${j}`}
+                key={`tile-${i}-${j}`}
               />
             </div>
           ))

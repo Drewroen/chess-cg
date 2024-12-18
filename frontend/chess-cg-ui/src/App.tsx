@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { socket } from "./socket";
-import { ChessBoard } from "./obj/ChessBoard";
+import { ChessBoard, ChessGame } from "./obj/ChessGame";
 import { Board } from "./components/Board";
 
 export default function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
-  const [chessBoard, setChessBoard] = useState<ChessBoard | undefined>(
-    undefined
-  );
+  const [chessGame, setChessGame] = useState<ChessGame>(new ChessGame());
+
+  function updatePossibleMoves(moves: Array<[number, number]>) {
+    setChessGame({ ...chessGame, possibleMoves: moves });
+  }
 
   useEffect(() => {
     function onConnect() {
@@ -16,31 +18,44 @@ export default function App() {
 
     function onDisconnect() {
       setIsConnected(false);
-      setChessBoard(undefined);
+      setChessGame(new ChessGame());
     }
 
     function onBoard(data: ChessBoard) {
-      setChessBoard(data);
+      setChessGame({ ...chessGame, board: data });
     }
 
     function onTileClick(data: any) {
-      console.log("Tile clicked", data);
+      const moves: Array<[number, number]> = data.map((move: any) => {
+        const position = move.position_to_move;
+        return [position.row, position.col];
+      });
+      setChessGame({ ...chessGame, possibleMoves: moves });
     }
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("board", onBoard);
-    socket.on("tileClick", onTileClick);
+    socket.on("tileClicked", onTileClick);
 
     return () => {
       socket.off("connect");
       socket.off("disconnect");
       socket.off("board");
-      socket.off("tileClick");
+      socket.off("tileClicked");
     };
-  }, []);
+  }, [chessGame]);
 
+  console.log(chessGame);
   return (
-    <div className="App">{isConnected && <Board board={chessBoard} />}</div>
+    <div className="App" key="app">
+      {isConnected && (
+        <Board
+          game={chessGame}
+          updatePossibleMoves={updatePossibleMoves}
+          key="board"
+        />
+      )}
+    </div>
   );
 }

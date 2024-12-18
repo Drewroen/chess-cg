@@ -13,3 +13,8 @@ export class ChessPiece {
     this.color = color;
   }
 }
+
+export class ChessGame {
+  board?: ChessBoard = new ChessBoard();
+  possibleMoves?: Array<[number, number]> = [];
+}
