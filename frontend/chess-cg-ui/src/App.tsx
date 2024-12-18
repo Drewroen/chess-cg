@@ -46,7 +46,6 @@ export default function App() {
     };
   }, [chessGame]);
 
-  console.log(chessGame);
   return (
     <div className="App" key="app">
       {isConnected && (

@@ -45,22 +45,24 @@ export function Tile({
           key={`piece-${x}-${y}`}
         />
       </div>
-      {isPossibleMove && (
-        <div
-          style={{
-            ...pieceStyle,
-            background:
-              "radial-gradient(rgba(20, 85, 30, 0.5) 19%, rgba(0, 0, 0, 0) 20%)",
-          }}
-        ></div>
-      )}
-      {/* <div
-        style={{
-          ...pieceStyle,
-          background:
-            "radial-gradient(transparent 0%, transparent 79%, rgba(20, 85, 0, 0.3) 80%)",
-        }}
-      ></div> */}
+      {isPossibleMove &&
+        (type == null && color == null ? (
+          <div
+            style={{
+              ...pieceStyle,
+              background:
+                "radial-gradient(rgba(20, 85, 30, 0.5) 19%, rgba(0, 0, 0, 0) 20%)",
+            }}
+          ></div>
+        ) : (
+          <div
+            style={{
+              ...pieceStyle,
+              background:
+                "radial-gradient(transparent 0%, transparent 79%, rgba(20, 85, 0, 0.3) 80%)",
+            }}
+          ></div>
+        ))}
     </>
   );
 }

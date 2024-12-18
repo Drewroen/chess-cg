@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ChessBoard, ChessGame } from "../obj/ChessGame";
+import { useState } from "react";
+import { ChessGame } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { socket } from "../socket";
 
@@ -13,9 +13,6 @@ export function Board({
   const [activeSquare, setActiveSquare] = useState<[number, number] | null>(
     null
   );
-
-  console.log(game.possibleMoves);
-  console.log("WHAT");
 
   function onSquareClicked(coords: [number, number]) {
     if (isPossibleMove(coords)) {
