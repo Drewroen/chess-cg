@@ -18,8 +18,15 @@ def test_connect():
     room_id = room_service.add(request.sid)
     print(request.sid + " connected to room " + str(room_id))
     emit(
-        "board",
-        {"squares": room_service.get_room(room_id).board.get_squares()},
+        "game",
+        {
+            "squares": room_service.get_room(room_id).game.board.get_squares(),
+            "turn": room_service.get_room(room_id).game.turn,
+            "players": {
+                "white": room_service.get_room(room_id).white,
+                "black": room_service.get_room(room_id).black,
+            },
+        },
         to=room_id,
     )
 
@@ -29,6 +36,7 @@ def test_disconnect():
     print(request.sid + " disconnected")
 
 
+# TODO: Move this to the frontend, no reason to send this to a websocket besides simplicity
 @socketio.on("tileClicked")
 def tileClicked(data):
     row, col = data
@@ -36,8 +44,8 @@ def tileClicked(data):
 
     room = room_service.get_player_room(request.sid)
 
-    moves = room.board.get_available_moves(notation)
-    emit("tileClicked", [move.to_dict() for move in moves], to=room.id)
+    moves = room.game.board.get_available_moves(notation)
+    emit("tileClicked", [move.to_dict() for move in moves], to=request.sid)
 
 
 @socketio.on("movePiece")
@@ -47,8 +55,19 @@ def movePiece(data):
 
     room = room_service.get_player_room(request.sid)
 
-    room.board.move(start, end)
-    emit("board", {"squares": room.board.get_squares()}, to=room.id)
+    room.game.move(start, end)
+    emit(
+        "game",
+        {
+            "squares": room_service.get_room(room.id).game.board.get_squares(),
+            "turn": room_service.get_room(room.id).game.turn,
+            "players": {
+                "white": room_service.get_room(room.id).white,
+                "black": room_service.get_room(room.id).black,
+            },
+        },
+        to=room.id,
+    )
 
 
 if __name__ == "__main__":

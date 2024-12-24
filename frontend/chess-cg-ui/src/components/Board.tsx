@@ -13,24 +13,30 @@ export function Board({
   const [activeSquare, setActiveSquare] = useState<[number, number] | null>(
     null
   );
+  const playerColor = game.players?.white === socket.id ? "white" : "black";
 
   function onSquareClicked(coords: [number, number]) {
-    if (isPossibleMove(coords)) {
-      socket.emit("movePiece", {
-        from: activeSquare,
-        to: coords,
-      });
-      setActiveSquare(null);
-      updatePossibleMoves([]);
-      return;
+    if (
+      (game.turn === "white" && game?.players?.white === socket.id) ||
+      (game.turn === "black" && game?.players?.black === socket.id)
+    ) {
+      if (isPossibleMove(coords)) {
+        socket.emit("movePiece", {
+          from: activeSquare,
+          to: coords,
+        });
+        setActiveSquare(null);
+        updatePossibleMoves([]);
+        return;
+      }
+      if (game.board?.squares![coords[0]][coords[1]] === null) {
+        setActiveSquare(null);
+        updatePossibleMoves([]);
+        return;
+      }
+      setActiveSquare(coords);
+      socket.emit("tileClicked", coords);
     }
-    if (game.board?.squares![coords[0]][coords[1]] === null) {
-      setActiveSquare(null);
-      updatePossibleMoves([]);
-      return;
-    }
-    setActiveSquare(coords);
-    socket.emit("tileClicked", coords);
   }
 
   function isPossibleMove(coords: [number, number]) {
@@ -62,8 +68,8 @@ export function Board({
               <Tile
                 type={square?.type}
                 color={square?.color}
-                x={i}
-                y={j}
+                x={playerColor === "white" ? i : 8 - i}
+                y={playerColor === "white" ? j : 8 - j}
                 isActive={activeSquare?.[0] === i && activeSquare?.[1] === j}
                 isPossibleMove={
                   game.possibleMoves?.find(

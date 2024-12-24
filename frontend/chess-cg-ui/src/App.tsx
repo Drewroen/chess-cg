@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { socket } from "./socket";
-import { ChessBoard, ChessGame } from "./obj/ChessGame";
+import { BoardEvent, ChessGame } from "./obj/ChessGame";
 import { Board } from "./components/Board";
 
 export default function App() {
@@ -21,8 +21,13 @@ export default function App() {
       setChessGame(new ChessGame());
     }
 
-    function onBoard(data: ChessBoard) {
-      setChessGame({ ...chessGame, board: data });
+    function onGame(data: BoardEvent) {
+      setChessGame({
+        ...chessGame,
+        board: data,
+        turn: data.turn,
+        players: data.players,
+      });
     }
 
     function onTileClick(data: any) {
@@ -35,13 +40,13 @@ export default function App() {
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-    socket.on("board", onBoard);
+    socket.on("game", onGame);
     socket.on("tileClicked", onTileClick);
 
     return () => {
       socket.off("connect");
       socket.off("disconnect");
-      socket.off("board");
+      socket.off("game");
       socket.off("tileClicked");
     };
   }, [chessGame]);

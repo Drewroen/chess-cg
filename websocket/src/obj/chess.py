@@ -68,6 +68,7 @@ class Board:
     def move(self, position_from: Position, position_to: Position):
         """
         Move a piece from the first position to the second position
+        Returns True if the move was successful, False otherwise
         """
         first_position = position_from.notation()
         second_position = position_to.notation()
@@ -95,6 +96,9 @@ class Board:
             self.squares[initial_position[0]][initial_position[1]] = None
             piece.mark_moved()
             self.last_move = (first_position, second_position)
+            return True
+
+        return False
 
     def get_available_moves(self, position: str) -> list[ChessMove]:
         """

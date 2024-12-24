@@ -23,9 +23,6 @@ class RoomService:
 
     def get_player_room(self, player_id: int):
         room = self.id_to_room_map.get(player_id)
-        print(self.id_to_room_map)
-        print(player_id)
-        print(room)
         return room
 
     def get_room(self, room_id: str):
