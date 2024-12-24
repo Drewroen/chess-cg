@@ -1,2 +1,2 @@
 run:
-	watchmedo auto-restart --patterns='*.py' --recursive ./src/main.py
+	uv run watchmedo auto-restart --patterns='*.py' --recursive ./src/main.py
