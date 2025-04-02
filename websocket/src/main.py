@@ -39,11 +39,10 @@ def test_disconnect():
 @socketio.on("tileClicked")
 def tileClicked(data):
     row, col = data
-    notation = chr(col + ord("a")) + str(8 - row)
 
     room = room_service.get_player_room(request.sid)
 
-    moves = room.game.board.get_available_moves(notation)
+    moves = room.game.board.get_available_moves(Position(row, col))
     emit("tileClicked", [move.to_dict() for move in moves], to=request.sid)
 
 
