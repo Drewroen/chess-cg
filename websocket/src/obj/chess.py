@@ -37,12 +37,14 @@ class ChessMove:
         position_from: Position,
         position_to: Position,
         position_to_capture: Position = None,
+        additional_move: tuple[Position, Position] = None,
     ):
         self.position_from = position_from
         self.position_to = position_to
         self.position_to_capture = (
             position_to_capture if position_to_capture else position_to
         )
+        self.additional_move = additional_move
 
     def to_dict(self):
         return {
@@ -56,6 +58,15 @@ class Board:
         self.squares: list[list[Piece]] = [[None] * 8 for _ in range(8)]
         self.last_move: ChessMove = None
         self.initialize_board()
+
+    def get_squares(self):
+        return [
+            [
+                {"type": piece.type, "color": piece.color} if piece else None
+                for piece in row
+            ]
+            for row in self.squares
+        ]
 
     def move(self, position_from: Position, position_to: Position):
         """
@@ -84,6 +95,21 @@ class Board:
             self.squares[initial_position[0]][initial_position[1]] = None
             piece.mark_moved()
             self.last_move = (first_position, second_position)
+
+            if move.additional_move:
+                additional_piece = self.piece_from_position(move.additional_move[0])
+                if additional_piece:
+                    # Move the additional piece (like in castling)
+                    additional_initial_position = move.additional_move[0].coordinates()
+                    additional_position_to = move.additional_move[1].coordinates()
+                    self.squares[additional_position_to[0]][
+                        additional_position_to[1]
+                    ] = additional_piece
+                    self.squares[additional_initial_position[0]][
+                        additional_initial_position[1]
+                    ] = None
+                    additional_piece.mark_moved()
+
             return True
 
         return False
@@ -401,11 +427,12 @@ class Board:
 
     def _get_king_moves(self, position: Position) -> list[ChessMove]:
         """
-        Get the available moves for a king in the given position
+        Get the available moves for a king in the given position, including castling
         """
         moves = []
         row, col = position.coordinates()
 
+        # Check standard king moves
         # Check moves in the first quadrant
         if row - 1 >= 0 and col + 1 < 8:
             if (
@@ -461,6 +488,36 @@ class Board:
                 or self.squares[row][col + 1].color != self.squares[row][col].color
             ):
                 moves.append(ChessMove(position, Position(row, col + 1)))
+
+        # Check castling moves
+        if not self.squares[row][col].moved:  # Ensure the king has not moved
+            # Check kingside castling
+            if (
+                col + 2 < 8
+                and self.squares[row][col + 1] is None
+                and self.squares[row][col + 2] is None
+                and isinstance(self.squares[row][col + 3], Rook)
+                and not self.squares[row][col + 3].moved
+            ):
+                move = ChessMove(position, Position(row, col + 2))
+                move.additional_move = (
+                    Position(row, col + 3),
+                    Position(row, col + 1),
+                )
+                moves.append(move)
+
+            # Check queenside castling
+            if (
+                col - 2 >= 0
+                and self.squares[row][col - 1] is None
+                and self.squares[row][col - 2] is None
+                and self.squares[row][col - 3] is None
+                and isinstance(self.squares[row][col - 4], Rook)
+                and not self.squares[row][col - 4].moved
+            ):
+                move = ChessMove(position, Position(row, col - 2))
+                move.additional_move = (Position(row, col - 4), Position(row, col - 1))
+                moves.append(move)
 
         return moves
 
