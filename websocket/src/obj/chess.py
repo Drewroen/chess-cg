@@ -82,13 +82,9 @@ class Board:
         )
 
         if move:
-            initial_position = self.index_from_chess_notation(first_position)
-            position_to_move = self.index_from_chess_notation(
-                move.position_to_move.notation()
-            )
-            position_to_capture = self.index_from_chess_notation(
-                move.position_to_capture.notation()
-            )
+            initial_position = position_from.coordinates()
+            position_to_move = move.position_to_move.coordinates()
+            position_to_capture = move.position_to_capture.coordinates()
 
             piece = self.piece_from_chess_notation(first_position)
             self.squares[position_to_capture[0]][position_to_capture[1]] = None

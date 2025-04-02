@@ -36,7 +36,6 @@ def test_disconnect():
     print(request.sid + " disconnected")
 
 
-# TODO: Move this to the frontend, no reason to send this to a websocket besides simplicity
 @socketio.on("tileClicked")
 def tileClicked(data):
     row, col = data
