@@ -9,6 +9,7 @@ export function Tile({
   y,
   isActive,
   isPossibleMove,
+  isCheck,
 }: {
   type: string;
   color: string;
@@ -16,6 +17,7 @@ export function Tile({
   y: number;
   isActive: boolean;
   isPossibleMove?: boolean;
+  isCheck?: boolean;
 }) {
   const pieceStyle: CSSProperties = {
     position: "absolute",
@@ -33,6 +35,16 @@ export function Tile({
           style={pieceStyle}
           key={`square-${x}-${y}`}
         ></Square>
+        {isCheck && (
+          <div
+            style={{
+              ...pieceStyle,
+              background:
+                "radial-gradient(ellipse at center, rgb(255, 0, 0) 0%, rgb(231, 0, 0) 25%, rgba(169, 0, 0, 0) 89%, rgba(158, 0, 0, 0) 100%)",
+              borderRadius: "50%",
+            }}
+          ></div>
+        )}
         {isActive && (
           <div
             style={{ ...pieceStyle, backgroundColor: "rgba(20, 85, 30, .5)" }}

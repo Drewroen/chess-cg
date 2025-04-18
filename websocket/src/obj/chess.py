@@ -68,11 +68,15 @@ class Board:
             for row in self.squares
         ]
 
-    def move(self, position_from: Position, position_to: Position):
+    def move(self, position_from: Position, position_to: Position, turn: str):
         """
         Move a piece from the first position to the second position
         Returns True if the move was successful, False otherwise
         """
+        piece = self.piece_from_position(position_from)
+        if piece is None or piece.color != turn:
+            return False  # Invalid move if no piece or wrong color's turn
+
         first_position = position_from.notation()
         second_position = position_to.notation()
         available_moves: list[ChessMove] = self.get_available_moves(position_from)
@@ -114,7 +118,9 @@ class Board:
 
         return False
 
-    def get_available_moves(self, position: Position) -> list[ChessMove]:
+    def get_available_moves(
+        self, position: Position, ignore_check: bool = False
+    ) -> list[ChessMove]:
         """
         Get the available moves for a piece in the given position
         """
@@ -134,7 +140,70 @@ class Board:
             moves = self._get_rook_moves(position) + self._get_bishop_moves(position)
         if piece.type == "king":
             moves = self._get_king_moves(position)
+
+        if not ignore_check:
+            moves = [
+                m for m in moves if not self._is_king_in_check_after_move(position, m)
+            ]
+
         return moves
+
+    def _is_king_in_check_after_move(self, position: Position, move: ChessMove) -> bool:
+        """
+        Check if the king would be in check after making the given move
+        """
+        # Simulate the move
+        initial_position = position.coordinates()
+        target_position = move.position_to.coordinates()
+        captured_position = move.position_to_capture.coordinates()
+
+        piece = self.piece_from_position(position)
+        captured_piece = self.squares[captured_position[0]][captured_position[1]]
+
+        # Temporarily make the move
+        temp_piece = self.squares[target_position[0]][target_position[1]]
+        self.squares[initial_position[0]][initial_position[1]] = None
+        self.squares[captured_position[0]][captured_position[1]] = None
+        self.squares[target_position[0]][target_position[1]] = piece
+
+        # Find the king's position
+        king_position = None
+        for row in range(8):
+            for col in range(8):
+                if (
+                    self.squares[row][col]
+                    and self.squares[row][col].type == "king"
+                    and self.squares[row][col].color == piece.color
+                ):
+                    king_position = Position(row, col)
+                    break
+            if king_position:
+                break
+
+        # Check if the king is in check
+        in_check = self._is_square_attacked(king_position, piece.color)
+
+        # Undo the move
+        self.squares[initial_position[0]][initial_position[1]] = piece
+        self.squares[captured_position[0]][captured_position[1]] = captured_piece
+        self.squares[target_position[0]][target_position[1]] = temp_piece
+
+        return in_check
+
+    def _is_square_attacked(self, position: Position, color: str) -> bool:
+        """
+        Check if a square is attacked by any piece of the opposite color
+        """
+        row, col = position.coordinates()
+        for r in range(8):
+            for c in range(8):
+                piece = self.squares[r][c]
+                if piece and piece.color != color:
+                    moves = self.get_available_moves(Position(r, c), ignore_check=True)
+                    for move in moves:
+                        if move.position_to.coordinates() == (row, col):
+                            return True
+        return False
 
     def chess_notation_from_index(self, row: int, col: int):
         return f"{chr(97+col)}{8-row}"

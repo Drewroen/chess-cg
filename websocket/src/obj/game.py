@@ -7,6 +7,6 @@ class Game:
         self.board = Board()
 
     def move(self, start, end):
-        moved = self.board.move(start, end)
+        moved = self.board.move(start, end, self.turn)
         if moved:
             self.turn = "black" if self.turn == "white" else "white"

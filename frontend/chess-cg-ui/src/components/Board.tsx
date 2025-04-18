@@ -16,10 +16,7 @@ export function Board({
   const playerColor = game.players?.white === socket.id ? "white" : "black";
 
   function onSquareClicked(coords: [number, number]) {
-    if (
-      (game.turn === "white" && game?.players?.white === socket.id) ||
-      (game.turn === "black" && game?.players?.black === socket.id)
-    ) {
+    if (game.turn === playerColor) {
       if (isPossibleMove(coords)) {
         socket.emit("movePiece", {
           from: activeSquare,
@@ -27,15 +24,21 @@ export function Board({
         });
         setActiveSquare(null);
         updatePossibleMoves([]);
-        return;
-      }
-      if (game.board?.squares![coords[0]][coords[1]] === null) {
+      } else if (game.board?.squares![coords[0]][coords[1]] === null) {
         setActiveSquare(null);
         updatePossibleMoves([]);
-        return;
+      } else if (
+        game.board?.squares![coords[0]][coords[1]]?.color === playerColor
+      ) {
+        setActiveSquare(coords);
+        socket.emit("tileClicked", coords);
+      } else {
+        setActiveSquare(null);
+        updatePossibleMoves([]);
       }
-      setActiveSquare(coords);
-      socket.emit("tileClicked", coords);
+    } else {
+      setActiveSquare(null);
+      updatePossibleMoves([]);
     }
   }
 
@@ -76,6 +79,7 @@ export function Board({
                     (move) => move[0] === i && move[1] === j
                   ) !== undefined
                 }
+                isCheck={false}
                 key={`tile-${i}-${j}`}
               />
             </div>
