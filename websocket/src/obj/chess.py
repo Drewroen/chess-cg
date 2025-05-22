@@ -139,7 +139,7 @@ class Board:
         if piece.type == "queen":
             moves = self._get_rook_moves(position) + self._get_bishop_moves(position)
         if piece.type == "king":
-            moves = self._get_king_moves(position)
+            moves = self._get_king_moves(position, ignore_check)
 
         if not ignore_check:
             moves = [
@@ -494,7 +494,9 @@ class Board:
 
         return moves
 
-    def _get_king_moves(self, position: Position) -> list[ChessMove]:
+    def _get_king_moves(
+        self, position: Position, ignore_check: bool = False
+    ) -> list[ChessMove]:
         """
         Get the available moves for a king in the given position, including castling
         """
@@ -558,9 +560,10 @@ class Board:
             ):
                 moves.append(ChessMove(position, Position(row, col + 1)))
 
-        # Check castling moves
-        if not self.squares[row][col].moved:  # Ensure the king has not moved
-            # Check kingside castling
+        color = self.squares[row][col].color
+        # Castling: only when not ignoring checks
+        if not ignore_check and not self.squares[row][col].moved:
+            # kingside
             if (
                 col + 2 < 8
                 and self.squares[row][col + 1] is None
@@ -568,14 +571,22 @@ class Board:
                 and isinstance(self.squares[row][col + 3], Rook)
                 and not self.squares[row][col + 3].moved
             ):
-                move = ChessMove(position, Position(row, col + 2))
-                move.additional_move = (
-                    Position(row, col + 3),
-                    Position(row, col + 1),
-                )
-                moves.append(move)
-
-            # Check queenside castling
+                safe = True
+                if not ignore_check:
+                    if self._is_square_attacked(position, color):
+                        safe = False
+                    if self._is_square_attacked(Position(row, col + 1), color):
+                        safe = False
+                    if self._is_square_attacked(Position(row, col + 2), color):
+                        safe = False
+                if safe:
+                    move = ChessMove(position, Position(row, col + 2))
+                    move.additional_move = (
+                        Position(row, col + 3),
+                        Position(row, col + 1),
+                    )
+                    moves.append(move)
+            # queenside
             if (
                 col - 2 >= 0
                 and self.squares[row][col - 1] is None
@@ -584,9 +595,21 @@ class Board:
                 and isinstance(self.squares[row][col - 4], Rook)
                 and not self.squares[row][col - 4].moved
             ):
-                move = ChessMove(position, Position(row, col - 2))
-                move.additional_move = (Position(row, col - 4), Position(row, col - 1))
-                moves.append(move)
+                safe = True
+                if not ignore_check:
+                    if self._is_square_attacked(position, color):
+                        safe = False
+                    if self._is_square_attacked(Position(row, col - 1), color):
+                        safe = False
+                    if self._is_square_attacked(Position(row, col - 2), color):
+                        safe = False
+                if safe:
+                    move = ChessMove(position, Position(row, col - 2))
+                    move.additional_move = (
+                        Position(row, col - 4),
+                        Position(row, col - 1),
+                    )
+                    moves.append(move)
 
         return moves
 
