@@ -68,6 +68,24 @@ class Board:
             for row in self.squares
         ]
 
+    def kings_in_check(self) -> dict[str, bool]:
+        """
+        Check if each king is in check.
+        Returns a dictionary with keys 'white' and 'black', where the value is True if the king is in check.
+        """
+        king_positions = {"white": None, "black": None}
+        for row in range(8):
+            for col in range(8):
+                piece = self.squares[row][col]
+                if piece and piece.type == "king":
+                    king_positions[piece.color] = Position(row, col)
+
+        in_check = {"white": False, "black": False}
+        for color, king_pos in king_positions.items():
+            if king_pos and self._is_square_attacked(king_pos, color):
+                in_check[color] = True
+        return in_check
+
     def move(self, position_from: Position, position_to: Position, turn: str):
         """
         Move a piece from the first position to the second position

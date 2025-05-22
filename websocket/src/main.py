@@ -26,6 +26,9 @@ def test_connect():
                 "white": room_service.get_room(room_id).white,
                 "black": room_service.get_room(room_id).black,
             },
+            "kings_in_check": room_service.get_room(
+                room_id
+            ).game.board.kings_in_check(),
         },
         to=room_id,
     )
@@ -63,6 +66,9 @@ def movePiece(data):
                 "white": room_service.get_room(room.id).white,
                 "black": room_service.get_room(room.id).black,
             },
+            "kings_in_check": room_service.get_room(
+                room.id
+            ).game.board.kings_in_check(),
         },
         to=room.id,
     )

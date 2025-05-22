@@ -26,5 +26,5 @@ class RoomService:
         room = self.id_to_room_map.get(player_id)
         return room
 
-    def get_room(self, room_id: str):
+    def get_room(self, room_id: str) -> Room:
         return self.rooms.get(room_id)

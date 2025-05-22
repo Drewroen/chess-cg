@@ -27,6 +27,7 @@ export default function App() {
         board: data,
         turn: data.turn,
         players: data.players,
+        kingsInCheck: data.kings_in_check,
       });
     }
 

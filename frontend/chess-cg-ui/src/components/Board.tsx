@@ -79,7 +79,14 @@ export function Board({
                     (move) => move[0] === i && move[1] === j
                   ) !== undefined
                 }
-                isCheck={false}
+                isCheck={
+                  (square?.type === "king" &&
+                    square?.color === "white" &&
+                    game.kingsInCheck?.white) ||
+                  (square?.type === "king" &&
+                    square?.color === "black" &&
+                    game.kingsInCheck?.black)
+                }
                 key={`tile-${i}-${j}`}
               />
             </div>

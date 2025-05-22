@@ -19,6 +19,7 @@ export class ChessGame {
   board?: ChessBoard = new ChessBoard();
   possibleMoves?: Array<[number, number]> = [];
   players?: ChessPlayers = new ChessPlayers();
+  kingsInCheck?: KingsInCheck = new KingsInCheck();
   turn: string = "";
 }
 
@@ -27,8 +28,14 @@ export class ChessPlayers {
   black: string = "";
 }
 
+export class KingsInCheck {
+  white: boolean = false;
+  black: boolean = false;
+}
+
 export class BoardEvent {
   squares: ChessPiece[][] = [];
   players: ChessPlayers = new ChessPlayers();
   turn: string = "white";
+  kings_in_check: KingsInCheck = new KingsInCheck();
 }
