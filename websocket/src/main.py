@@ -14,7 +14,7 @@ room_service = RoomService()
 
 
 @socketio.on("connect")
-def test_connect():
+def connect():
     room_id = room_service.add(request.sid)
     print(request.sid + " connected to room " + str(room_id))
     emit(
@@ -35,7 +35,7 @@ def test_connect():
 
 
 @socketio.on("disconnect")
-def test_disconnect():
+def disconnect():
     print(request.sid + " disconnected")
 
 

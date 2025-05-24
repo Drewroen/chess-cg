@@ -660,3 +660,27 @@ class Board:
         if 0 <= row < 8 and 0 <= col < 8:
             return self.squares[row][col]
         return None
+
+    def can_player_move(self, color):
+        """
+        Check if the given player color (black or white) can make any valid moves.
+        Return True if moves are available; otherwise, return False.
+        """
+        # Check if the king of the specified color is present
+        king_exists = any(
+            piece and piece.type == "king" and piece.color == color
+            for row in self.squares
+            for piece in row
+        )
+        if not king_exists:
+            return False
+
+        # Check if the player has any legal moves
+        for row in range(8):
+            for col in range(8):
+                piece = self.squares[row][col]
+                if piece and piece.color == color:
+                    position = Position(row, col)
+                    if self.get_available_moves(position):
+                        return True
+        return False
