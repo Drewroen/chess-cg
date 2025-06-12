@@ -37,6 +37,7 @@ class ChessMove:
         position_from: Position,
         position_to: Position,
         position_to_capture: Position = None,
+        transform_to: Piece = None,
         additional_move: tuple[Position, Position] = None,
     ):
         self.position_from = position_from
@@ -44,6 +45,7 @@ class ChessMove:
         self.position_to_capture = (
             position_to_capture if position_to_capture else position_to
         )
+        self.transform_to = transform_to  # For pawn promotion
         self.additional_move = additional_move
 
     def to_dict(self):
@@ -86,7 +88,13 @@ class Board:
                 in_check[color] = True
         return in_check
 
-    def move(self, position_from: Position, position_to: Position, turn: str):
+    def move(
+        self,
+        position_from: Position,
+        position_to: Position,
+        turn: str,
+        promote_to: str = None,
+    ):
         """
         Move a piece from the first position to the second position
         Returns True if the move was successful, False otherwise
@@ -100,7 +108,11 @@ class Board:
         available_moves: list[ChessMove] = self.get_available_moves(position_from)
         move: ChessMove = next(
             filter(
-                lambda move: move.position_to.notation() == second_position,
+                lambda move: move.position_to.notation() == second_position
+                and (
+                    (move.transform_to is None and promote_to is None)
+                    or move.transform_to.type == promote_to
+                ),
                 available_moves,
             ),
             None,
@@ -113,7 +125,7 @@ class Board:
 
             piece = self.piece_from_position(position_from)
             self.squares[position_to_capture[0]][position_to_capture[1]] = None
-            self.squares[position_to[0]][position_to[1]] = piece
+            self.squares[position_to[0]][position_to[1]] = move.transform_to or piece
             self.squares[initial_position[0]][initial_position[1]] = None
             piece.mark_moved()
             self.last_move = (first_position, second_position)
@@ -175,14 +187,16 @@ class Board:
         target_position = move.position_to.coordinates()
         captured_position = move.position_to_capture.coordinates()
 
-        piece = self.piece_from_position(position)
+        original_piece = self.piece_from_position(position)
         captured_piece = self.squares[captured_position[0]][captured_position[1]]
 
         # Temporarily make the move
         temp_piece = self.squares[target_position[0]][target_position[1]]
         self.squares[initial_position[0]][initial_position[1]] = None
         self.squares[captured_position[0]][captured_position[1]] = None
-        self.squares[target_position[0]][target_position[1]] = piece
+        self.squares[target_position[0]][target_position[1]] = (
+            move.transform_to if move.transform_to else original_piece
+        )
 
         # Find the king's position
         king_position = None
@@ -191,7 +205,7 @@ class Board:
                 if (
                     self.squares[row][col]
                     and self.squares[row][col].type == "king"
-                    and self.squares[row][col].color == piece.color
+                    and self.squares[row][col].color == original_piece.color
                 ):
                     king_position = Position(row, col)
                     break
@@ -199,10 +213,10 @@ class Board:
                 break
 
         # Check if the king is in check
-        in_check = self._is_square_attacked(king_position, piece.color)
+        in_check = self._is_square_attacked(king_position, original_piece.color)
 
         # Undo the move
-        self.squares[initial_position[0]][initial_position[1]] = piece
+        self.squares[initial_position[0]][initial_position[1]] = original_piece
         self.squares[captured_position[0]][captured_position[1]] = captured_piece
         self.squares[target_position[0]][target_position[1]] = temp_piece
 
@@ -242,20 +256,59 @@ class Board:
                     moves.append(ChessMove(position, Position(4, col)))
             # Move one square forward if the square is empty
             if self.squares[row - 1][col] is None:
-                moves.append(ChessMove(position, Position(row - 1, col)))
+                if row != 1:
+                    moves.append(ChessMove(position, Position(row - 1, col)))
+                else:
+                    for piece in [
+                        Bishop("white"),
+                        Knight("white"),
+                        Rook("white"),
+                        Queen("white"),
+                    ]:
+                        moves.append(
+                            ChessMove(
+                                position, Position(row - 1, col), transform_to=piece
+                            )
+                        )
             # Capture diagonally
             if (
                 col - 1 >= 0
                 and self.squares[row - 1][col - 1] is not None
                 and self.squares[row - 1][col - 1].color != piece.color
             ):
-                moves.append(ChessMove(position, Position(row - 1, col - 1)))
+                if row != 1:
+                    moves.append(ChessMove(position, Position(row - 1, col - 1)))
+                else:
+                    for piece in [
+                        Bishop("white"),
+                        Knight("white"),
+                        Rook("white"),
+                        Queen("white"),
+                    ]:
+                        moves.append(
+                            ChessMove(
+                                position, Position(row - 1, col - 1), transform_to=piece
+                            )
+                        )
             if (
                 col + 1 < 8
                 and self.squares[row - 1][col + 1] is not None
                 and self.squares[row - 1][col + 1].color != piece.color
             ):
-                moves.append(ChessMove(position, Position(row - 1, col + 1)))
+                if row != 1:
+                    moves.append(ChessMove(position, Position(row - 1, col + 1)))
+                else:
+                    for piece in [
+                        Bishop("white"),
+                        Knight("white"),
+                        Rook("white"),
+                        Queen("white"),
+                    ]:
+                        moves.append(
+                            ChessMove(
+                                position, Position(row - 1, col + 1), transform_to=piece
+                            )
+                        )
             # En passant
             if row == 3:
                 if (
@@ -294,6 +347,7 @@ class Board:
                             Position(row, col + 1),
                         )
                     )
+
         else:
             # Check moves for black pawns
             # If the pawn is in its initial position, it can move two squares forward
@@ -302,20 +356,59 @@ class Board:
                     moves.append(ChessMove(position, Position(3, col)))
             # Move one square forward if the square is empty
             if self.squares[row + 1][col] is None:
-                moves.append(ChessMove(position, Position(row + 1, col)))
+                if row != 6:
+                    moves.append(ChessMove(position, Position(row + 1, col)))
+                else:
+                    for piece in [
+                        Bishop("black"),
+                        Knight("black"),
+                        Rook("black"),
+                        Queen("black"),
+                    ]:
+                        moves.append(
+                            ChessMove(
+                                position, Position(row + 1, col), transform_to=piece
+                            )
+                        )
             # Capture diagonally
             if (
                 col - 1 >= 0
                 and self.squares[row + 1][col - 1] is not None
                 and self.squares[row + 1][col - 1].color != piece.color
             ):
-                moves.append(ChessMove(position, Position(row + 1, col - 1)))
+                if row != 6:
+                    moves.append(ChessMove(position, Position(row + 1, col - 1)))
+                else:
+                    for piece in [
+                        Bishop("black"),
+                        Knight("black"),
+                        Rook("black"),
+                        Queen("black"),
+                    ]:
+                        moves.append(
+                            ChessMove(
+                                position, Position(row + 1, col - 1), transform_to=piece
+                            )
+                        )
             if (
                 col + 1 < 8
                 and self.squares[row + 1][col + 1] is not None
                 and self.squares[row + 1][col + 1].color != piece.color
             ):
-                moves.append(ChessMove(position, Position(row + 1, col + 1)))
+                if row != 6:
+                    moves.append(ChessMove(position, Position(row + 1, col + 1)))
+                else:
+                    for piece in [
+                        Bishop("black"),
+                        Knight("black"),
+                        Rook("black"),
+                        Queen("black"),
+                    ]:
+                        moves.append(
+                            ChessMove(
+                                position, Position(row + 1, col + 1), transform_to=piece
+                            )
+                        )
             # En passant
             if row == 4:
                 if (
@@ -633,8 +726,8 @@ class Board:
 
     def initialize_board(self):
         for i in range(8):
-            self.squares[1][i] = Pawn("black")
-            self.squares[6][i] = Pawn("white")
+            self.squares[6][i] = Pawn("black")
+            self.squares[1][i] = Pawn("white")
         self.squares[0][0] = Rook("black")
         self.squares[0][7] = Rook("black")
         self.squares[7][0] = Rook("white")
@@ -649,8 +742,8 @@ class Board:
         self.squares[7][5] = Bishop("white")
         self.squares[0][3] = Queen("black")
         self.squares[7][3] = Queen("white")
-        self.squares[0][4] = King("black")
-        self.squares[7][4] = King("white")
+        self.squares[2][4] = King("black")
+        self.squares[5][4] = King("white")
 
     def piece_from_position(self, position: Position):
         """

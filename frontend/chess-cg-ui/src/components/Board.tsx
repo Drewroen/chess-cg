@@ -18,10 +18,23 @@ export function Board({
   function onSquareClicked(coords: [number, number]) {
     if (game.turn === playerColor) {
       if (isPossibleMove(coords)) {
-        socket.emit("movePiece", {
-          from: activeSquare,
-          to: coords,
-        });
+        if (
+          ((playerColor === "white" && coords[0] === 0) ||
+            (playerColor === "black" && coords[0] === 7)) &&
+          game.board?.squares![activeSquare![0]][activeSquare![1]]?.type ===
+            "pawn"
+        ) {
+          socket.emit("movePiece", {
+            from: activeSquare,
+            to: coords,
+            promotion: "queen",
+          });
+        } else {
+          socket.emit("movePiece", {
+            from: activeSquare,
+            to: coords,
+          });
+        }
         setActiveSquare(null);
         updatePossibleMoves([]);
       } else if (game.board?.squares![coords[0]][coords[1]] === null) {

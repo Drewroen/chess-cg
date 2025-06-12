@@ -53,10 +53,11 @@ def tileClicked(data):
 def movePiece(data):
     start = Position(data["from"][0], data["from"][1])
     end = Position(data["to"][0], data["to"][1])
+    promote_to = data.get("promotion", None)
 
     room = room_service.get_player_room(request.sid)
 
-    room.game.move(start, end)
+    room.game.move(start, end, promote_to)
     emit(
         "game",
         {
