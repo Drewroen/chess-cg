@@ -13,25 +13,29 @@ socketio.init_app(app, cors_allowed_origins="*", allow_eio3=True)
 room_service = RoomService()
 
 
+def emit_game_state(room_id):
+    """Emit the current game state to all players in the room."""
+    room = room_service.get_room(room_id)
+    emit(
+        "game",
+        {
+            "squares": room.game.board.get_squares(),
+            "turn": room.game.turn,
+            "players": {
+                "white": room.white,
+                "black": room.black,
+            },
+            "kings_in_check": room.game.board.kings_in_check(),
+        },
+        to=room_id,
+    )
+
+
 @socketio.on("connect")
 def connect():
     room_id = room_service.add(request.sid)
     print(request.sid + " connected to room " + str(room_id))
-    emit(
-        "game",
-        {
-            "squares": room_service.get_room(room_id).game.board.get_squares(),
-            "turn": room_service.get_room(room_id).game.turn,
-            "players": {
-                "white": room_service.get_room(room_id).white,
-                "black": room_service.get_room(room_id).black,
-            },
-            "kings_in_check": room_service.get_room(
-                room_id
-            ).game.board.kings_in_check(),
-        },
-        to=room_id,
-    )
+    emit_game_state(room_id)
 
 
 @socketio.on("disconnect")
@@ -58,21 +62,7 @@ def movePiece(data):
     room = room_service.get_player_room(request.sid)
 
     room.game.move(start, end, promote_to)
-    emit(
-        "game",
-        {
-            "squares": room_service.get_room(room.id).game.board.get_squares(),
-            "turn": room_service.get_room(room.id).game.turn,
-            "players": {
-                "white": room_service.get_room(room.id).white,
-                "black": room_service.get_room(room.id).black,
-            },
-            "kings_in_check": room_service.get_room(
-                room.id
-            ).game.board.kings_in_check(),
-        },
-        to=room.id,
-    )
+    emit_game_state(room.id)
 
 
 if __name__ == "__main__":

@@ -726,8 +726,8 @@ class Board:
 
     def initialize_board(self):
         for i in range(8):
-            self.squares[6][i] = Pawn("black")
-            self.squares[1][i] = Pawn("white")
+            self.squares[1][i] = Pawn("black")
+            self.squares[6][i] = Pawn("white")
         self.squares[0][0] = Rook("black")
         self.squares[0][7] = Rook("black")
         self.squares[7][0] = Rook("white")
@@ -742,8 +742,8 @@ class Board:
         self.squares[7][5] = Bishop("white")
         self.squares[0][3] = Queen("black")
         self.squares[7][3] = Queen("white")
-        self.squares[2][4] = King("black")
-        self.squares[5][4] = King("white")
+        self.squares[0][4] = King("black")
+        self.squares[7][4] = King("white")
 
     def piece_from_position(self, position: Position):
         """
