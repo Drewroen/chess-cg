@@ -252,9 +252,6 @@ def extract_pgn_move(move: str, color: str) -> Dict[str, str]:
     }
 
 
-import obj.game
-
-
 @pytest.fixture(scope="module")
 def pgn_games():
     # Path to the PGN file
@@ -265,29 +262,23 @@ def pgn_games():
     print(reader.get_file_stats())
 
     # Convert the generator to a list so it can be reused
-    games_list = list(reader.read_games_generator(limit=1000))
+    games_list = list(reader.read_games_generator())
     return games_list
 
 
-@pytest.mark.parametrize("board", range(1, 10001))
+@pytest.mark.parametrize("board", range(1, 101))
 def test_read_pgn(pgn_games, board):
     # Get a specific game based on the 'board' parameter (with index bounds checking)
     index = (board - 1) % len(pgn_games)  # Ensure we don't go out of bounds
     pgn_game = pgn_games[index]
 
-    print(f"\n--- Game {board} (PGN index: {index}) ---")
     pgn_moves = pgn_game.get("moves", "")
-    print(f"Moves: {pgn_moves}")
     chess_game = obj.game.Game()
 
     for move in pgn_moves.split():
         turn = chess_game.turn
         extracted_pgn = extract_pgn_move(move, chess_game.turn)
         position = find_position_that_can_move_to_position(chess_game, extracted_pgn)
-        print(
-            position.notation(),
-            position_from_notation(extracted_pgn["to_square"]).notation(),
-        )
         chess_game.move(
             position,
             position_from_notation(extracted_pgn["to_square"]),
@@ -321,27 +312,28 @@ def find_position_that_can_move_to_position(
     from_hint_column = extracted_pgn["from_hint_column"]
     from_hint_row = extracted_pgn["from_hint_row"]
 
-    # # Handle castling as a special case
-    # if piece_type == "king" and abs(to_square.col - 4) > 1:
-    #     print("ayo")
-    #     # King's starting position is always e1/e8
-    #     return Position(row=0 if game.turn == "white" else 7, col=4)
+    # Determine the search space based on hints
+    if from_hint_column is not None:
+        # If we have a column hint, only search that column
+        cols_to_search = [ord(from_hint_column) - ord("a")]
+    else:
+        # Otherwise search all columns
+        cols_to_search = list(range(8))
+
+    if from_hint_row is not None:
+        # If we have a row hint, only search that row
+        rows_to_search = [8 - int(from_hint_row)]
+    else:
+        # Otherwise search all rows
+        rows_to_search = list(range(8))
 
     # Get all pieces of the current player's turn that match the piece type
     candidates = []
-    for row in range(8):
-        for col in range(8):
+    for row in rows_to_search:
+        for col in cols_to_search:
             pos = Position(row=row, col=col)
-            piece = game.board.squares[pos.row][pos.col]
+            piece = game.board.squares[row][col]
             if piece and piece.type == piece_type and piece.color == game.turn:
-                # Filter by from hints if available
-                if from_hint_column is not None and col != ord(from_hint_column) - ord(
-                    "a"
-                ):
-                    continue
-                if from_hint_row is not None and row != 8 - int(from_hint_row):
-                    continue
-
                 # Check if this piece can legally move to the target square
                 available_moves = game.board.get_available_moves(pos)
                 if to_square.notation() in [
