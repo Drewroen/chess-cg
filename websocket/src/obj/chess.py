@@ -1,34 +1,4 @@
-from obj.objects import Piece, Position
-
-
-class Pawn(Piece):
-    def __init__(self, color):
-        super().__init__(color, "pawn")
-
-
-class Rook(Piece):
-    def __init__(self, color):
-        super().__init__(color, "rook")
-
-
-class Knight(Piece):
-    def __init__(self, color):
-        super().__init__(color, "knight")
-
-
-class Bishop(Piece):
-    def __init__(self, color):
-        super().__init__(color, "bishop")
-
-
-class Queen(Piece):
-    def __init__(self, color):
-        super().__init__(color, "queen")
-
-
-class King(Piece):
-    def __init__(self, color):
-        super().__init__(color, "king")
+from obj.objects import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
 
 
 class ChessMove:
@@ -59,6 +29,7 @@ class Board:
     def __init__(self):
         self.squares: list[list[Piece]] = [[None] * 8 for _ in range(8)]
         self.last_move: ChessMove = None
+        self.pieces: dict[str, list[Piece]] = {"white": [], "black": []}
         self.initialize_board()
 
     def get_squares(self):
@@ -776,6 +747,12 @@ class Board:
         self.squares[7][3] = Queen("white")
         self.squares[0][4] = King("black")
         self.squares[7][4] = King("white")
+
+        for row in range(8):
+            for col in range(8):
+                piece = self.squares[row][col]
+                if piece:
+                    self.pieces[piece.color].append(piece)
 
     def piece_from_position(self, position: Position):
         """
