@@ -24,4 +24,3 @@ class Game:
             self.turn = "black" if self.turn == "white" else "white"
             if not self.board.can_player_move(self.turn):
                 self.status = GameStatus.COMPLETE
-                print("GAME OVER")

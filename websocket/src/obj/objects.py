@@ -13,6 +13,12 @@ class Position:
         return {"row": self.row, "col": self.col}
 
 
+def position_from_notation(notation: str) -> Position:
+    col = ord(notation[0].lower()) - 97
+    row = 8 - int(notation[1])
+    return Position(row, col)
+
+
 class Piece:
     def __init__(self, color, type=None):
         self.color = color
