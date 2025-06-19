@@ -47,11 +47,14 @@ class Board:
         Returns a dictionary with keys 'white' and 'black', where the value is True if the king is in check.
         """
         king_positions = {"white": None, "black": None}
-        for row in range(8):
-            for col in range(8):
-                piece = self.squares[row][col]
-                if piece and piece.type == "king":
-                    king_positions[piece.color] = Position(row, col)
+        for piece in self.pieces["white"]:
+            if piece.type == "king":
+                king_positions["white"] = piece.position
+                break
+        for piece in self.pieces["black"]:
+            if piece.type == "king":
+                king_positions["black"] = piece.position
+                break
 
         in_check = {"white": False, "black": False}
         for color, king_pos in king_positions.items():
@@ -96,7 +99,16 @@ class Board:
 
             piece = self.piece_from_position(position_from)
             self.squares[position_to_capture[0]][position_to_capture[1]] = None
+            piece_to_capture = self.piece_from_position(move.position_to_capture)
+            if piece_to_capture:
+                self.pieces[piece_to_capture.color].remove(piece_to_capture)
             self.squares[position_to[0]][position_to[1]] = move.transform_to or piece
+            if move.transform_to:
+                move.transform_to.position = Position(position_to[0], position_to[1])
+                self.pieces[piece.color].remove(piece)
+                self.pieces[piece.color].append(move.transform_to)
+            else:
+                piece.position = Position(position_to[0], position_to[1])
             self.squares[initial_position[0]][initial_position[1]] = None
             piece.mark_moved()
             self.last_move = (first_position, second_position)
@@ -114,6 +126,9 @@ class Board:
                         additional_initial_position[1]
                     ] = None
                     additional_piece.mark_moved()
+                    additional_piece.position = Position(
+                        additional_position_to[0], additional_position_to[1]
+                    )
 
             return True
 
@@ -154,11 +169,9 @@ class Board:
         Find the position of the king for the given color.
         Returns the king's position or None if not found.
         """
-        for row in range(8):
-            for col in range(8):
-                piece = self.squares[row][col]
-                if piece and piece.type == "king" and piece.color == color:
-                    return Position(row, col)
+        for piece in self.pieces[color]:
+            if piece.type == "king":
+                return piece.position
         return None
 
     def _is_king_in_check_after_move(self, position: Position, move: ChessMove) -> bool:
@@ -178,12 +191,29 @@ class Board:
         captured_piece = self.squares[capture_pos[0]][capture_pos[1]]
         temp_piece = self.squares[target_pos[0]][target_pos[1]]
 
+        # Track pieces list changes
+        pieces_modified = False
+        transform_piece = None
+
+        # Remove captured piece from pieces list if any
+        if captured_piece:
+            self.pieces[captured_piece.color].remove(captured_piece)
+            pieces_modified = True
+
         # Apply the move temporarily
         self.squares[initial_pos[0]][initial_pos[1]] = None
         self.squares[capture_pos[0]][capture_pos[1]] = None
-        self.squares[target_pos[0]][target_pos[1]] = (
-            move.transform_to if move.transform_to else original_piece
-        )
+
+        # Handle transformation (promotion)
+        if move.transform_to:
+            transform_piece = move.transform_to
+            self.pieces[original_piece.color].remove(original_piece)
+            self.pieces[transform_piece.color].append(transform_piece)
+            self.squares[target_pos[0]][target_pos[1]] = transform_piece
+            pieces_modified = True
+        else:
+            self.squares[target_pos[0]][target_pos[1]] = original_piece
+            original_piece.position = Position(target_pos[0], target_pos[1])
 
         # Handle additional moves (e.g., castling)
         additional_state = None
@@ -212,8 +242,18 @@ class Board:
 
         # Restore original board state
         self.squares[initial_pos[0]][initial_pos[1]] = original_piece
-        self.squares[capture_pos[0]][capture_pos[1]] = captured_piece
         self.squares[target_pos[0]][target_pos[1]] = temp_piece
+        self.squares[capture_pos[0]][capture_pos[1]] = captured_piece
+
+        original_piece.position = Position(initial_pos[0], initial_pos[1])
+
+        # Restore pieces list
+        if pieces_modified:
+            if transform_piece:
+                self.pieces[transform_piece.color].remove(transform_piece)
+                self.pieces[original_piece.color].append(original_piece)
+            if captured_piece:
+                self.pieces[captured_piece.color].append(captured_piece)
 
         # Restore additional move if it was made
         if additional_state:
@@ -728,25 +768,36 @@ class Board:
         return moves
 
     def initialize_board(self):
+        # Set up pawns
         for i in range(8):
-            self.squares[1][i] = Pawn("black")
-            self.squares[6][i] = Pawn("white")
-        self.squares[0][0] = Rook("black")
-        self.squares[0][7] = Rook("black")
-        self.squares[7][0] = Rook("white")
-        self.squares[7][7] = Rook("white")
-        self.squares[0][1] = Knight("black")
-        self.squares[0][6] = Knight("black")
-        self.squares[7][1] = Knight("white")
-        self.squares[7][6] = Knight("white")
-        self.squares[0][2] = Bishop("black")
-        self.squares[0][5] = Bishop("black")
-        self.squares[7][2] = Bishop("white")
-        self.squares[7][5] = Bishop("white")
-        self.squares[0][3] = Queen("black")
-        self.squares[7][3] = Queen("white")
-        self.squares[0][4] = King("black")
-        self.squares[7][4] = King("white")
+            self.squares[1][i] = Pawn("black", Position(1, i))
+            self.squares[6][i] = Pawn("white", Position(6, i))
+
+        # Set up rooks
+        self.squares[0][0] = Rook("black", Position(0, 0))
+        self.squares[0][7] = Rook("black", Position(0, 7))
+        self.squares[7][0] = Rook("white", Position(7, 0))
+        self.squares[7][7] = Rook("white", Position(7, 7))
+
+        # Set up knights
+        self.squares[0][1] = Knight("black", Position(0, 1))
+        self.squares[0][6] = Knight("black", Position(0, 6))
+        self.squares[7][1] = Knight("white", Position(7, 1))
+        self.squares[7][6] = Knight("white", Position(7, 6))
+
+        # Set up bishops
+        self.squares[0][2] = Bishop("black", Position(0, 2))
+        self.squares[0][5] = Bishop("black", Position(0, 5))
+        self.squares[7][2] = Bishop("white", Position(7, 2))
+        self.squares[7][5] = Bishop("white", Position(7, 5))
+
+        # Set up queens
+        self.squares[0][3] = Queen("black", Position(0, 3))
+        self.squares[7][3] = Queen("white", Position(7, 3))
+
+        # Set up kings
+        self.squares[0][4] = King("black", Position(0, 4))
+        self.squares[7][4] = King("white", Position(7, 4))
 
         for row in range(8):
             for col in range(8):
@@ -769,10 +820,8 @@ class Board:
         Return True if moves are available; otherwise, return False.
         """
         # Check if the king of the specified color is present
-        king_exists = any(
-            piece and piece.type == "king" and piece.color == color
-            for row in self.squares
-            for piece in row
+        king_exists = self.pieces[color] and any(
+            piece.type == "king" for piece in self.pieces[color]
         )
         if not king_exists:
             return False

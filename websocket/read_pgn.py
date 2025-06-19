@@ -266,7 +266,7 @@ def pgn_games():
     return games_list
 
 
-@pytest.mark.parametrize("board", range(1, 101))
+@pytest.mark.parametrize("board", range(1, 10001))
 def test_read_pgn(pgn_games, board):
     # Get a specific game based on the 'board' parameter (with index bounds checking)
     index = (board - 1) % len(pgn_games)  # Ensure we don't go out of bounds
@@ -287,6 +287,23 @@ def test_read_pgn(pgn_games, board):
         assert (
             turn != chess_game.turn
         ), f"move {move} did not work. Full extracted pgn: {extracted_pgn}. Attempted move: {position.notation()} to {extracted_pgn['to_square']}"
+        # Verify all pieces on the board are properly tracked in the pieces list
+        for row in range(8):
+            for col in range(8):
+                piece = chess_game.board.squares[row][col]
+                if piece:
+                    # Find this piece in the pieces list
+                    found = False
+                    for tracked_piece in chess_game.board.pieces[piece.color]:
+                        if tracked_piece == piece:
+                            found = True
+                            # Verify position is correct
+                            assert (
+                                tracked_piece.position.row == row
+                                and tracked_piece.position.col == col
+                            ), f"Piece position mismatch: {tracked_piece.position.notation()} vs actual {Position(row=row, col=col).notation()}"
+                            break
+                    assert found, f"{piece.color} {piece.type} at {Position(row=row, col=col).notation()} not found in pieces list"
         if extracted_pgn["is_checkmate"]:
             assert chess_game.status == obj.game.GameStatus.COMPLETE
 

@@ -20,41 +20,41 @@ def position_from_notation(notation: str) -> Position:
 
 
 class Piece:
-    def __init__(self, color, type=None, position=None):
+    def __init__(self, color: str, type: str = None, position: Position = None):
         self.color = color
         self.moved = False
         self.type = type
-        self.position = None
+        self.position = position
 
     def mark_moved(self):
         self.moved = True
 
 
 class Pawn(Piece):
-    def __init__(self, color):
-        super().__init__(color, "pawn")
+    def __init__(self, color, position: Position = None):
+        super().__init__(color, "pawn", position=position)
 
 
 class Rook(Piece):
-    def __init__(self, color):
-        super().__init__(color, "rook")
+    def __init__(self, color, position: Position = None):
+        super().__init__(color, "rook", position=position)
 
 
 class Knight(Piece):
-    def __init__(self, color):
-        super().__init__(color, "knight")
+    def __init__(self, color, position: Position = None):
+        super().__init__(color, "knight", position=position)
 
 
 class Bishop(Piece):
-    def __init__(self, color):
-        super().__init__(color, "bishop")
+    def __init__(self, color, position: Position = None):
+        super().__init__(color, "bishop", position=position)
 
 
 class Queen(Piece):
-    def __init__(self, color):
-        super().__init__(color, "queen")
+    def __init__(self, color, position: Position = None):
+        super().__init__(color, "queen", position=position)
 
 
 class King(Piece):
-    def __init__(self, color):
-        super().__init__(color, "king")
+    def __init__(self, color, position: Position = None):
+        super().__init__(color, "king", position=position)
