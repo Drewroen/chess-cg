@@ -1,5 +1,14 @@
 from obj.objects import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
 
+BOARD_SIZE = 8
+PAWN_START_ROWS = {"white": 6, "black": 1}
+PAWN_PROMOTION_ROWS = {"white": 0, "black": 7}
+EN_PASSANT_ROWS = {"white": 3, "black": 4}
+PAWN_DIRECTIONS = {"white": -1, "black": 1}
+
+KNIGHT_MOVES = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
+KING_MOVES = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+
 
 class ChessMove:
     def __init__(
@@ -27,7 +36,9 @@ class ChessMove:
 
 class Board:
     def __init__(self):
-        self.squares: list[list[Piece]] = [[None] * 8 for _ in range(8)]
+        self.squares: list[list[Piece]] = [
+            [None] * BOARD_SIZE for _ in range(BOARD_SIZE)
+        ]
         self.last_move: ChessMove = None
         self.pieces: dict[str, list[Piece]] = {"white": [], "black": []}
         self.initialize_board()
@@ -40,6 +51,20 @@ class Board:
             ]
             for row in self.squares
         ]
+
+    def _is_valid_position(self, row: int, col: int) -> bool:
+        return 0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE
+
+    def _is_enemy_piece(self, row: int, col: int, color: str) -> bool:
+        if not self._is_valid_position(row, col):
+            return False
+        piece = self.squares[row][col]
+        return piece is not None and piece.color != color
+
+    def _is_empty_square(self, row: int, col: int) -> bool:
+        if not self._is_valid_position(row, col):
+            return False
+        return self.squares[row][col] is None
 
     def kings_in_check(self) -> dict[str, bool]:
         """
@@ -493,279 +518,116 @@ class Board:
 
         return moves
 
-    def _get_rook_moves(self, position: Position) -> list[ChessMove]:
-        """
-        Get the available moves for a rook in the given position
-        """
+    def _get_sliding_moves(
+        self, position: Position, directions: list[tuple[int, int]]
+    ) -> list[ChessMove]:
         moves = []
         row, col = position.coordinates()
+        piece = self.piece_from_position(position)
 
-        # Check moves to the right
-        for i in range(col + 1, 8):
-            if self.squares[row][i] is None:
-                moves.append(ChessMove(position, Position(row, i)))
-            else:
-                if self.squares[row][i].color != self.squares[row][col].color:
-                    moves.append(ChessMove(position, Position(row, i)))
-                break
-
-        # Check moves to the left
-        for i in range(col - 1, -1, -1):
-            if self.squares[row][i] is None:
-                moves.append(ChessMove(position, Position(row, i)))
-            else:
-                if self.squares[row][i].color != self.squares[row][col].color:
-                    moves.append(ChessMove(position, Position(row, i)))
-                break
-
-        # Check moves upwards
-        for i in range(row - 1, -1, -1):
-            if self.squares[i][col] is None:
-                moves.append(ChessMove(position, Position(i, col)))
-            else:
-                if self.squares[i][col].color != self.squares[row][col].color:
-                    moves.append(ChessMove(position, Position(i, col)))
-                break
-
-        # Check moves downwards
-        for i in range(row + 1, 8):
-            if self.squares[i][col] is None:
-                moves.append(ChessMove(position, Position(i, col)))
-            else:
-                if self.squares[i][col].color != self.squares[row][col].color:
-                    moves.append(ChessMove(position, Position(i, col)))
-                break
+        for dr, dc in directions:
+            current_row, current_col = row + dr, col + dc
+            while self._is_valid_position(current_row, current_col):
+                target_piece = self.squares[current_row][current_col]
+                if target_piece is None:
+                    moves.append(
+                        ChessMove(position, Position(current_row, current_col))
+                    )
+                else:
+                    if target_piece.color != piece.color:
+                        moves.append(
+                            ChessMove(position, Position(current_row, current_col))
+                        )
+                    break
+                current_row += dr
+                current_col += dc
 
         return moves
 
+    def _get_rook_moves(self, position: Position) -> list[ChessMove]:
+        return self._get_sliding_moves(position, [(0, 1), (0, -1), (1, 0), (-1, 0)])
+
     def _get_knight_moves(self, position: Position) -> list[ChessMove]:
-        """
-        Get the available moves for a knight in the given position
-        """
         moves = []
         row, col = position.coordinates()
+        piece = self.piece_from_position(position)
 
-        # Check moves in the first quadrant
-        if row - 2 >= 0 and col + 1 < 8:
-            if (
-                self.squares[row - 2][col + 1] is None
-                or self.squares[row - 2][col + 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row - 2, col + 1)))
-        if row - 1 >= 0 and col + 2 < 8:
-            if (
-                self.squares[row - 1][col + 2] is None
-                or self.squares[row - 1][col + 2].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row - 1, col + 2)))
-
-        # Check moves in the second quadrant
-        if row - 2 >= 0 and col - 1 >= 0:
-            if (
-                self.squares[row - 2][col - 1] is None
-                or self.squares[row - 2][col - 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row - 2, col - 1)))
-        if row - 1 >= 0 and col - 2 >= 0:
-            if (
-                self.squares[row - 1][col - 2] is None
-                or self.squares[row - 1][col - 2].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row - 1, col - 2)))
-
-        # Check moves in the third quadrant
-        if row + 1 < 8 and col - 2 >= 0:
-            if (
-                self.squares[row + 1][col - 2] is None
-                or self.squares[row + 1][col - 2].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row + 1, col - 2)))
-        if row + 2 < 8 and col - 1 >= 0:
-            if (
-                self.squares[row + 2][col - 1] is None
-                or self.squares[row + 2][col - 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row + 2, col - 1)))
-
-        # Check moves in the fourth quadrant
-        if row + 1 < 8 and col + 2 < 8:
-            if (
-                self.squares[row + 1][col + 2] is None
-                or self.squares[row + 1][col + 2].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row + 1, col + 2)))
-        if row + 2 < 8 and col + 1 < 8:
-            if (
-                self.squares[row + 2][col + 1] is None
-                or self.squares[row + 2][col + 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row + 2, col + 1)))
+        for dr, dc in KNIGHT_MOVES:
+            new_row, new_col = row + dr, col + dc
+            if self._is_valid_position(new_row, new_col):
+                target_piece = self.squares[new_row][new_col]
+                if target_piece is None or target_piece.color != piece.color:
+                    moves.append(ChessMove(position, Position(new_row, new_col)))
 
         return moves
 
     def _get_bishop_moves(self, position: Position) -> list[ChessMove]:
-        """
-        Get the available moves for a bishop in the given position
-        """
-        moves = []
-        row, col = position.coordinates()
-
-        # Check moves in the first quadrant
-        for i in range(1, min(8 - row, 8 - col)):
-            if self.squares[row + i][col + i] is None:
-                moves.append(ChessMove(position, Position(row + i, col + i)))
-            else:
-                if self.squares[row + i][col + i].color != self.squares[row][col].color:
-                    moves.append(ChessMove(position, Position(row + i, col + i)))
-                break
-
-        # Check moves in the second quadrant
-        for i in range(1, min(8 - row, col + 1)):
-            if self.squares[row + i][col - i] is None:
-                moves.append(ChessMove(position, Position(row + i, col - i)))
-            else:
-                if self.squares[row + i][col - i].color != self.squares[row][col].color:
-                    moves.append(ChessMove(position, Position(row + i, col - i)))
-                break
-
-        # Check moves in the third quadrant
-        for i in range(1, min(row + 1, col + 1)):
-            if self.squares[row - i][col - i] is None:
-                moves.append(ChessMove(position, Position(row - i, col - i)))
-            else:
-                if self.squares[row - i][col - i].color != self.squares[row][col].color:
-                    moves.append(ChessMove(position, Position(row - i, col - i)))
-                break
-
-        # Check moves in the fourth quadrant
-        for i in range(1, min(row + 1, 8 - col)):
-            if self.squares[row - i][col + i] is None:
-                moves.append(ChessMove(position, Position(row - i, col + i)))
-            else:
-                if self.squares[row - i][col + i].color != self.squares[row][col].color:
-                    moves.append(ChessMove(position, Position(row - i, col + i)))
-                break
-
-        return moves
+        return self._get_sliding_moves(position, [(1, 1), (1, -1), (-1, -1), (-1, 1)])
 
     def _get_king_moves(
         self, position: Position, ignore_check: bool = False
     ) -> list[ChessMove]:
-        """
-        Get the available moves for a king in the given position, including castling
-        """
         moves = []
         row, col = position.coordinates()
+        piece = self.piece_from_position(position)
 
-        # Check standard king moves
-        # Check moves in the first quadrant
-        if row - 1 >= 0 and col + 1 < 8:
-            if (
-                self.squares[row - 1][col + 1] is None
-                or self.squares[row - 1][col + 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row - 1, col + 1)))
-        if row - 1 >= 0:
-            if (
-                self.squares[row - 1][col] is None
-                or self.squares[row - 1][col].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row - 1, col)))
+        # Standard king moves
+        for dr, dc in KING_MOVES:
+            new_row, new_col = row + dr, col + dc
+            if self._is_valid_position(new_row, new_col):
+                target_piece = self.squares[new_row][new_col]
+                if target_piece is None or target_piece.color != piece.color:
+                    moves.append(ChessMove(position, Position(new_row, new_col)))
 
-        # Check moves in the second quadrant
-        if row - 1 >= 0 and col - 1 >= 0:
-            if (
-                self.squares[row - 1][col - 1] is None
-                or self.squares[row - 1][col - 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row - 1, col - 1)))
-        if col - 1 >= 0:
-            if (
-                self.squares[row][col - 1] is None
-                or self.squares[row][col - 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row, col - 1)))
-
-        # Check moves in the third quadrant
-        if row + 1 < 8 and col - 1 >= 0:
-            if (
-                self.squares[row + 1][col - 1] is None
-                or self.squares[row + 1][col - 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row + 1, col - 1)))
-        if row + 1 < 8:
-            if (
-                self.squares[row + 1][col] is None
-                or self.squares[row + 1][col].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row + 1, col)))
-
-        # Check moves in the fourth quadrant
-        if row + 1 < 8 and col + 1 < 8:
-            if (
-                self.squares[row + 1][col + 1] is None
-                or self.squares[row + 1][col + 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row + 1, col + 1)))
-        if col + 1 < 8:
-            if (
-                self.squares[row][col + 1] is None
-                or self.squares[row][col + 1].color != self.squares[row][col].color
-            ):
-                moves.append(ChessMove(position, Position(row, col + 1)))
-
-        color = self.squares[row][col].color
-        # Castling: only when not ignoring checks
-        if not ignore_check and not self.squares[row][col].moved:
-            # kingside
-            if (
-                col + 2 < 8
-                and self.squares[row][col + 1] is None
-                and self.squares[row][col + 2] is None
-                and isinstance(self.squares[row][col + 3], Rook)
-                and not self.squares[row][col + 3].moved
-            ):
-                safe = True
-                if not ignore_check:
-                    if self._is_square_attacked(position, color):
-                        safe = False
-                    if self._is_square_attacked(Position(row, col + 1), color):
-                        safe = False
-                    if self._is_square_attacked(Position(row, col + 2), color):
-                        safe = False
-                if safe:
-                    move = ChessMove(position, Position(row, col + 2))
-                    move.additional_move = (
-                        Position(row, col + 3),
-                        Position(row, col + 1),
-                    )
-                    moves.append(move)
-            # queenside
-            if (
-                col - 2 >= 0
-                and self.squares[row][col - 1] is None
-                and self.squares[row][col - 2] is None
-                and self.squares[row][col - 3] is None
-                and isinstance(self.squares[row][col - 4], Rook)
-                and not self.squares[row][col - 4].moved
-            ):
-                safe = True
-                if not ignore_check:
-                    if self._is_square_attacked(position, color):
-                        safe = False
-                    if self._is_square_attacked(Position(row, col - 1), color):
-                        safe = False
-                    if self._is_square_attacked(Position(row, col - 2), color):
-                        safe = False
-                if safe:
-                    move = ChessMove(position, Position(row, col - 2))
-                    move.additional_move = (
-                        Position(row, col - 4),
-                        Position(row, col - 1),
-                    )
-                    moves.append(move)
+        # Castling logic
+        if not ignore_check and not piece.moved:
+            moves.extend(self._get_castling_moves(position))
 
         return moves
+
+    def _get_castling_moves(self, position: Position) -> list[ChessMove]:
+        moves = []
+        row, col = position.coordinates()
+        piece = self.piece_from_position(position)
+
+        # Kingside castling
+        if self._can_castle_kingside(row, col, piece.color):
+            move = ChessMove(position, Position(row, col + 2))
+            move.additional_move = (Position(row, col + 3), Position(row, col + 1))
+            moves.append(move)
+
+        # Queenside castling
+        if self._can_castle_queenside(row, col, piece.color):
+            move = ChessMove(position, Position(row, col - 2))
+            move.additional_move = (Position(row, col - 4), Position(row, col - 1))
+            moves.append(move)
+
+        return moves
+
+    def _can_castle_kingside(self, row: int, col: int, color: str) -> bool:
+        return (
+            col + 2 < BOARD_SIZE
+            and self.squares[row][col + 1] is None
+            and self.squares[row][col + 2] is None
+            and isinstance(self.squares[row][col + 3], Rook)
+            and not self.squares[row][col + 3].moved
+            and not self._is_square_attacked(Position(row, col), color)
+            and not self._is_square_attacked(Position(row, col + 1), color)
+            and not self._is_square_attacked(Position(row, col + 2), color)
+        )
+
+    def _can_castle_queenside(self, row: int, col: int, color: str) -> bool:
+        return (
+            col - 2 >= 0
+            and self.squares[row][col - 1] is None
+            and self.squares[row][col - 2] is None
+            and self.squares[row][col - 3] is None
+            and isinstance(self.squares[row][col - 4], Rook)
+            and not self.squares[row][col - 4].moved
+            and not self._is_square_attacked(Position(row, col), color)
+            and not self._is_square_attacked(Position(row, col - 1), color)
+            and not self._is_square_attacked(Position(row, col - 2), color)
+        )
 
     def initialize_board(self):
         # Set up pawns
