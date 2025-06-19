@@ -310,213 +310,150 @@ class Board:
 
     def _get_pawn_moves(self, position: Position) -> list[ChessMove]:
         """
-        Get the available moves for a pawn in the given position
+        Get all available moves for a pawn at the given position.
+
+        This includes:
+        - Forward moves (1 or 2 squares from starting position)
+        - Diagonal captures (including promotions)
+        - En passant captures
         """
         piece = self.piece_from_position(position)
-        moves = []
         row, col = position.coordinates()
+        color = piece.color
+        direction = PAWN_DIRECTIONS[color]
 
-        # Check moves for white pawns
-        if piece.color == "white":
-            # If the pawn is in its initial position, it can move two squares forward
-            if row == 6:
-                if self.squares[4][col] is None and self.squares[5][col] is None:
-                    moves.append(ChessMove(position, Position(4, col)))
-            # Move one square forward if the square is empty
-            if self.squares[row - 1][col] is None:
-                if row != 1:
-                    moves.append(ChessMove(position, Position(row - 1, col)))
-                else:
-                    for piece in [
-                        Bishop("white"),
-                        Knight("white"),
-                        Rook("white"),
-                        Queen("white"),
-                    ]:
-                        moves.append(
-                            ChessMove(
-                                position, Position(row - 1, col), transform_to=piece
-                            )
-                        )
-            # Capture diagonally
-            if (
-                col - 1 >= 0
-                and self.squares[row - 1][col - 1] is not None
-                and self.squares[row - 1][col - 1].color != piece.color
-            ):
-                if row != 1:
-                    moves.append(ChessMove(position, Position(row - 1, col - 1)))
-                else:
-                    for piece in [
-                        Bishop("white"),
-                        Knight("white"),
-                        Rook("white"),
-                        Queen("white"),
-                    ]:
-                        moves.append(
-                            ChessMove(
-                                position, Position(row - 1, col - 1), transform_to=piece
-                            )
-                        )
-            if (
-                col + 1 < 8
-                and self.squares[row - 1][col + 1] is not None
-                and self.squares[row - 1][col + 1].color != piece.color
-            ):
-                if row != 1:
-                    moves.append(ChessMove(position, Position(row - 1, col + 1)))
-                else:
-                    for piece in [
-                        Bishop("white"),
-                        Knight("white"),
-                        Rook("white"),
-                        Queen("white"),
-                    ]:
-                        moves.append(
-                            ChessMove(
-                                position, Position(row - 1, col + 1), transform_to=piece
-                            )
-                        )
-            # En passant
-            if row == 3:
-                if (
-                    col - 1 >= 0
-                    and self.squares[row][col - 1] is not None
-                    and self.squares[row][col - 1].type == "pawn"
-                    and self.squares[row][col - 1].color != piece.color
-                    and self.last_move
-                    == (
-                        self.chess_notation_from_index(row - 2, col - 1),
-                        self.chess_notation_from_index(row, col - 1),
-                    )
-                ):
-                    moves.append(
-                        ChessMove(
-                            position,
-                            Position(row - 1, col - 1),
-                            Position(row, col - 1),
-                        )
-                    )
-                if (
-                    col + 1 < 8
-                    and self.squares[row][col + 1] is not None
-                    and self.squares[row][col + 1].type == "pawn"
-                    and self.squares[row][col + 1].color != piece.color
-                    and self.last_move
-                    == (
-                        self.chess_notation_from_index(row - 2, col + 1),
-                        self.chess_notation_from_index(row, col + 1),
-                    )
-                ):
-                    moves.append(
-                        ChessMove(
-                            position,
-                            Position(row - 1, col + 1),
-                            Position(row, col + 1),
-                        )
-                    )
-
-        else:
-            # Check moves for black pawns
-            # If the pawn is in its initial position, it can move two squares forward
-            if row == 1:
-                if self.squares[3][col] is None and self.squares[2][col] is None:
-                    moves.append(ChessMove(position, Position(3, col)))
-            # Move one square forward if the square is empty
-            if self.squares[row + 1][col] is None:
-                if row != 6:
-                    moves.append(ChessMove(position, Position(row + 1, col)))
-                else:
-                    for piece in [
-                        Bishop("black"),
-                        Knight("black"),
-                        Rook("black"),
-                        Queen("black"),
-                    ]:
-                        moves.append(
-                            ChessMove(
-                                position, Position(row + 1, col), transform_to=piece
-                            )
-                        )
-            # Capture diagonally
-            if (
-                col - 1 >= 0
-                and self.squares[row + 1][col - 1] is not None
-                and self.squares[row + 1][col - 1].color != piece.color
-            ):
-                if row != 6:
-                    moves.append(ChessMove(position, Position(row + 1, col - 1)))
-                else:
-                    for piece in [
-                        Bishop("black"),
-                        Knight("black"),
-                        Rook("black"),
-                        Queen("black"),
-                    ]:
-                        moves.append(
-                            ChessMove(
-                                position, Position(row + 1, col - 1), transform_to=piece
-                            )
-                        )
-            if (
-                col + 1 < 8
-                and self.squares[row + 1][col + 1] is not None
-                and self.squares[row + 1][col + 1].color != piece.color
-            ):
-                if row != 6:
-                    moves.append(ChessMove(position, Position(row + 1, col + 1)))
-                else:
-                    for piece in [
-                        Bishop("black"),
-                        Knight("black"),
-                        Rook("black"),
-                        Queen("black"),
-                    ]:
-                        moves.append(
-                            ChessMove(
-                                position, Position(row + 1, col + 1), transform_to=piece
-                            )
-                        )
-            # En passant
-            if row == 4:
-                if (
-                    col - 1 >= 0
-                    and self.squares[row][col - 1] is not None
-                    and self.squares[row][col - 1].type == "pawn"
-                    and self.squares[row][col - 1].color != piece.color
-                    and self.last_move
-                    == (
-                        self.chess_notation_from_index(row + 2, col - 1),
-                        self.chess_notation_from_index(row, col - 1),
-                    )
-                ):
-                    moves.append(
-                        ChessMove(
-                            position,
-                            Position(row + 1, col - 1),
-                            Position(row, col - 1),
-                        )
-                    )
-                if (
-                    col + 1 < 8
-                    and self.squares[row][col + 1] is not None
-                    and self.squares[row][col + 1].type == "pawn"
-                    and self.squares[row][col + 1].color != piece.color
-                    and self.last_move
-                    == (
-                        self.chess_notation_from_index(row + 2, col + 1),
-                        self.chess_notation_from_index(row, col + 1),
-                    )
-                ):
-                    moves.append(
-                        ChessMove(
-                            position,
-                            Position(row + 1, col + 1),
-                            Position(row, col + 1),
-                        )
-                    )
+        moves = []
+        moves.extend(self._get_pawn_forward_moves(position, row, col, color, direction))
+        moves.extend(self._get_pawn_capture_moves(position, row, col, color, direction))
+        moves.extend(
+            self._get_pawn_en_passant_moves(position, row, col, color, direction)
+        )
 
         return moves
+
+    def _get_pawn_forward_moves(
+        self, position: Position, row: int, col: int, color: str, direction: int
+    ) -> list[ChessMove]:
+        """Get forward moves for a pawn (1 or 2 squares)"""
+        moves = []
+        target_row = row + direction
+
+        # Check if one square forward is valid and empty
+        if not (
+            self._is_valid_position(target_row, col)
+            and self._is_empty_square(target_row, col)
+        ):
+            return moves
+
+        # Handle promotion or regular move
+        if target_row == PAWN_PROMOTION_ROWS[color]:
+            moves.extend(self._create_promotion_moves(position, target_row, col, color))
+        else:
+            moves.append(ChessMove(position, Position(target_row, col)))
+
+            # Check for two-square initial move
+            if (
+                row == PAWN_START_ROWS[color]
+                and self._is_valid_position(target_row + direction, col)
+                and self._is_empty_square(target_row + direction, col)
+            ):
+                moves.append(ChessMove(position, Position(target_row + direction, col)))
+
+        return moves
+
+    def _get_pawn_capture_moves(
+        self, position: Position, row: int, col: int, color: str, direction: int
+    ) -> list[ChessMove]:
+        """Get diagonal capture moves for a pawn"""
+        moves = []
+        target_row = row + direction
+
+        # Check both diagonal directions
+        for col_offset in [-1, 1]:
+            target_col = col + col_offset
+
+            if not (
+                self._is_valid_position(target_row, target_col)
+                and self._is_enemy_piece(target_row, target_col, color)
+            ):
+                continue
+
+            # Handle promotion or regular capture
+            if target_row == PAWN_PROMOTION_ROWS[color]:
+                moves.extend(
+                    self._create_promotion_moves(
+                        position, target_row, target_col, color
+                    )
+                )
+            else:
+                moves.append(ChessMove(position, Position(target_row, target_col)))
+
+        return moves
+
+    def _get_pawn_en_passant_moves(
+        self, position: Position, row: int, col: int, color: str, direction: int
+    ) -> list[ChessMove]:
+        """Get en passant moves for a pawn"""
+        moves = []
+
+        # En passant is only possible from specific rows
+        if row != EN_PASSANT_ROWS[color]:
+            return moves
+
+        # Check both sides for en passant opportunities
+        for col_offset in [-1, 1]:
+            target_col = col + col_offset
+
+            if self._is_valid_position(
+                row, target_col
+            ) and self._can_capture_en_passant(row, target_col, color):
+                capture_position = Position(row, target_col)
+                move_position = Position(row + direction, target_col)
+                moves.append(ChessMove(position, move_position, capture_position))
+
+        return moves
+
+    def _can_capture_en_passant(self, pawn_row: int, pawn_col: int, color: str) -> bool:
+        """Check if we can capture en passant at the given position"""
+        adjacent_piece = self.squares[pawn_row][pawn_col]
+
+        return (
+            adjacent_piece
+            and adjacent_piece.type == "pawn"
+            and adjacent_piece.color != color
+            and self._is_valid_en_passant_move(pawn_row, pawn_col, color)
+        )
+
+    def _is_valid_en_passant_move(
+        self, pawn_row: int, pawn_col: int, color: str
+    ) -> bool:
+        """Check if the last move allows en passant capture"""
+        if not self.last_move:
+            return False
+
+        # Calculate where the enemy pawn should have started and ended for en passant
+        enemy_color = self._opposite_color(color)
+        start_row = PAWN_START_ROWS[enemy_color]
+        end_row = pawn_row
+
+        expected_start = self.chess_notation_from_index(start_row, pawn_col)
+        expected_end = self.chess_notation_from_index(end_row, pawn_col)
+
+        return self.last_move == (expected_start, expected_end)
+
+    def _create_promotion_moves(
+        self, position: Position, target_row: int, target_col: int, color: str
+    ) -> list[ChessMove]:
+        """Create all possible promotion moves for a pawn"""
+        promotion_pieces = [Bishop(color), Knight(color), Rook(color), Queen(color)]
+        return [
+            ChessMove(position, Position(target_row, target_col), transform_to=piece)
+            for piece in promotion_pieces
+        ]
+
+    def _opposite_color(self, color: str) -> str:
+        """Get the opposite color"""
+        return "black" if color == "white" else "white"
 
     def _get_sliding_moves(
         self, position: Position, directions: list[tuple[int, int]]
