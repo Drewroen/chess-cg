@@ -40,7 +40,7 @@ class Board:
             [None] * BOARD_SIZE for _ in range(BOARD_SIZE)
         ]
         self.last_move: ChessMove = None
-        self.pieces: dict[str, list[Piece]] = {"white": [], "black": []}
+        self.pieces: list[Piece] = []
         self.initialize_board()
 
     def get_squares(self):
@@ -72,14 +72,14 @@ class Board:
         Returns a dictionary with keys 'white' and 'black', where the value is True if the king is in check.
         """
         king_positions = {"white": None, "black": None}
-        for piece in self.pieces["white"]:
+        for piece in self.pieces:
             if piece.type == "king":
-                king_positions["white"] = piece.position
-                break
-        for piece in self.pieces["black"]:
-            if piece.type == "king":
-                king_positions["black"] = piece.position
-                break
+                if piece.color == "white":
+                    king_positions["white"] = piece.position
+                elif piece.color == "black":
+                    king_positions["black"] = piece.position
+                if king_positions["white"] and king_positions["black"]:
+                    break
 
         in_check = {"white": False, "black": False}
         for color, king_pos in king_positions.items():
@@ -126,12 +126,12 @@ class Board:
             self.squares[position_to_capture[0]][position_to_capture[1]] = None
             piece_to_capture = self.piece_from_position(move.position_to_capture)
             if piece_to_capture:
-                self.pieces[piece_to_capture.color].remove(piece_to_capture)
+                self.pieces.remove(piece_to_capture)
             self.squares[position_to[0]][position_to[1]] = move.transform_to or piece
             if move.transform_to:
                 move.transform_to.position = Position(position_to[0], position_to[1])
-                self.pieces[piece.color].remove(piece)
-                self.pieces[piece.color].append(move.transform_to)
+                self.pieces.remove(piece)
+                self.pieces.append(move.transform_to)
             else:
                 piece.position = Position(position_to[0], position_to[1])
             self.squares[initial_position[0]][initial_position[1]] = None
@@ -194,8 +194,8 @@ class Board:
         Find the position of the king for the given color.
         Returns the king's position or None if not found.
         """
-        for piece in self.pieces[color]:
-            if piece.type == "king":
+        for piece in self.pieces:
+            if piece.type == "king" and piece.color == color:
                 return piece.position
         return None
 
@@ -222,7 +222,7 @@ class Board:
 
         # Remove captured piece from pieces list if any
         if captured_piece:
-            self.pieces[captured_piece.color].remove(captured_piece)
+            self.pieces.remove(captured_piece)
             pieces_modified = True
 
         # Apply the move temporarily
@@ -232,8 +232,8 @@ class Board:
         # Handle transformation (promotion)
         if move.transform_to:
             transform_piece = move.transform_to
-            self.pieces[original_piece.color].remove(original_piece)
-            self.pieces[transform_piece.color].append(transform_piece)
+            self.pieces.remove(original_piece)
+            self.pieces.append(transform_piece)
             self.squares[target_pos[0]][target_pos[1]] = transform_piece
             pieces_modified = True
         else:
@@ -275,10 +275,10 @@ class Board:
         # Restore pieces list
         if pieces_modified:
             if transform_piece:
-                self.pieces[transform_piece.color].remove(transform_piece)
-                self.pieces[original_piece.color].append(original_piece)
+                self.pieces.remove(transform_piece)
+                self.pieces.append(original_piece)
             if captured_piece:
-                self.pieces[captured_piece.color].append(captured_piece)
+                self.pieces.append(captured_piece)
 
         # Restore additional move if it was made
         if additional_state:
@@ -602,7 +602,7 @@ class Board:
             for col in range(8):
                 piece = self.squares[row][col]
                 if piece:
-                    self.pieces[piece.color].append(piece)
+                    self.pieces.append(piece)
 
     def piece_from_position(self, position: Position):
         """
@@ -619,8 +619,8 @@ class Board:
         Return True if moves are available; otherwise, return False.
         """
         # Check if the king of the specified color is present
-        king_exists = self.pieces[color] and any(
-            piece.type == "king" for piece in self.pieces[color]
+        king_exists = self.pieces and any(
+            piece.type == "king" and piece.color == color for piece in self.pieces
         )
         if not king_exists:
             return False

@@ -294,7 +294,7 @@ def test_read_pgn(pgn_games, board):
                 if piece:
                     # Find this piece in the pieces list
                     found = False
-                    for tracked_piece in chess_game.board.pieces[piece.color]:
+                    for tracked_piece in chess_game.board.pieces:
                         if tracked_piece == piece:
                             found = True
                             # Verify position is correct
