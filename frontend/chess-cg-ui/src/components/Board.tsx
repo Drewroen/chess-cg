@@ -16,7 +16,7 @@ export function Board({
   const playerColor = game.players?.white === socket.id ? "white" : "black";
 
   function onSquareClicked(coords: [number, number]) {
-    if (game.turn === playerColor) {
+    if (game.turn === playerColor && game.status !== "complete") {
       if (isPossibleMove(coords)) {
         if (
           ((playerColor === "white" && coords[0] === 0) ||

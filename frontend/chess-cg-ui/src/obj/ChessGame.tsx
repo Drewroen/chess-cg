@@ -21,6 +21,7 @@ export class ChessGame {
   players?: ChessPlayers = new ChessPlayers();
   kingsInCheck?: KingsInCheck = new KingsInCheck();
   turn: string = "";
+  status: string = "";
 }
 
 export class ChessPlayers {
@@ -38,4 +39,5 @@ export class BoardEvent {
   players: ChessPlayers = new ChessPlayers();
   turn: string = "white";
   kings_in_check: KingsInCheck = new KingsInCheck();
+  status: string = "";
 }

@@ -28,6 +28,7 @@ export default function App() {
         turn: data.turn,
         players: data.players,
         kingsInCheck: data.kings_in_check,
+        status: data.status,
       });
     }
 
