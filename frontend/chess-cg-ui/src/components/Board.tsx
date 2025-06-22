@@ -84,8 +84,8 @@ export function Board({
               <Tile
                 type={square?.type}
                 color={square?.color}
-                x={playerColor === "white" ? i : 8 - i}
-                y={playerColor === "white" ? j : 8 - j}
+                x={playerColor === "white" ? i : 7 - i}
+                y={playerColor === "white" ? j : 7 - j}
                 isActive={activeSquare?.[0] === i && activeSquare?.[1] === j}
                 isPossibleMove={
                   game.possibleMoves?.find(

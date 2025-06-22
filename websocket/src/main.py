@@ -27,6 +27,10 @@ def emit_game_state(room_id):
             },
             "kings_in_check": room.game.board.kings_in_check(),
             "status": room.game.status.value,
+            "time": {
+                "white": room.game.white_time_left,
+                "black": room.game.black_time_left,
+            },
         },
         to=room_id,
     )
