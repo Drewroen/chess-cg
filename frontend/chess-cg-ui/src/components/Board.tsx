@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChessGame } from "../obj/ChessGame";
 import { Tile } from "./Tile";
+import { PromotionSelector } from "./PromotionSelector";
 import { socket } from "../socket";
 
 export function Board({
@@ -13,7 +14,26 @@ export function Board({
   const [activeSquare, setActiveSquare] = useState<[number, number] | null>(
     null
   );
+  const [showPromotion, setShowPromotion] = useState(false);
+  const [promotionMove, setPromotionMove] = useState<{
+    from: [number, number];
+    to: [number, number];
+  } | null>(null);
   const playerColor = game.players?.white === socket.id ? "white" : "black";
+
+  function handlePromotion(pieceType: string) {
+    if (promotionMove) {
+      socket.emit("movePiece", {
+        from: promotionMove.from,
+        to: promotionMove.to,
+        promotion: pieceType,
+      });
+      setPromotionMove(null);
+      setShowPromotion(false);
+      setActiveSquare(null);
+      updatePossibleMoves([]);
+    }
+  }
 
   function onSquareClicked(coords: [number, number]) {
     if (game.turn === playerColor && game.status !== "complete") {
@@ -24,19 +44,17 @@ export function Board({
           game.board?.squares![activeSquare![0]][activeSquare![1]]?.type ===
             "pawn"
         ) {
-          socket.emit("movePiece", {
-            from: activeSquare,
-            to: coords,
-            promotion: "queen",
-          });
+          // Show promotion selector instead of auto-promoting
+          setPromotionMove({ from: activeSquare!, to: coords });
+          setShowPromotion(true);
         } else {
           socket.emit("movePiece", {
             from: activeSquare,
             to: coords,
           });
+          setActiveSquare(null);
+          updatePossibleMoves([]);
         }
-        setActiveSquare(null);
-        updatePossibleMoves([]);
       } else if (game.board?.squares![coords[0]][coords[1]] === null) {
         setActiveSquare(null);
         updatePossibleMoves([]);
@@ -105,6 +123,12 @@ export function Board({
             </div>
           ))
         )}
+      {/* Promotion Selector */}
+      <PromotionSelector
+        isVisible={showPromotion}
+        playerColor={playerColor}
+        onSelect={handlePromotion}
+      />
     </div>
   );
 }
