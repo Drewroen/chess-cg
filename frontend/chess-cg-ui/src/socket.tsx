@@ -4,4 +4,5 @@ import { io } from "socket.io-client";
 const URL =
   process.env.NODE_ENV === "production" ? undefined : "http://localhost:5000";
 
-export const socket = io(URL);
+// Create socket but don't connect automatically
+export const socket = io(URL, { autoConnect: false });
