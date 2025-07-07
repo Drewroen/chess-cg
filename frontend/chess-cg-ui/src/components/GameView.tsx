@@ -33,27 +33,18 @@ export function GameView() {
         kingsInCheck: data.kings_in_check,
         status: data.status,
         time: data.time,
+        moves: data.moves,
       });
-    }
-
-    function onTileClick(data: any) {
-      const moves: Array<[number, number]> = data.map((move: any) => {
-        const position = move.position_to_move;
-        return [position.row, position.col];
-      });
-      setChessGame({ ...chessGame, possibleMoves: moves });
     }
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("game", onGame);
-    socket.on("tileClicked", onTileClick);
 
     return () => {
       socket.off("connect");
       socket.off("disconnect");
       socket.off("game");
-      socket.off("tileClicked");
     };
   }, [chessGame]);
 

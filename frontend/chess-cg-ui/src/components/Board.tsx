@@ -20,6 +20,7 @@ export function Board({
     to: [number, number];
   } | null>(null);
   const playerColor = game.players?.white === socket.id ? "white" : "black";
+  const [possibleMoves, setPossibleMoves] = useState<number[][]>([]);
 
   function handlePromotion(pieceType: string) {
     if (promotionMove) {
@@ -31,7 +32,7 @@ export function Board({
       setPromotionMove(null);
       setShowPromotion(false);
       setActiveSquare(null);
-      updatePossibleMoves([]);
+      setPossibleMoves([]);
     }
   }
 
@@ -53,29 +54,37 @@ export function Board({
             to: coords,
           });
           setActiveSquare(null);
-          updatePossibleMoves([]);
+          setPossibleMoves([]);
         }
       } else if (game.board?.squares![coords[0]][coords[1]] === null) {
         setActiveSquare(null);
-        updatePossibleMoves([]);
+        setPossibleMoves([]);
       } else if (
         game.board?.squares![coords[0]][coords[1]]?.color === playerColor
       ) {
+        let gameMoves = game.moves[playerColor];
+        let availableMoves = [];
+        for (let move of gameMoves) {
+          let from = move[0];
+          if (from[0] === coords[0] && from[1] === coords[1]) {
+            availableMoves.push(move[1]);
+          }
+        }
+        setPossibleMoves(availableMoves);
         setActiveSquare(coords);
-        socket.emit("tileClicked", coords);
       } else {
         setActiveSquare(null);
-        updatePossibleMoves([]);
+        setPossibleMoves([]);
       }
     } else {
       setActiveSquare(null);
-      updatePossibleMoves([]);
+      setPossibleMoves([]);
     }
   }
 
   function isPossibleMove(coords: [number, number]) {
     return (
-      game.possibleMoves?.find(
+      possibleMoves?.find(
         (move) => move[0] === coords[0] && move[1] === coords[1]
       ) !== undefined
     );
@@ -105,11 +114,9 @@ export function Board({
                 x={playerColor === "white" ? i : 7 - i}
                 y={playerColor === "white" ? j : 7 - j}
                 isActive={activeSquare?.[0] === i && activeSquare?.[1] === j}
-                isPossibleMove={
-                  game.possibleMoves?.find(
-                    (move) => move[0] === i && move[1] === j
-                  ) !== undefined
-                }
+                isPossibleMove={possibleMoves.some(
+                  (move) => move[0] === i && move[1] === j
+                )}
                 isCheck={
                   (square?.type === "king" &&
                     square?.color === "white" &&

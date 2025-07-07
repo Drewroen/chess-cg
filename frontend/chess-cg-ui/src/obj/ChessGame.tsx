@@ -23,6 +23,7 @@ export class ChessGame {
   turn: string = "";
   status: string = "";
   time: RemainingTime = new RemainingTime();
+  moves: ChessMoves = new ChessMoves();
 }
 
 export class ChessPlayers {
@@ -33,6 +34,11 @@ export class ChessPlayers {
 export class KingsInCheck {
   white: boolean = false;
   black: boolean = false;
+}
+
+export class ChessMoves {
+  white: number[][][] = [];
+  black: number[][][] = [];
 }
 
 export class RemainingTime {
@@ -47,4 +53,5 @@ export class BoardEvent {
   kings_in_check: KingsInCheck = new KingsInCheck();
   status: string = "";
   time: RemainingTime = { white: 0, black: 0 };
+  moves: ChessMoves = new ChessMoves();
 }

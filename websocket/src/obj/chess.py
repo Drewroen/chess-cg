@@ -159,6 +159,21 @@ class Board:
 
         return False
 
+    def get_available_moves_for_color(
+        self, color: str, ignore_check: bool = False
+    ) -> list[ChessMove]:
+        """
+        Get all available moves for all pieces of the given color
+        """
+        return sum(
+            (
+                self.get_available_moves(piece.position, ignore_check)
+                for piece in self.pieces
+                if piece.color == color
+            ),
+            [],
+        )
+
     def get_available_moves(
         self, position: Position, ignore_check: bool = False
     ) -> list[ChessMove]:

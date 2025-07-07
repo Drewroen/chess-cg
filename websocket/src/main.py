@@ -31,6 +31,16 @@ def emit_game_state(room_id):
                 "white": room.game.white_time_left,
                 "black": room.game.black_time_left,
             },
+            "moves": {
+                "white": [
+                    (x.position_from.coordinates(), x.position_to.coordinates())
+                    for x in room.game.board.get_available_moves_for_color("white")
+                ],
+                "black": [
+                    (x.position_from.coordinates(), x.position_to.coordinates())
+                    for x in room.game.board.get_available_moves_for_color("black")
+                ],
+            },
         },
         to=room_id,
     )
@@ -46,16 +56,6 @@ def connect():
 @socketio.on("disconnect")
 def disconnect():
     print(request.sid + " disconnected")
-
-
-@socketio.on("tileClicked")
-def tileClicked(data):
-    row, col = data
-
-    room = room_service.get_player_room(request.sid)
-
-    moves = room.game.board.get_available_moves(Position(row, col))
-    emit("tileClicked", [move.to_dict() for move in moves], to=request.sid)
 
 
 @socketio.on("movePiece")
