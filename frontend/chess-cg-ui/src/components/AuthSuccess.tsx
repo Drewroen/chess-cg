@@ -1,0 +1,151 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { authService } from "../services/auth";
+
+export function AuthSuccess() {
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading"
+  );
+  const [message, setMessage] = useState<string>("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleAuthSuccess = async () => {
+      try {
+        // Get the token from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get("token");
+
+        if (!token) {
+          console.error("No token received from backend");
+          setMessage("No authentication token received");
+          setStatus("error");
+          return;
+        }
+
+        console.log("Token received, storing...");
+
+        // Store token using auth service
+        authService.setToken(token);
+
+        setStatus("success");
+        setMessage("Authentication successful!");
+
+        // Trigger a custom event to notify the app about the auth change
+        window.dispatchEvent(new CustomEvent("authStateChanged"));
+
+        // Redirect back to main app after a short delay
+        setTimeout(() => {
+          navigate("/");
+        }, 2000);
+      } catch (error) {
+        console.error("Error handling auth success:", error);
+        setMessage(
+          error instanceof Error ? error.message : "Unknown error occurred"
+        );
+        setStatus("error");
+      }
+    };
+
+    handleAuthSuccess();
+  }, [navigate]);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+        padding: "2rem",
+        fontFamily: "inherit",
+      }}
+    >
+      <div
+        style={{
+          background: "linear-gradient(145deg, #2a2a2a, #1e1e1e)",
+          borderRadius: "20px",
+          padding: "3rem",
+          boxShadow:
+            "0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
+          border: "1px solid #444",
+          minWidth: "400px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "2rem",
+          textAlign: "center",
+        }}
+      >
+        {status === "loading" && (
+          <>
+            <div
+              style={{
+                color: "#ffffff",
+                fontSize: "1.5rem",
+                fontWeight: "600",
+              }}
+            >
+              Completing Login...
+            </div>
+            <div style={{ color: "#b0b0b0" }}>
+              Please wait while we finalize your authentication.
+            </div>
+          </>
+        )}
+
+        {status === "success" && (
+          <>
+            <div
+              style={{
+                color: "#4CAF50",
+                fontSize: "1.5rem",
+                fontWeight: "600",
+              }}
+            >
+              Login Successful!
+            </div>
+            <div style={{ color: "#b0b0b0" }}>
+              {message || "Redirecting you back to the game..."}
+            </div>
+          </>
+        )}
+
+        {status === "error" && (
+          <>
+            <div
+              style={{
+                color: "#f44336",
+                fontSize: "1.5rem",
+                fontWeight: "600",
+              }}
+            >
+              Authentication Error
+            </div>
+            <div style={{ color: "#b0b0b0" }}>
+              {message || "There was a problem with the login process."}
+            </div>
+            <button
+              onClick={() => navigate("/")}
+              style={{
+                padding: "1rem 2rem",
+                fontSize: "1rem",
+                fontWeight: "500",
+                border: "2px solid #707070",
+                borderRadius: "8px",
+                background: "transparent",
+                color: "#d0d0d0",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                fontFamily: "inherit",
+              }}
+            >
+              Return to Home
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

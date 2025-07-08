@@ -4,3 +4,4 @@ __pycache__/
 *.pyd
 .venv/
 **/.ruff_cache/
+.env
