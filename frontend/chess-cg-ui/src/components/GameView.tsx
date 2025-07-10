@@ -1,52 +1,77 @@
-import { useState, useEffect } from "react";
-import { socket } from "../socket";
+import { useState, useEffect, useRef } from "react";
 import { BoardEvent, ChessGame } from "../obj/ChessGame";
 import { Board } from "./Board";
 import { Timer } from "./Timer";
 
 export function GameView() {
-  const [isConnected, setIsConnected] = useState(false);
   const [chessGame, setChessGame] = useState<ChessGame>(new ChessGame());
+  const [connectionStatus, setConnectionStatus] =
+    useState<string>("Connecting...");
   const playerColor =
-    chessGame.players?.white === socket.id ? "white" : "black";
+    chessGame.players?.white === chessGame.id ? "white" : "black";
 
   function updatePossibleMoves(moves: Array<[number, number]>) {
-    setChessGame({ ...chessGame, possibleMoves: moves });
+    setChessGame((prevGame) => ({ ...prevGame, possibleMoves: moves }));
   }
 
+  const connection = useRef(null as WebSocket | null);
+
   useEffect(() => {
-    function onConnect() {
-      setIsConnected(true);
-    }
-
-    function onDisconnect() {
-      setIsConnected(false);
-      setChessGame(new ChessGame());
-    }
-
     function onGame(data: BoardEvent) {
-      setChessGame({
-        ...chessGame,
-        board: data,
-        turn: data.turn,
-        players: data.players,
-        kingsInCheck: data.kings_in_check,
-        status: data.status,
-        time: data.time,
-        moves: data.moves,
+      console.log("Processing game data:", data);
+      setChessGame((prevGame) => {
+        const newGame = {
+          ...prevGame,
+          board: { squares: data.squares },
+          turn: data.turn,
+          players: data.players,
+          kingsInCheck: data.kings_in_check,
+          status: data.status,
+          time: data.time,
+          moves: data.moves,
+          id: data.id,
+        };
+        console.log("Updated game state:", newGame);
+        return newGame;
       });
     }
 
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    socket.on("game", onGame);
+    if (connection.current) {
+      console.log("WebSocket already connected");
+      return;
+    }
+
+    const socket = new WebSocket("ws://127.0.0.1:8000/ws");
+
+    socket.addEventListener("message", (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Received WebSocket data:", data);
+      onGame(data);
+    });
+
+    socket.addEventListener("open", () => {
+      console.log("WebSocket connected");
+      setConnectionStatus("Connected");
+    });
+
+    socket.addEventListener("error", (error) => {
+      console.error("WebSocket error:", error);
+      setConnectionStatus("Error");
+    });
+
+    socket.addEventListener("close", () => {
+      console.log("WebSocket disconnected");
+      setConnectionStatus("Disconnected");
+    });
+
+    connection.current = socket;
 
     return () => {
-      socket.off("connect");
-      socket.off("disconnect");
-      socket.off("game");
+      if (connection.current?.readyState === WebSocket.OPEN) {
+        connection.current.close();
+      }
     };
-  }, [chessGame]);
+  }, []); // Remove chessGame dependency to prevent reconnection loop
 
   return (
     <div
@@ -60,11 +85,24 @@ export function GameView() {
         justifyContent: "center",
       }}
     >
-      {isConnected && (
+      <div
+        style={{
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+          padding: "10px",
+          background: "lightgray",
+          borderRadius: "5px",
+        }}
+      >
+        Status: {connectionStatus}
+      </div>
+      {connection.current && (
         <Board
           game={chessGame}
           updatePossibleMoves={updatePossibleMoves}
           key="board"
+          socket={connection.current}
         />
       )}
       <div

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { socket } from "./socket";
 import { GameView } from "./components/GameView";
 import { AuthCallback } from "./components/AuthCallback";
 import { AuthSuccess } from "./components/AuthSuccess";
@@ -41,7 +40,6 @@ export default function App() {
   function startGame() {
     console.log("Starting game...");
     // Connect to socket
-    socket.connect();
     setShowGame(true);
   }
 

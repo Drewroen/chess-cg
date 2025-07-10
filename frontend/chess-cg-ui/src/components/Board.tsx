@@ -2,14 +2,15 @@ import { useState } from "react";
 import { ChessGame } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { PromotionSelector } from "./PromotionSelector";
-import { socket } from "../socket";
 
 export function Board({
   game,
   updatePossibleMoves,
+  socket,
 }: {
   game: ChessGame;
   updatePossibleMoves: (moves: Array<[number, number]>) => void;
+  socket: WebSocket | null;
 }) {
   const [activeSquare, setActiveSquare] = useState<[number, number] | null>(
     null
@@ -19,16 +20,18 @@ export function Board({
     from: [number, number];
     to: [number, number];
   } | null>(null);
-  const playerColor = game.players?.white === socket.id ? "white" : "black";
+  const playerColor = game.players?.white === game.id ? "white" : "black";
   const [possibleMoves, setPossibleMoves] = useState<number[][]>([]);
 
   function handlePromotion(pieceType: string) {
     if (promotionMove) {
-      socket.emit("movePiece", {
-        from: promotionMove.from,
-        to: promotionMove.to,
-        promotion: pieceType,
-      });
+      socket?.send(
+        JSON.stringify({
+          from: promotionMove.from,
+          to: promotionMove.to,
+          promotion: pieceType,
+        })
+      );
       setPromotionMove(null);
       setShowPromotion(false);
       setActiveSquare(null);
@@ -49,10 +52,12 @@ export function Board({
           setPromotionMove({ from: activeSquare!, to: coords });
           setShowPromotion(true);
         } else {
-          socket.emit("movePiece", {
-            from: activeSquare,
-            to: coords,
-          });
+          socket?.send(
+            JSON.stringify({
+              from: activeSquare,
+              to: coords,
+            })
+          );
           setActiveSquare(null);
           setPossibleMoves([]);
         }

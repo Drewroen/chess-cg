@@ -153,7 +153,7 @@ room_service = RoomService()
 async def websocket_endpoint(websocket: WebSocket):
     id = await manager.connect(websocket)
     room_id = room_service.add(id)
-    await emit_game_state(room_id, websocket)
+    await emit_game_state(room_id, websocket, id)
     try:
         while True:
             data = await websocket.receive_json()
@@ -164,16 +164,21 @@ async def websocket_endpoint(websocket: WebSocket):
             room = room_service.get_player_room(id)
 
             room.game.move(start, end, promote_to)
-            await emit_game_state(room.id, websocket)
+            for id in [room.white, room.black]:
+                if id:
+                    connection = manager.active_connections.get(id)
+                    if connection:
+                        await emit_game_state(room.id, connection, id)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         await manager.broadcast("Client left the chat")
 
 
-async def emit_game_state(room_id, websocket: WebSocket):
+async def emit_game_state(room_id, websocket: WebSocket, id: int):
     """Emit the current game state to all players in the room."""
     room = room_service.get_room(room_id)
     state = {
+        "id": id,
         "squares": room.game.board.get_squares(),
         "turn": room.game.turn,
         "players": {

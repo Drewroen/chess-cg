@@ -24,11 +24,12 @@ export class ChessGame {
   status: string = "";
   time: RemainingTime = new RemainingTime();
   moves: ChessMoves = new ChessMoves();
+  id: number = -1;
 }
 
 export class ChessPlayers {
-  white: string = "";
-  black: string = "";
+  white: number = -1;
+  black: number = -1;
 }
 
 export class KingsInCheck {
@@ -54,4 +55,5 @@ export class BoardEvent {
   status: string = "";
   time: RemainingTime = { white: 0, black: 0 };
   moves: ChessMoves = new ChessMoves();
+  id: number = 0;
 }
