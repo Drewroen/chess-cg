@@ -134,11 +134,29 @@ class ConnectionManager:
             del self.active_connections[connection_id]
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
-        await websocket.send_json(message)
+        try:
+            await websocket.send_json(message)
+        except Exception as e:
+            print(f"Failed to send personal message: {e}")
 
     async def broadcast(self, message: str):
-        for connection in self.active_connections.values():
-            await connection.send_text(message)
+        disconnected_connections = []
+        for connection_id, connection in self.active_connections.items():
+            try:
+                await connection.send_text(message)
+            except Exception as e:
+                print(
+                    f"Failed to send broadcast message to connection {connection_id}: {e}"
+                )
+                disconnected_connections.append(connection_id)
+
+        # Remove disconnected connections
+        for connection_id in disconnected_connections:
+            self.disconnect(connection_id)
+
+    def is_connection_active(self, connection_id: int) -> bool:
+        """Check if a connection is still active"""
+        return connection_id in self.active_connections
 
     def get_active_connections(self):
         return [
@@ -166,45 +184,60 @@ async def websocket_endpoint(websocket: WebSocket):
             room = room_service.get_player_room(id)
 
             room.game.move(start, end, promote_to)
-            for id in [room.white, room.black]:
-                if id:
-                    connection = manager.active_connections.get(id)
+            # Only send game state to active connections
+            for player_id in [room.white, room.black]:
+                if player_id and manager.is_connection_active(player_id):
+                    connection = manager.active_connections.get(player_id)
                     if connection:
-                        await emit_game_state(room.id, connection, id)
+                        await emit_game_state(room.id, connection, player_id)
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        await manager.broadcast(f"{id} has disconnected")
+        print(f"WebSocket disconnected for player {id}")
+        manager.disconnect(id)
+        room = room_service.get_player_room(id)
+        if room:
+            room.leave(id)
+    except Exception as e:
+        print(f"WebSocket error for player {id}: {e}")
+        manager.disconnect(id)
+        room = room_service.get_player_room(id)
+        if room:
+            room.leave(id)
 
 
 async def emit_game_state(room_id, websocket: WebSocket, id: int):
     """Emit the current game state to all players in the room."""
-    room = room_service.get_room(room_id)
-    state = {
-        "id": id,
-        "squares": room.game.board.get_squares(),
-        "turn": room.game.turn,
-        "players": {
-            "white": room.white,
-            "black": room.black,
-        },
-        "kings_in_check": room.game.board.kings_in_check(),
-        "status": room.game.status.value,
-        "time": {
-            "white": room.game.white_time_left,
-            "black": room.game.black_time_left,
-        },
-        "moves": {
-            "white": [
-                (x.position_from.coordinates(), x.position_to.coordinates())
-                for x in room.game.board.get_available_moves_for_color("white")
-            ],
-            "black": [
-                (x.position_from.coordinates(), x.position_to.coordinates())
-                for x in room.game.board.get_available_moves_for_color("black")
-            ],
-        },
-    }
-    await websocket.send_json(state)
+    try:
+        room = room_service.get_room(room_id)
+        state = {
+            "id": id,
+            "squares": room.game.board.get_squares(),
+            "turn": room.game.turn,
+            "players": {
+                "white": room.white,
+                "black": room.black,
+            },
+            "kings_in_check": room.game.board.kings_in_check(),
+            "status": room.game.status.value,
+            "time": {
+                "white": room.game.white_time_left,
+                "black": room.game.black_time_left,
+            },
+            "moves": {
+                "white": [
+                    (x.position_from.coordinates(), x.position_to.coordinates())
+                    for x in room.game.board.get_available_moves_for_color("white")
+                ],
+                "black": [
+                    (x.position_from.coordinates(), x.position_to.coordinates())
+                    for x in room.game.board.get_available_moves_for_color("black")
+                ],
+            },
+        }
+        await websocket.send_json(state)
+    except Exception as e:
+        print(f"Failed to emit game state to player {id}: {e}")
+        # Remove the connection if it's no longer valid
+        manager.disconnect(id)
 
 
 @app.get("/debug/rooms")

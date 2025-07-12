@@ -17,6 +17,7 @@ class Game:
         self.white_time_left = 300.0
         self.black_time_left = 300.0
         self.last_move_time = time.time()
+        self.winner = None
 
     def move(self, start, end, promote_to=None):
         if self.status == GameStatus.COMPLETE:
@@ -45,3 +46,12 @@ class Game:
 
             if not self.board.can_player_move(self.turn):
                 self.status = GameStatus.COMPLETE
+                if self.board.is_king_in_check(self.turn):
+                    self.winner = "black" if self.turn == "white" else "white"
+                else:
+                    self.winner = "draw"
+
+    def mark_player_forfeit(self, color):
+        if self.status != GameStatus.COMPLETE:
+            self.status = GameStatus.COMPLETE
+            self.winner = "black" if color == "white" else "white"

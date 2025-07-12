@@ -87,6 +87,15 @@ class Board:
                 in_check[color] = True
         return in_check
 
+    def is_king_in_check(self, color: str) -> bool:
+        """
+        Check if the king of the given color is in check.
+        """
+        king_pos = self._find_king_position(color)
+        if not king_pos:
+            return False
+        return self._is_square_attacked(king_pos, color)
+
     def move(
         self,
         position_from: Position,

@@ -5,9 +5,9 @@ from app.obj.game import Game
 class Room:
     def __init__(self):
         self.id = uuid4()
-        self.white = None
-        self.black = None
-        self.game = Game()
+        self.white: int = None
+        self.black: int = None
+        self.game: Game = Game()
 
     def open(self):
         return self.white is None or self.black is None
@@ -21,11 +21,29 @@ class Room:
             return False
         return True
 
+    def leave(self, player: int) -> bool:
+        if self.white == player:
+            self.white = None
+            return True
+        elif self.black == player:
+            self.black = None
+            return True
+        return False
+
+    def player_color(self, player: int) -> bool:
+        return (
+            "white"
+            if self.white == player
+            else "black"
+            if self.black == player
+            else None
+        )
+
 
 class RoomService:
     def __init__(self):
-        self.rooms = {}
-        self.id_to_room_map = {}
+        self.rooms: dict[int, Room] = {}
+        self.id_to_room_map: dict[int, Room] = {}
 
     def add(self, websocket_id: int) -> UUID:
         for room in self.rooms.values():
@@ -40,8 +58,19 @@ class RoomService:
         return new_room.id
 
     def get_player_room(self, player_id: int) -> Room:
-        room = self.id_to_room_map.get(player_id)
-        return room
+        return self.id_to_room_map.get(player_id)
 
     def get_room(self, room_id: str) -> Room:
         return self.rooms.get(room_id)
+
+    def disconnect(self, player_id: int):
+        room: Room = self.id_to_room_map.get(player_id)
+        if room:
+            room.leave(player_id)
+            if room.game.status != "complete":
+                color = room.player_color(player_id)
+                if color:
+                    room.game.mark_player_forfeit(color)
+            if room.white is None and room.black is None:
+                del self.rooms[room.id]
+            del self.id_to_room_map[player_id]
