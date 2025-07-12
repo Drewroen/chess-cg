@@ -1,2 +1,2 @@
-run:
-	uv run watchmedo auto-restart --patterns='*.py' --recursive -- python -m app.main
+run-new:
+	uv run fastapi run app/main.py --reload

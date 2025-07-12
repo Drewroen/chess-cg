@@ -1,5 +1,25 @@
-from uuid import UUID
-from app.obj.room import Room
+from uuid import UUID, uuid4
+from app.obj.game import Game
+
+
+class Room:
+    def __init__(self):
+        self.id = uuid4()
+        self.white = None
+        self.black = None
+        self.game = Game()
+
+    def open(self):
+        return self.white is None or self.black is None
+
+    def join(self, player: int) -> bool:
+        if self.white is None:
+            self.white = player
+        elif self.black is None:
+            self.black = player
+        else:
+            return False
+        return True
 
 
 class RoomService:
