@@ -36,10 +36,7 @@ export default function App() {
     };
   }, []);
 
-  // Function to handle starting a game
   function startGame() {
-    console.log("Starting game...");
-    // Connect to socket
     setShowGame(true);
   }
 

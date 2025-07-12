@@ -1,77 +1,99 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { BoardEvent, ChessGame } from "../obj/ChessGame";
 import { Board } from "./Board";
 import { Timer } from "./Timer";
 
-export function GameView() {
-  const [chessGame, setChessGame] = useState<ChessGame>(new ChessGame());
+type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
+
+const WEBSOCKET_URL = "ws://127.0.0.1:8000/ws";
+
+// Custom hook for WebSocket connection
+function useWebSocket(onMessage: (data: BoardEvent) => void) {
   const [connectionStatus, setConnectionStatus] =
-    useState<string>("Connecting...");
-  const playerColor =
-    chessGame.players?.white === chessGame.id ? "white" : "black";
+    useState<ConnectionStatus>("connecting");
+  const socketRef = useRef<WebSocket | null>(null);
 
-  function updatePossibleMoves(moves: Array<[number, number]>) {
-    setChessGame((prevGame) => ({ ...prevGame, possibleMoves: moves }));
-  }
+  const connect = useCallback(() => {
+    if (socketRef.current) return;
 
-  const connection = useRef(null as WebSocket | null);
-
-  useEffect(() => {
-    function onGame(data: BoardEvent) {
-      console.log("Processing game data:", data);
-      setChessGame((prevGame) => {
-        const newGame = {
-          ...prevGame,
-          board: { squares: data.squares },
-          turn: data.turn,
-          players: data.players,
-          kingsInCheck: data.kings_in_check,
-          status: data.status,
-          time: data.time,
-          moves: data.moves,
-          id: data.id,
-        };
-        console.log("Updated game state:", newGame);
-        return newGame;
-      });
-    }
-
-    if (connection.current) {
-      console.log("WebSocket already connected");
-      return;
-    }
-
-    const socket = new WebSocket("ws://127.0.0.1:8000/ws");
+    const socket = new WebSocket(WEBSOCKET_URL);
 
     socket.addEventListener("message", (event) => {
-      const data = JSON.parse(event.data);
-      console.log("Received WebSocket data:", data);
-      onGame(data);
+      try {
+        const data = JSON.parse(event.data);
+        console.log("Received WebSocket data:", data);
+        onMessage(data);
+      } catch (error) {
+        console.error("Failed to parse WebSocket message:", error);
+      }
     });
 
     socket.addEventListener("open", () => {
       console.log("WebSocket connected");
-      setConnectionStatus("Connected");
+      setConnectionStatus("connected");
     });
 
     socket.addEventListener("error", (error) => {
       console.error("WebSocket error:", error);
-      setConnectionStatus("Error");
+      setConnectionStatus("error");
     });
 
     socket.addEventListener("close", () => {
       console.log("WebSocket disconnected");
-      setConnectionStatus("Disconnected");
+      setConnectionStatus("disconnected");
     });
 
-    connection.current = socket;
+    socketRef.current = socket;
+  }, [onMessage]);
+
+  useEffect(() => {
+    connect();
 
     return () => {
-      if (connection.current?.readyState === WebSocket.OPEN) {
-        connection.current.close();
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.close();
       }
     };
-  }, []); // Remove chessGame dependency to prevent reconnection loop
+  }, [connect]);
+
+  return { socket: socketRef.current, connectionStatus };
+}
+
+export function GameView() {
+  const [chessGame, setChessGame] = useState<ChessGame>(new ChessGame());
+
+  const updateGameState = useCallback((data: BoardEvent) => {
+    setChessGame((prevGame) => ({
+      ...prevGame,
+      board: { squares: data.squares },
+      turn: data.turn,
+      players: data.players,
+      kingsInCheck: data.kings_in_check,
+      status: data.status,
+      time: data.time,
+      moves: data.moves,
+      id: data.id,
+    }));
+  }, []);
+
+  const { socket, connectionStatus } = useWebSocket(updateGameState);
+
+  const playerColor =
+    chessGame.players?.white === chessGame.id ? "white" : "black";
+
+  const updatePossibleMoves = useCallback((moves: Array<[number, number]>) => {
+    setChessGame((prevGame) => ({ ...prevGame, possibleMoves: moves }));
+  }, []);
+
+  const getStatusDisplay = (status: ConnectionStatus) => {
+    const statusMap = {
+      connecting: "Connecting...",
+      connected: "Connected",
+      disconnected: "Disconnected",
+      error: "Error",
+    };
+    return statusMap[status];
+  };
 
   return (
     <div
@@ -95,14 +117,14 @@ export function GameView() {
           borderRadius: "5px",
         }}
       >
-        Status: {connectionStatus}
+        Status: {getStatusDisplay(connectionStatus)}
       </div>
-      {connection.current && (
+      {socket && (
         <Board
           game={chessGame}
           updatePossibleMoves={updatePossibleMoves}
           key="board"
-          socket={connection.current}
+          socket={socket}
         />
       )}
       <div

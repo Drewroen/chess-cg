@@ -6,8 +6,8 @@ Script to read and parse PGN files step by step
 import os
 import re
 from typing import Dict, Generator
-import obj.game
-from obj.objects import Position, position_from_notation
+from app.obj.objects import Position, position_from_notation
+from app.obj.game import Game, GameStatus
 import pytest
 
 
@@ -255,7 +255,7 @@ def extract_pgn_move(move: str, color: str) -> Dict[str, str]:
 @pytest.fixture(scope="module")
 def pgn_games():
     # Path to the PGN file
-    pgn_file = "tests/pgn/lichess_db_standard_rated_2013-01.pgn"
+    pgn_file = "pgn/lichess_db_standard_rated_2013-01.pgn"
 
     # Create PGN reader just once
     reader = PGNReader(pgn_file)
@@ -266,6 +266,39 @@ def pgn_games():
     return games_list
 
 
+def test_bishop_moves_correctly_flake():
+    game = Game()
+    moves = [
+        ("e2", "e4"),
+        ("c7", "c6"),
+        ("d2", "d4"),
+        ("d7", "d5"),
+        ("g1", "f3"),
+        ("c8", "g4"),
+        ("f1", "e2"),
+        ("g4", "h5"),
+        ("g2", "g4"),
+    ]
+    for move in moves:
+        game.move(position_from_notation(move[0]), position_from_notation(move[1]))
+
+    moves = {
+        "moves": {
+            "white": [
+                (x.position_from.coordinates(), x.position_to.coordinates())
+                for x in game.board.get_available_moves_for_color("white")
+            ],
+            "black": [
+                (x.position_from.coordinates(), x.position_to.coordinates())
+                for x in game.board.get_available_moves_for_color("black")
+            ],
+        },
+    }
+
+    assert ((3, 7), (4, 6)) in moves["moves"]["black"]
+    assert ((3, 7), (2, 6)) in moves["moves"]["black"]
+
+
 @pytest.mark.parametrize("board", range(1, 10001))
 def test_read_pgn(pgn_games, board):
     # Get a specific game based on the 'board' parameter (with index bounds checking)
@@ -273,7 +306,7 @@ def test_read_pgn(pgn_games, board):
     pgn_game = pgn_games[index]
 
     pgn_moves = pgn_game.get("moves", "")
-    chess_game = obj.game.Game()
+    chess_game = Game()
 
     for move in pgn_moves.split():
         turn = chess_game.turn
@@ -305,14 +338,14 @@ def test_read_pgn(pgn_games, board):
                             break
                     assert found, f"{piece.color} {piece.type} at {Position(row=row, col=col).notation()} not found in pieces list"
         if extracted_pgn["is_checkmate"]:
-            assert chess_game.status == obj.game.GameStatus.COMPLETE
+            assert chess_game.status == GameStatus.COMPLETE
 
     # Add assertions as needed
     assert True
 
 
 def find_position_that_can_move_to_position(
-    game: obj.game.Game, extracted_pgn: Dict[str, str]
+    game: Game, extracted_pgn: Dict[str, str]
 ) -> Position:
     """
     Find the initial position of the piece that can move to the target position.

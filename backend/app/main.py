@@ -1,9 +1,11 @@
+from uuid import UUID
 from app.obj.objects import Position
 from app.svc.room import RoomService
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
+
 import uvicorn
 from typing import Optional
 
@@ -171,7 +173,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         await emit_game_state(room.id, connection, id)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        await manager.broadcast("Client left the chat")
+        await manager.broadcast(f"{id} has disconnected")
 
 
 async def emit_game_state(room_id, websocket: WebSocket, id: int):
@@ -205,47 +207,43 @@ async def emit_game_state(room_id, websocket: WebSocket, id: int):
     await websocket.send_json(state)
 
 
-html = """
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Chat</title>
-    </head>
-    <body>
-        <h1>WebSocket Chat</h1>
-        <h2>Your ID: <span id="ws-id"></span></h2>
-        <form action="" onsubmit="sendMessage(event)">
-            <input type="text" id="messageText" autocomplete="off"/>
-            <button>Send</button>
-        </form>
-        <ul id='messages'>
-        </ul>
-        <script>
-            var client_id = Date.now()
-            document.querySelector("#ws-id").textContent = client_id;
-            var ws = new WebSocket(`ws://localhost:8000/ws`);
-            ws.onmessage = function(event) {
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode(event.data)
-                message.appendChild(content)
-                messages.appendChild(message)
-            };
-            function sendMessage(event) {
-                var input = document.getElementById("messageText")
-                ws.send(input.value)
-                input.value = ''
-                event.preventDefault()
+@app.get("/debug/rooms")
+async def get_room():
+    room_map = room_service.id_to_room_map
+    return JSONResponse(
+        content=[
+            {
+                "room_id": room_id,
+                "details": {
+                    "white": {"id": room.white},
+                    "black": {"id": room.black} if room.black else None,
+                    "id": str(room.id),
+                },
             }
-        </script>
-    </body>
-</html>
-"""
+            for room_id, room in room_map.items()
+        ],
+        status_code=200,
+    )
 
 
-@app.get("/abc")
-async def get():
-    return HTMLResponse(html)
+@app.get("/debug/rooms/{room_id}")
+async def get_room_by_id(room_id: UUID):
+    print(room_service.rooms)
+    room = room_service.get_room(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return {
+        "moves": {
+            "white": [
+                (x.position_from.coordinates(), x.position_to.coordinates())
+                for x in room.game.board.get_available_moves_for_color("white")
+            ],
+            "black": [
+                (x.position_from.coordinates(), x.position_to.coordinates())
+                for x in room.game.board.get_available_moves_for_color("black")
+            ],
+        },
+    }
 
 
 if __name__ == "__main__":

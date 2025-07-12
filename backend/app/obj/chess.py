@@ -165,17 +165,15 @@ class Board:
         """
         Get all available moves for all pieces of the given color
         """
-        return sum(
-            (
-                self.get_available_moves(piece.position, ignore_check)
-                for piece in self.pieces
-                if piece.color == color
-            ),
-            [],
-        )
+        moves = []
+        for piece in self.pieces:
+            if piece.color == color:
+                available_moves = self.get_available_moves(piece.position, ignore_check)
+                moves.extend(available_moves)
+        return moves
 
     def get_available_moves(
-        self, position: Position, ignore_check: bool = False
+        self, position: Position, ignore_check: bool = False, recursive: bool = False
     ) -> list[ChessMove]:
         """
         Get the available moves for a piece in the given position
@@ -232,13 +230,7 @@ class Board:
         temp_piece = self.squares[target_pos[0]][target_pos[1]]
 
         # Track pieces list changes
-        pieces_modified = False
         transform_piece = None
-
-        # Remove captured piece from pieces list if any
-        if captured_piece:
-            self.pieces.remove(captured_piece)
-            pieces_modified = True
 
         # Apply the move temporarily
         self.squares[initial_pos[0]][initial_pos[1]] = None
@@ -247,10 +239,7 @@ class Board:
         # Handle transformation (promotion)
         if move.transform_to:
             transform_piece = move.transform_to
-            self.pieces.remove(original_piece)
-            self.pieces.append(transform_piece)
             self.squares[target_pos[0]][target_pos[1]] = transform_piece
-            pieces_modified = True
         else:
             self.squares[target_pos[0]][target_pos[1]] = original_piece
             original_piece.position = Position(target_pos[0], target_pos[1])
@@ -287,14 +276,6 @@ class Board:
 
         original_piece.position = Position(initial_pos[0], initial_pos[1])
 
-        # Restore pieces list
-        if pieces_modified:
-            if transform_piece:
-                self.pieces.remove(transform_piece)
-                self.pieces.append(original_piece)
-            if captured_piece:
-                self.pieces.append(captured_piece)
-
         # Restore additional move if it was made
         if additional_state:
             additional_from, additional_to, additional_piece, additional_temp = (
@@ -314,7 +295,9 @@ class Board:
             for c in range(8):
                 piece = self.squares[r][c]
                 if piece and piece.color != color:
-                    moves = self.get_available_moves(Position(r, c), ignore_check=True)
+                    moves = self.get_available_moves(
+                        Position(r, c), ignore_check=True, recursive=True
+                    )
                     for move in moves:
                         if move.position_to.coordinates() == (row, col):
                             return True
