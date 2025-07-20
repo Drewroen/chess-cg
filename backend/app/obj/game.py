@@ -31,15 +31,16 @@ class Game:
             else:
                 self.black_time_left = round(self.black_time_left - elapsed, 2)
 
-        if self.status == GameStatus.NOT_STARTED and self.turn == "black":
-            self.status = GameStatus.IN_PROGRESS
-
         moved = self.board.move(start, end, self.turn, promote_to)
         if moved:
-            if self.turn == "white":
-                self.white_time_left += 3
-            else:
-                self.black_time_left += 3
+            if self.status == GameStatus.IN_PROGRESS:
+                if self.turn == "white":
+                    self.white_time_left += 3
+                else:
+                    self.black_time_left += 3
+
+            if self.status == GameStatus.NOT_STARTED and self.turn == "black":
+                self.status = GameStatus.IN_PROGRESS
 
             self.turn = "black" if self.turn == "white" else "white"
             self.last_move_time = time.time()
