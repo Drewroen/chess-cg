@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { BoardEvent, ChessGame } from "../obj/ChessGame";
 import { Board } from "./Board";
 import { Timer } from "./Timer";
+import { authService } from "../services/auth";
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
@@ -16,7 +17,13 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
   const connect = useCallback(() => {
     if (socketRef.current) return;
 
-    const socket = new WebSocket(WEBSOCKET_URL);
+    // Get auth token from cookie
+    const token = authService.getToken();
+    const wsUrl = token
+      ? `${WEBSOCKET_URL}?token=${encodeURIComponent(token)}`
+      : WEBSOCKET_URL;
+
+    const socket = new WebSocket(wsUrl);
 
     socket.addEventListener("message", (event) => {
       try {

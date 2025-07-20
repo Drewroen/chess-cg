@@ -171,6 +171,7 @@ room_service = RoomService()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    print("Token: " + websocket.query_params.get("token"))
     id = await manager.connect(websocket)
     room_id = room_service.add(id)
     await emit_game_state_to_room(room_id)
