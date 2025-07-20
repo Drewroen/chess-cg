@@ -66,11 +66,10 @@ class RoomService:
     def disconnect(self, player_id: int):
         room: Room = self.id_to_room_map.get(player_id)
         if room:
+            color = room.player_color(player_id)
             room.leave(player_id)
             if room.game.status != "complete":
-                color = room.player_color(player_id)
-                if color:
-                    room.game.mark_player_forfeit(color)
+                room.game.mark_player_forfeit(color)
             if room.white is None and room.black is None:
                 del self.rooms[room.id]
             del self.id_to_room_map[player_id]

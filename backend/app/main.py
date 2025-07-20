@@ -173,7 +173,7 @@ room_service = RoomService()
 async def websocket_endpoint(websocket: WebSocket):
     id = await manager.connect(websocket)
     room_id = room_service.add(id)
-    await emit_game_state(room_id, websocket, id)
+    await emit_game_state_to_room(room_id)
     try:
         while True:
             data = await websocket.receive_json()
@@ -189,27 +189,24 @@ async def websocket_endpoint(websocket: WebSocket):
                 if player_id and manager.is_connection_active(player_id):
                     connection = manager.active_connections.get(player_id)
                     if connection:
-                        await emit_game_state(room.id, connection, player_id)
+                        await emit_game_state_to_room(room.id)
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for player {id}")
         manager.disconnect(id)
-        room = room_service.get_player_room(id)
-        if room:
-            room.leave(id)
+        room_service.disconnect(id)
+        await emit_game_state_to_room(room_id)
     except Exception as e:
         print(f"WebSocket error for player {id}: {e}")
         manager.disconnect(id)
-        room = room_service.get_player_room(id)
-        if room:
-            room.leave(id)
+        room_service.disconnect(id)
+        await emit_game_state_to_room(room_id)
 
 
-async def emit_game_state(room_id, websocket: WebSocket, id: int):
+async def emit_game_state_to_room(room_id):
     """Emit the current game state to all players in the room."""
-    try:
-        room = room_service.get_room(room_id)
+    room = room_service.get_room(room_id)
+    if room:
         state = {
-            "id": id,
             "squares": room.game.board.get_squares(),
             "turn": room.game.turn,
             "players": {
@@ -233,11 +230,12 @@ async def emit_game_state(room_id, websocket: WebSocket, id: int):
                 ],
             },
         }
-        await websocket.send_json(state)
-    except Exception as e:
-        print(f"Failed to emit game state to player {id}: {e}")
-        # Remove the connection if it's no longer valid
-        manager.disconnect(id)
+        for player_id in [room.white, room.black]:
+            state["id"] = player_id
+            if player_id and manager.is_connection_active(player_id):
+                connection = manager.active_connections.get(player_id)
+                if connection:
+                    await connection.send_json(state)
 
 
 @app.get("/debug/rooms")
