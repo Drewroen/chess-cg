@@ -23,7 +23,7 @@ export function AuthSuccess() {
           return;
         }
 
-        console.log("Token received, storing...");
+        console.debug("Token received, storing...");
 
         // Store token using auth service
         authService.setToken(token);

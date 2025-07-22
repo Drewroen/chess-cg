@@ -29,7 +29,7 @@ export function AuthCallback() {
           return;
         }
 
-        console.log("Authorization code received, exchanging for token...");
+        console.debug("Authorization code received, exchanging for token...");
 
         // Send the authorization code to the backend
         const backendUrl =

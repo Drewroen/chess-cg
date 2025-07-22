@@ -16,6 +16,7 @@ from .auth import (
     create_jwt_token,
     get_google_auth_url,
     FRONTEND_URL,
+    verify_jwt_token,
 )
 from .models import UserResponse
 
@@ -103,7 +104,6 @@ async def auth_callback(
 @app.get("/auth/me", response_model=UserResponse)
 async def get_current_user(token: str = Query(..., description="JWT token")):
     """Get current user information from JWT token"""
-    from .auth import verify_jwt_token
 
     payload = verify_jwt_token(token)
     if not payload:
@@ -117,42 +117,29 @@ async def get_current_user(token: str = Query(..., description="JWT token")):
     )
 
 
+class WebSocketConnection:
+    def __init__(self, websocket: WebSocket, jwt: str):
+        self.websocket = websocket
+        self.jwt = jwt
+        payload = verify_jwt_token(jwt)
+        self.name = payload.get("name", "Guest") if payload else "Guest"
+
+
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: dict[int, WebSocket] = {}
+        self.active_connections: dict[int, WebSocketConnection] = {}
         self.next_id = 1
 
-    async def connect(self, websocket: WebSocket) -> int:
+    async def connect(self, websocket: WebSocket, jwt: str = None) -> int:
         await websocket.accept()
         connection_id = self.next_id
-        self.active_connections[connection_id] = websocket
+        self.active_connections[connection_id] = WebSocketConnection(websocket, jwt)
         self.next_id += 1
         return connection_id
 
     def disconnect(self, connection_id: int):
         if connection_id in self.active_connections:
             del self.active_connections[connection_id]
-
-    async def send_personal_message(self, message: str, websocket: WebSocket):
-        try:
-            await websocket.send_json(message)
-        except Exception as e:
-            print(f"Failed to send personal message: {e}")
-
-    async def broadcast(self, message: str):
-        disconnected_connections = []
-        for connection_id, connection in self.active_connections.items():
-            try:
-                await connection.send_text(message)
-            except Exception as e:
-                print(
-                    f"Failed to send broadcast message to connection {connection_id}: {e}"
-                )
-                disconnected_connections.append(connection_id)
-
-        # Remove disconnected connections
-        for connection_id in disconnected_connections:
-            self.disconnect(connection_id)
 
     def is_connection_active(self, connection_id: int) -> bool:
         """Check if a connection is still active"""
@@ -171,10 +158,10 @@ room_service = RoomService()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    print("Token: " + websocket.query_params.get("token"))
-    id = await manager.connect(websocket)
+    id = await manager.connect(websocket, websocket.query_params.get("token", None))
     room_id = room_service.add(id)
-    await emit_game_state_to_room(room_id)
+    if room_service.is_room_full(room_id):
+        await emit_game_state_to_room(room_id)
     try:
         while True:
             data = await websocket.receive_json()
@@ -211,8 +198,20 @@ async def emit_game_state_to_room(room_id):
             "squares": room.game.board.get_squares(),
             "turn": room.game.turn,
             "players": {
-                "white": room.white,
-                "black": room.black,
+                "white": {
+                    "id": room.white,
+                    "name": manager.active_connections.get(room.white).name
+                    if room.white in manager.active_connections
+                    else "Disconnected",
+                    "connected": manager.is_connection_active(room.white),
+                },
+                "black": {
+                    "id": room.black,
+                    "name": manager.active_connections.get(room.black).name
+                    if room.black in manager.active_connections
+                    else "Disconnected",
+                    "connected": manager.is_connection_active(room.black),
+                },
             },
             "kings_in_check": room.game.board.kings_in_check(),
             "status": room.game.status.value,
@@ -236,7 +235,7 @@ async def emit_game_state_to_room(room_id):
             if player_id and manager.is_connection_active(player_id):
                 connection = manager.active_connections.get(player_id)
                 if connection:
-                    await connection.send_json(state)
+                    await connection.websocket.send_json(state)
 
 
 @app.get("/debug/rooms")

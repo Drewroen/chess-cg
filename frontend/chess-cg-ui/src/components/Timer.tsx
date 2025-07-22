@@ -41,18 +41,32 @@ export const Timer: React.FC<TimerProps> = ({ initialTime, isActive }) => {
   return (
     <div
       style={{
-        width: 250,
-        border: "1px solid #ccc",
+        width: 200,
+        height: 48,
+        border: "1px solid #e5e7eb",
         borderRadius: 4,
-        padding: 8,
-        fontFamily: "sans-serif",
-        boxSizing: "border-box",
-        textAlign: "center",
-        fontSize: 40,
-        fontWeight: "100",
+        fontSize: 36,
+        fontWeight: 200,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+        color: "#374151",
       }}
     >
-      <div>{formatTime(timeRemaining)}</div>
+      <div
+        style={{
+          lineHeight: 1,
+          margin: 0,
+          padding: 0,
+          color: "white",
+          fontWeight: 100,
+          fontFamily: "sans-serif",
+        }}
+      >
+        {formatTime(timeRemaining)}
+      </div>
     </div>
   );
 };

@@ -63,6 +63,12 @@ class RoomService:
     def get_room(self, room_id: str) -> Room:
         return self.rooms.get(room_id)
 
+    def is_room_full(self, room_id: str) -> bool:
+        room = self.rooms.get(room_id)
+        if room:
+            return room.white is not None and room.black is not None
+        return False
+
     def disconnect(self, player_id: int):
         room: Room = self.id_to_room_map.get(player_id)
         if room:

@@ -20,7 +20,7 @@ export function Board({
     from: [number, number];
     to: [number, number];
   } | null>(null);
-  const playerColor = game.players?.white === game.id ? "white" : "black";
+  const playerColor = game.players?.white.id === game.id ? "white" : "black";
   const [possibleMoves, setPossibleMoves] = useState<number[][]>([]);
 
   function handlePromotion(pieceType: string) {

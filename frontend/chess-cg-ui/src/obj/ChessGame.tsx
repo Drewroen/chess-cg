@@ -26,10 +26,17 @@ export class ChessGame {
   moves: ChessMoves = new ChessMoves();
   id: number = -1;
 }
-
 export class ChessPlayers {
-  white: number = -1;
-  black: number = -1;
+  white: { id: number; name: string; connected: boolean } = {
+    id: -1,
+    name: "Disconnected",
+    connected: false,
+  };
+  black: { id: number; name: string; connected: boolean } = {
+    id: -1,
+    name: "Disconnected",
+    connected: false,
+  };
 }
 
 export class KingsInCheck {

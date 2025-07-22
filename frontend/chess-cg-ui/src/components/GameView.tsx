@@ -2,16 +2,21 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { BoardEvent, ChessGame } from "../obj/ChessGame";
 import { Board } from "./Board";
 import { Timer } from "./Timer";
+import { ConnectionStatus } from "./ConnectionStatus";
 import { authService } from "../services/auth";
 
-type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
+type ConnectionStatusType =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
 
 const WEBSOCKET_URL = "ws://127.0.0.1:8000/ws";
 
 // Custom hook for WebSocket connection
 function useWebSocket(onMessage: (data: BoardEvent) => void) {
   const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>("connecting");
+    useState<ConnectionStatusType>("connecting");
   const socketRef = useRef<WebSocket | null>(null);
 
   const connect = useCallback(() => {
@@ -36,7 +41,7 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
     });
 
     socket.addEventListener("open", () => {
-      console.log("WebSocket connected");
+      console.debug("WebSocket connected");
       setConnectionStatus("connected");
     });
 
@@ -46,7 +51,7 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
     });
 
     socket.addEventListener("close", () => {
-      console.log("WebSocket disconnected");
+      console.debug("WebSocket disconnected");
       setConnectionStatus("disconnected");
     });
 
@@ -86,13 +91,13 @@ export function GameView() {
   const { socket, connectionStatus } = useWebSocket(updateGameState);
 
   const playerColor =
-    chessGame.players?.white === chessGame.id ? "white" : "black";
+    chessGame.players?.white.id === chessGame.id ? "white" : "black";
 
   const updatePossibleMoves = useCallback((moves: Array<[number, number]>) => {
     setChessGame((prevGame) => ({ ...prevGame, possibleMoves: moves }));
   }, []);
 
-  const getStatusDisplay = (status: ConnectionStatus) => {
+  const getStatusDisplay = (status: ConnectionStatusType) => {
     const statusMap = {
       connecting: "Connecting...",
       connected: "Connected",
@@ -126,43 +131,60 @@ export function GameView() {
       >
         Status: {getStatusDisplay(connectionStatus)}
       </div>
-      {socket && (
-        <Board
-          game={chessGame}
-          updatePossibleMoves={updatePossibleMoves}
-          key="board"
-          socket={socket}
-        />
+      {chessGame.board?.squares ? (
+        <>
+          {socket && (
+            <Board
+              game={chessGame}
+              updatePossibleMoves={updatePossibleMoves}
+              key="board"
+              socket={socket}
+            />
+          )}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "6px",
+              justifyContent: "center",
+            }}
+          >
+            <ConnectionStatus
+              connected={chessGame.players?.white?.connected || false}
+              username={chessGame.players?.white?.name}
+            />
+            <Timer
+              initialTime={
+                playerColor === "white"
+                  ? chessGame.time?.black || 0
+                  : chessGame.time?.white || 0
+              }
+              isActive={
+                chessGame.turn !== playerColor &&
+                chessGame.status === "in progress"
+              }
+            />
+            <div style={{ height: 20 }}></div>
+            <Timer
+              initialTime={
+                playerColor === "white"
+                  ? chessGame.time?.white || 0
+                  : chessGame.time?.black || 0
+              }
+              isActive={
+                chessGame.turn === playerColor &&
+                chessGame.status === "in progress"
+              }
+            />
+            <ConnectionStatus
+              connected={chessGame.players?.black?.connected || false}
+              username={chessGame.players?.black?.name}
+            />
+          </div>
+        </>
+      ) : (
+        <div>Loading...</div>
       )}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          justifyContent: "center",
-        }}
-      >
-        <Timer
-          initialTime={
-            playerColor === "white"
-              ? chessGame.time?.black || 0
-              : chessGame.time?.white || 0
-          }
-          isActive={
-            chessGame.turn !== playerColor && chessGame.status === "in progress"
-          }
-        />
-        <Timer
-          initialTime={
-            playerColor === "white"
-              ? chessGame.time?.white || 0
-              : chessGame.time?.black || 0
-          }
-          isActive={
-            chessGame.turn === playerColor && chessGame.status === "in progress"
-          }
-        />
-      </div>
     </div>
   );
 }
