@@ -20,17 +20,9 @@ export class AuthService {
     return AuthService.instance;
   }
 
-  // Cookie utility methods
-  private setCookie(name: string, value: string, days: number = 7): void {
-    const expires = new Date();
-    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Strict;Secure=${
-      window.location.protocol === "https:"
-    }`;
-  }
-
-  private getCookie(name: string): string | null {
-    const nameEQ = name + "=";
+  // Get stored JWT token
+  getToken(): string | null {
+    const nameEQ = "authToken=";
     const ca = document.cookie.split(";");
     for (let i = 0; i < ca.length; i++) {
       let c = ca[i];
@@ -40,23 +32,18 @@ export class AuthService {
     return null;
   }
 
-  private deleteCookie(name: string): void {
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
-  }
-
-  // Get stored JWT token
-  getToken(): string | null {
-    return this.getCookie("authToken");
-  }
-
   // Store JWT token
   setToken(token: string): void {
-    this.setCookie("authToken", token, 7);
+    const expires = new Date();
+    expires.setTime(expires.getTime() + 7 * 24 * 60 * 60 * 1000);
+    document.cookie = `authToken=${token};expires=${expires.toUTCString()};path=/;SameSite=Strict;Secure=${
+      window.location.protocol === "https:"
+    }`;
   }
 
   // Remove JWT token
   clearToken(): void {
-    this.deleteCookie("authToken");
+    document.cookie = `authToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
   }
 
   // Check if user is authenticated
