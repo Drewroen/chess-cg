@@ -22,28 +22,17 @@ export class AuthService {
 
   // Get stored JWT token
   getToken(): string | null {
-    const nameEQ = "authToken=";
-    const ca = document.cookie.split(";");
-    for (let i = 0; i < ca.length; i++) {
-      let c = ca[i];
-      while (c.charAt(0) === " ") c = c.substring(1, c.length);
-      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
+    return localStorage.getItem("authToken");
   }
 
   // Store JWT token
   setToken(token: string): void {
-    const expires = new Date();
-    expires.setTime(expires.getTime() + 7 * 24 * 60 * 60 * 1000);
-    document.cookie = `authToken=${token};expires=${expires.toUTCString()};path=/;SameSite=Strict;Secure=${
-      window.location.protocol === "https:"
-    }`;
+    localStorage.setItem("authToken", token);
   }
 
   // Remove JWT token
   clearToken(): void {
-    document.cookie = `authToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+    localStorage.removeItem("authToken");
   }
 
   // Check if user is authenticated
@@ -59,12 +48,51 @@ export class AuthService {
     }
 
     try {
-      const response = await fetch(
-        `${BACKEND_URL}/auth/me?token=${encodeURIComponent(token)}`
-      );
+      const response = await fetch(`${BACKEND_URL}/auth/me?token=${token}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
-        // Token might be expired or invalid
+        // Token might be expired or invalid, try refreshing the token
+        try {
+          const refreshResponse = await fetch(`${BACKEND_URL}/auth/refresh`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (refreshResponse.ok) {
+            const { access_token: newToken } = await refreshResponse.json();
+            this.setToken(newToken);
+
+            // Retry fetching the current user with the new token
+            const retryResponse = await fetch(
+              `${BACKEND_URL}/auth/me?token=${newToken}`,
+              {
+                method: "GET",
+                credentials: "include",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            if (retryResponse.ok) {
+              const user = await retryResponse.json();
+              return user;
+            }
+          }
+        } catch (refreshError) {
+          console.error("Error refreshing token:", refreshError);
+        }
+
+        // Clear token and return null if refresh fails
         this.clearToken();
         return null;
       }

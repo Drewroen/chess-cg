@@ -1,7 +1,14 @@
 from uuid import UUID
 from app.obj.objects import Position
 from app.svc.room import RoomService
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+    Request,
+)
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -13,12 +20,19 @@ from .auth import (
     GoogleOAuthError,
     exchange_code_for_token,
     get_user_info,
-    create_jwt_token,
+    create_tokens,
+    refresh_access_token,
+    revoke_refresh_token,
     get_google_auth_url,
     FRONTEND_URL,
     verify_jwt_token,
 )
-from .models import UserResponse
+from .models import (
+    UserResponse,
+    TokenResponse,
+    RefreshTokenRequest,
+    RefreshTokenResponse,
+)
 
 app = FastAPI(
     title="Chess CG API", description="A chess game backend API", version="1.0.0"
@@ -83,13 +97,26 @@ async def auth_callback(
         # Get user information from Google
         user_info = await get_user_info(token_data["access_token"])
 
-        # Create JWT token for our application
-        jwt_token = create_jwt_token(user_info)
+        # Create both access and refresh tokens for our application
+        access_token, refresh_token = create_tokens(user_info)
 
-        # Redirect to frontend with token
-        redirect_url = f"{FRONTEND_URL}/auth/success?token={jwt_token}"
+        # Redirect to frontend with access token in URL and refresh token as cookie
+        redirect_url = f"{FRONTEND_URL}/auth/success?access_token={access_token}"
 
-        return RedirectResponse(url=redirect_url, status_code=302)
+        response = RedirectResponse(url=redirect_url, status_code=302)
+
+        # Set refresh token as an HTTP-only secure cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,  # Prevents JavaScript access (XSS protection)
+            secure=True,  # Only send over HTTPS in production
+            samesite="lax",  # CSRF protection
+            max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+            path="/",  # Cookie available for entire domain
+        )
+
+        return response
 
     except GoogleOAuthError as e:
         error_msg = f"OAuth authentication failed: {str(e)}"
@@ -99,6 +126,45 @@ async def auth_callback(
         error_msg = f"Unexpected error during authentication: {str(e)}"
         redirect_url = f"{FRONTEND_URL}/auth/error?message={error_msg}"
         return RedirectResponse(url=redirect_url, status_code=302)
+
+
+@app.post("/auth/token", response_model=TokenResponse)
+async def get_token_from_code(
+    authorization_code: str,
+):
+    """Exchange authorization code for tokens (JSON response)"""
+
+    try:
+        # Exchange authorization code for access token
+        token_data = await exchange_code_for_token(authorization_code)
+
+        # Get user information from Google
+        user_info = await get_user_info(token_data["access_token"])
+
+        # Create both access and refresh tokens for our application
+        access_token, refresh_token = create_tokens(user_info)
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=3600,  # 1 hour in seconds
+            user=UserResponse(
+                id=user_info["id"],
+                email=user_info["email"],
+                name=user_info["name"],
+                picture=user_info.get("picture"),
+            ),
+        )
+
+    except GoogleOAuthError as e:
+        raise HTTPException(
+            status_code=400, detail=f"OAuth authentication failed: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected error during authentication: {str(e)}"
+        )
 
 
 @app.get("/auth/me", response_model=UserResponse)
@@ -117,11 +183,70 @@ async def get_current_user(token: str = Query(..., description="JWT token")):
     )
 
 
+@app.post("/auth/refresh", response_model=RefreshTokenResponse)
+async def refresh_token(request: Request, refresh_request: RefreshTokenRequest = None):
+    """Refresh access token using refresh token"""
+
+    # Try to get refresh token from cookie first, then from request body
+    refresh_token_value = None
+
+    if refresh_request and refresh_request.refresh_token:
+        refresh_token_value = refresh_request.refresh_token
+    else:
+        # Try to get from cookie
+        refresh_token_value = request.cookies.get("refresh_token")
+
+    if not refresh_token_value:
+        raise HTTPException(status_code=400, detail="Refresh token not provided")
+
+    new_access_token = refresh_access_token(refresh_token_value)
+    if not new_access_token:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    return RefreshTokenResponse(
+        access_token=new_access_token,
+        token_type="bearer",
+        expires_in=3600,  # 1 hour in seconds
+    )
+
+
+@app.post("/auth/logout")
+async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
+    """Logout user by revoking refresh token"""
+
+    # Try to get refresh token from request body first, then from cookie
+    refresh_token_value = None
+
+    if refresh_request and refresh_request.refresh_token:
+        refresh_token_value = refresh_request.refresh_token
+    else:
+        # Try to get from cookie
+        refresh_token_value = request.cookies.get("refresh_token")
+
+    if not refresh_token_value:
+        raise HTTPException(status_code=400, detail="Refresh token not provided")
+
+    revoked = revoke_refresh_token(refresh_token_value)
+    if not revoked:
+        raise HTTPException(status_code=400, detail="Refresh token not found")
+
+    response = JSONResponse(content={"message": "Successfully logged out"})
+
+    # Clear the refresh token cookie
+    response.delete_cookie(
+        key="refresh_token", path="/", httponly=True, secure=True, samesite="lax"
+    )
+
+    return response
+
+
 class WebSocketConnection:
     def __init__(self, websocket: WebSocket, jwt: str):
         self.websocket = websocket
         self.jwt = jwt
-        payload = verify_jwt_token(jwt)
+        payload = None
+        if jwt:
+            payload = verify_jwt_token(jwt)
         self.name = payload.get("name", "Guest") if payload else "Guest"
 
 
