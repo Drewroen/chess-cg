@@ -20,24 +20,6 @@ export class CookieAuthService {
     return CookieAuthService.instance;
   }
 
-  // Check if user is authenticated by making an API call
-  async isAuthenticated(): Promise<boolean> {
-    try {
-      const response = await fetch(`${BACKEND_URL}/auth/me`, {
-        method: "GET",
-        credentials: "include", // Include cookies in request
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error("Error checking authentication status:", error);
-      return false;
-    }
-  }
-
   // Get current user information from backend
   async getCurrentUser(): Promise<User | null> {
     try {

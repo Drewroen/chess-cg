@@ -4,7 +4,7 @@ import { GameView } from "./components/GameView";
 import { AuthCallback } from "./components/AuthCallback";
 import { AuthSuccess } from "./components/AuthSuccess";
 import { AuthError } from "./components/AuthError";
-import { authService, User } from "./services/auth";
+import { cookieAuthService, User } from "./services/cookieAuth";
 import "./App.css";
 
 export default function App() {
@@ -15,9 +15,9 @@ export default function App() {
   // Check authentication status on app load
   useEffect(() => {
     const checkAuth = async () => {
-      const isAuth = await authService.isAuthenticated();
+      const isAuth = (await cookieAuthService.getCurrentUser()) != null;
       if (isAuth) {
-        const currentUser = await authService.getCurrentUser();
+        const currentUser = await cookieAuthService.getCurrentUser();
         setUser(currentUser);
       }
       setIsCheckingAuth(false);
@@ -69,7 +69,7 @@ export default function App() {
   }
 
   async function handleLogout() {
-    await authService.logout();
+    await cookieAuthService.logout();
     setUser(null);
   }
 
