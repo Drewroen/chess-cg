@@ -255,7 +255,7 @@ def extract_pgn_move(move: str, color: str) -> Dict[str, str]:
 @pytest.fixture(scope="module")
 def pgn_games():
     # Path to the PGN file
-    pgn_file = "pgn/lichess_db_standard_rated_2013-01.pgn"
+    pgn_file = "tests/pgn/lichess_db_standard_rated_2013-01.pgn"
 
     # Create PGN reader just once
     reader = PGNReader(pgn_file)
