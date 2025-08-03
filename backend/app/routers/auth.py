@@ -198,6 +198,23 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
     return response
 
 
+@router.get("/ws-token")
+async def get_websocket_token(request: Request):
+    """Get access token for WebSocket connections"""
+
+    # Get access token from cookie
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Access token not found")
+
+    # Verify the token is valid
+    payload = verify_jwt_token(access_token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    return {"access_token": access_token}
+
+
 @router.post("/logout")
 async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
     """Logout user by revoking refresh token"""
@@ -211,12 +228,9 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
         # Try to get from cookie
         refresh_token_value = request.cookies.get("refresh_token")
 
-    if not refresh_token_value:
-        raise HTTPException(status_code=400, detail="Refresh token not provided")
-
-    revoked = revoke_refresh_token(refresh_token_value)
-    if not revoked:
-        raise HTTPException(status_code=400, detail="Refresh token not found")
+    # Try to revoke the refresh token if it exists, but don't fail if it doesn't
+    if refresh_token_value:
+        revoke_refresh_token(refresh_token_value)
 
     response = JSONResponse(content={"message": "Successfully logged out"})
 

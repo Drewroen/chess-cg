@@ -11,59 +11,69 @@ type ConnectionStatusType =
   | "error";
 
 const WEBSOCKET_URL = "ws://127.0.0.1:8000/ws";
+const BACKEND_URL =
+  process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
 // Custom hook for WebSocket connection
-function useWebSocket(onMessage: (data: BoardEvent) => void) {
+function useWebSocket(
+  onMessage: (data: BoardEvent) => void,
+  authToken: string | null
+) {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatusType>("connecting");
   const socketRef = useRef<WebSocket | null>(null);
 
-  const connect = useCallback(() => {
-    if (socketRef.current) return;
+  const connect = useCallback(
+    (authToken: string | null) => {
+      if (socketRef.current) return;
+      console.log(authToken);
+      if (authToken === null) return;
 
-    // Tokens are now in httpOnly cookies and handled by the browser automatically
-    // WebSocket connections will include cookies automatically when using credentials
-    const wsUrl = WEBSOCKET_URL;
+      // Tokens are now in httpOnly cookies and handled by the browser automatically
+      // WebSocket connections will include cookies automatically when using credentials
+      const wsUrl = `${WEBSOCKET_URL}?token=${encodeURIComponent(authToken)}`;
 
-    const socket = new WebSocket(wsUrl);
+      const socket = new WebSocket(wsUrl);
 
-    socket.addEventListener("message", (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("Received WebSocket data:", data);
-        onMessage(data);
-      } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
-      }
-    });
+      socket.addEventListener("message", (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("Received WebSocket data:", data);
+          onMessage(data);
+        } catch (error) {
+          console.error("Failed to parse WebSocket message:", error);
+        }
+      });
 
-    socket.addEventListener("open", () => {
-      console.debug("WebSocket connected");
-      setConnectionStatus("connected");
-    });
+      socket.addEventListener("open", () => {
+        console.debug("WebSocket connected");
+        setConnectionStatus("connected");
+      });
 
-    socket.addEventListener("error", (error) => {
-      console.error("WebSocket error:", error);
-      setConnectionStatus("error");
-    });
+      socket.addEventListener("error", (error) => {
+        console.error("WebSocket error:", error);
+        setConnectionStatus("error");
+      });
 
-    socket.addEventListener("close", () => {
-      console.debug("WebSocket disconnected");
-      setConnectionStatus("disconnected");
-    });
+      socket.addEventListener("close", () => {
+        console.debug("WebSocket disconnected");
+        setConnectionStatus("disconnected");
+      });
 
-    socketRef.current = socket;
-  }, [onMessage]);
+      socketRef.current = socket;
+    },
+    [onMessage]
+  );
 
   useEffect(() => {
-    connect();
+    connect(authToken);
 
     return () => {
       if (socketRef.current?.readyState === WebSocket.OPEN) {
         socketRef.current.close();
       }
     };
-  }, [connect]);
+  }, [connect, authToken]);
 
   return { socket: socketRef.current, connectionStatus };
 }
@@ -85,7 +95,32 @@ export function GameView() {
     }));
   }, []);
 
-  const { socket, connectionStatus } = useWebSocket(updateGameState);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchAuthToken = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/auth/ws-token`, {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const { access_token } = await response.json();
+          setAuthToken(access_token);
+        }
+      } catch (error) {
+        console.log("Could not fetch access token:", error);
+      }
+    };
+
+    fetchAuthToken();
+  }, []);
+
+  const { socket, connectionStatus } = useWebSocket(updateGameState, authToken);
 
   const playerColor =
     chessGame.players?.white.id === chessGame.id ? "white" : "black";

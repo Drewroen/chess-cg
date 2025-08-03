@@ -1,2 +1,2 @@
 run:
-	uv run fastapi run app/main.py --reload
+	uv run fastapi dev app/main.py --reload

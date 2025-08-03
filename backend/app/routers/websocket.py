@@ -49,13 +49,10 @@ room_service = None
 
 
 @router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    # Extract access token from cookies
-    access_token = None
-    cookies = websocket.cookies
-    if cookies:
-        access_token = cookies.get("access_token")
-    
+async def websocket_endpoint(websocket: WebSocket, token: str = None):
+    # Extract access token from query parameters
+    access_token = token
+
     id = await manager.connect(websocket, access_token)
     room_id = room_service.add(id)
     if room_service.is_room_full(room_id):
@@ -91,7 +88,7 @@ async def websocket_endpoint(websocket: WebSocket):
 async def emit_game_state_to_room(room_id):
     """Emit the current game state to all players in the room."""
     global room_service, manager
-    
+
     room = room_service.get_room(room_id)
     if room:
         state = {
