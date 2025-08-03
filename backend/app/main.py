@@ -97,7 +97,7 @@ async def auth_callback(
         user_info = await get_user_info(token_data["access_token"])
 
         # Create both access and refresh tokens for our application
-        access_token, refresh_token = create_tokens(user_info)
+        access_token, refresh_token = create_tokens(user_info, token_data)
 
         # Redirect to frontend without access token in URL
         redirect_url = f"{FRONTEND_URL}/auth/success"
@@ -152,7 +152,7 @@ async def get_token_from_code(
         user_info = await get_user_info(token_data["access_token"])
 
         # Create both access and refresh tokens for our application
-        access_token, refresh_token = create_tokens(user_info)
+        access_token, refresh_token = create_tokens(user_info, token_data)
 
         return TokenResponse(
             access_token=access_token,
@@ -214,7 +214,7 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
     if not refresh_token_value:
         raise HTTPException(status_code=400, detail="Refresh token not provided")
 
-    new_access_token = refresh_access_token(refresh_token_value)
+    new_access_token = await refresh_access_token(refresh_token_value)
     if not new_access_token:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 

@@ -68,7 +68,25 @@ async def get_user_info(access_token: str) -> dict:
         return response.json()
 
 
-def create_tokens(user_data: dict) -> Tuple[str, str]:
+async def refresh_google_token(google_refresh_token: str) -> dict:
+    """Refresh Google access token using Google's refresh token"""
+    async with httpx.AsyncClient() as client:
+        data = {
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "refresh_token": google_refresh_token,
+            "grant_type": "refresh_token",
+        }
+
+        response = await client.post(GOOGLE_TOKEN_URL, data=data)
+
+        if response.status_code != 200:
+            raise GoogleOAuthError(f"Failed to refresh Google token: {response.text}")
+
+        return response.json()
+
+
+def create_tokens(user_data: dict, google_token_data: dict = None) -> Tuple[str, str]:
     """Create both access and refresh tokens for authenticated user"""
     # Create access token with shorter expiry
     access_expire = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
@@ -86,7 +104,7 @@ def create_tokens(user_data: dict) -> Tuple[str, str]:
     refresh_expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
     refresh_token = secrets.token_urlsafe(32)
 
-    # Store refresh token with user info and expiry
+    # Store refresh token with user info, expiry, and Google tokens
     refresh_token_store[refresh_token] = {
         "user_id": user_data["id"],
         "email": user_data["email"],
@@ -94,18 +112,23 @@ def create_tokens(user_data: dict) -> Tuple[str, str]:
         "picture": user_data.get("picture"),
         "expires_at": refresh_expire,
         "created_at": datetime.utcnow(),
+        # Store Google's tokens for proper refresh capability
+        "google_access_token": google_token_data.get("access_token")
+        if google_token_data
+        else None,
+        "google_refresh_token": google_token_data.get("refresh_token")
+        if google_token_data
+        else None,
+        "google_token_expires_at": datetime.utcnow()
+        + timedelta(seconds=google_token_data.get("expires_in", 3600))
+        if google_token_data
+        else None,
     }
 
     return access_token, refresh_token
 
 
-def create_jwt_token(user_data: dict) -> str:
-    """Create JWT token for authenticated user (backwards compatibility)"""
-    access_token, _ = create_tokens(user_data)
-    return access_token
-
-
-def refresh_access_token(refresh_token: str) -> Optional[str]:
+async def refresh_access_token(refresh_token: str) -> Optional[str]:
     """Create a new access token using a valid refresh token"""
     if refresh_token not in refresh_token_store:
         return None
@@ -118,16 +141,50 @@ def refresh_access_token(refresh_token: str) -> Optional[str]:
         del refresh_token_store[refresh_token]
         return None
 
-    # Create new access token
-    user_data = {
-        "id": token_data["user_id"],
-        "email": token_data["email"],
-        "name": token_data["name"],
-        "picture": token_data.get("picture"),
-    }
+    try:
+        # Check if we have a Google refresh token and if Google token is expired
+        google_refresh_token = token_data.get("google_refresh_token")
+        google_token_expires_at = token_data.get("google_token_expires_at")
 
-    access_token, _ = create_tokens(user_data)
-    return access_token
+        if (
+            google_refresh_token
+            and google_token_expires_at
+            and datetime.utcnow() > google_token_expires_at
+        ):
+            # Refresh Google token
+            refreshed_google_token = await refresh_google_token(google_refresh_token)
+
+            # Update stored Google token data
+            token_data["google_access_token"] = refreshed_google_token["access_token"]
+            token_data["google_token_expires_at"] = datetime.utcnow() + timedelta(
+                seconds=refreshed_google_token.get("expires_in", 3600)
+            )
+
+            # Get fresh user info from Google
+            user_data = await get_user_info(refreshed_google_token["access_token"])
+        else:
+            # Use existing user data if Google token is still valid
+            user_data = {
+                "id": token_data["user_id"],
+                "email": token_data["email"],
+                "name": token_data["name"],
+                "picture": token_data.get("picture"),
+            }
+
+        # Create new access token
+        access_token, _ = create_tokens(user_data)
+        return access_token
+
+    except GoogleOAuthError:
+        # If Google token refresh fails, fall back to existing user data
+        user_data = {
+            "id": token_data["user_id"],
+            "email": token_data["email"],
+            "name": token_data["name"],
+            "picture": token_data.get("picture"),
+        }
+        access_token, _ = create_tokens(user_data)
+        return access_token
 
 
 def revoke_refresh_token(refresh_token: str) -> bool:
