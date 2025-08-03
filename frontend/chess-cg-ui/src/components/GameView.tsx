@@ -3,7 +3,6 @@ import { BoardEvent, ChessGame } from "../obj/ChessGame";
 import { Board } from "./Board";
 import { Timer } from "./Timer";
 import { ConnectionStatus } from "./ConnectionStatus";
-import { authService } from "../services/auth";
 
 type ConnectionStatusType =
   | "connecting"
@@ -22,11 +21,9 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
   const connect = useCallback(() => {
     if (socketRef.current) return;
 
-    // Get auth token from cookie
-    const token = authService.getToken();
-    const wsUrl = token
-      ? `${WEBSOCKET_URL}?token=${encodeURIComponent(token)}`
-      : WEBSOCKET_URL;
+    // Tokens are now in httpOnly cookies and handled by the browser automatically
+    // WebSocket connections will include cookies automatically when using credentials
+    const wsUrl = WEBSOCKET_URL;
 
     const socket = new WebSocket(wsUrl);
 

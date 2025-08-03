@@ -10,30 +10,14 @@ export interface User {
   picture?: string;
 }
 
-export class AuthService {
-  private static instance: AuthService;
+export class CookieAuthService {
+  private static instance: CookieAuthService;
 
-  static getInstance(): AuthService {
-    if (!AuthService.instance) {
-      AuthService.instance = new AuthService();
+  static getInstance(): CookieAuthService {
+    if (!CookieAuthService.instance) {
+      CookieAuthService.instance = new CookieAuthService();
     }
-    return AuthService.instance;
-  }
-
-  // Legacy methods for backward compatibility - these are now no-ops
-  getToken(): string | null {
-    // Tokens are now in httpOnly cookies and cannot be accessed by JavaScript
-    return null;
-  }
-
-  setToken(token: string): void {
-    // Tokens are now managed by the backend via httpOnly cookies
-    // This method is kept for backward compatibility but does nothing
-  }
-
-  clearToken(): void {
-    // Tokens are now cleared by the backend via logout endpoint
-    // This method is kept for backward compatibility but does nothing
+    return CookieAuthService.instance;
   }
 
   // Check if user is authenticated by making an API call
@@ -121,4 +105,4 @@ export class AuthService {
   }
 }
 
-export const authService = AuthService.getInstance();
+export const cookieAuthService = CookieAuthService.getInstance();

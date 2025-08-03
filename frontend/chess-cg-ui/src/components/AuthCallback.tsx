@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { authService } from "../services/auth";
 
 export function AuthCallback() {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -35,34 +34,27 @@ export function AuthCallback() {
         const backendUrl =
           process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
         const response = await fetch(
-          `${backendUrl}/auth/callback?code=${encodeURIComponent(code)}`
+          `${backendUrl}/auth/callback?code=${encodeURIComponent(code)}`,
+          {
+            credentials: "include", // Include cookies to receive the httpOnly tokens
+          }
         );
 
         if (!response.ok) {
           throw new Error(`Backend auth failed: ${response.statusText}`);
         }
 
-        const authResult = await response.json();
-
-        if (authResult.success) {
+        // Check if we were redirected to the success page (tokens are now in cookies)
+        if (response.redirected && response.url.includes("/auth/success")) {
           setStatus("success");
           setMessage("Authentication successful!");
-
-          // Store the JWT token if provided in the redirect URL
-          const redirectUrl = new URL(authResult.redirect_url);
-          const token = redirectUrl.searchParams.get("token");
-
-          if (token) {
-            // Store token using auth service
-            authService.setToken(token);
-          }
 
           // Redirect back to main app after a short delay
           setTimeout(() => {
             window.location.href = "/";
           }, 2000);
         } else {
-          setMessage(authResult.message || "Authentication failed");
+          setMessage("Authentication failed");
           setStatus("error");
         }
       } catch (error) {

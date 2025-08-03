@@ -31,7 +31,6 @@ from .models import (
     UserResponse,
     TokenResponse,
     RefreshTokenRequest,
-    RefreshTokenResponse,
 )
 
 app = FastAPI(
@@ -100,10 +99,21 @@ async def auth_callback(
         # Create both access and refresh tokens for our application
         access_token, refresh_token = create_tokens(user_info)
 
-        # Redirect to frontend with access token in URL and refresh token as cookie
-        redirect_url = f"{FRONTEND_URL}/auth/success?access_token={access_token}"
+        # Redirect to frontend without access token in URL
+        redirect_url = f"{FRONTEND_URL}/auth/success"
 
         response = RedirectResponse(url=redirect_url, status_code=302)
+
+        # Set access token as an HTTP-only secure cookie
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,  # Prevents JavaScript access (XSS protection)
+            secure=True,  # Only send over HTTPS in production
+            samesite="strict",  # CSRF protection
+            max_age=3600,  # 1 hour in seconds
+            path="/",  # Cookie available for entire domain
+        )
 
         # Set refresh token as an HTTP-only secure cookie
         response.set_cookie(
@@ -111,7 +121,7 @@ async def auth_callback(
             value=refresh_token,
             httponly=True,  # Prevents JavaScript access (XSS protection)
             secure=True,  # Only send over HTTPS in production
-            samesite="lax",  # CSRF protection
+            samesite="strict",  # CSRF protection
             max_age=30 * 24 * 60 * 60,  # 30 days in seconds
             path="/",  # Cookie available for entire domain
         )
@@ -168,10 +178,15 @@ async def get_token_from_code(
 
 
 @app.get("/auth/me", response_model=UserResponse)
-async def get_current_user(token: str = Query(..., description="JWT token")):
-    """Get current user information from JWT token"""
+async def get_current_user(request: Request):
+    """Get current user information from JWT token in cookie"""
 
-    payload = verify_jwt_token(token)
+    # Get access token from cookie
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Access token not found")
+
+    payload = verify_jwt_token(access_token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
@@ -183,7 +198,7 @@ async def get_current_user(token: str = Query(..., description="JWT token")):
     )
 
 
-@app.post("/auth/refresh", response_model=RefreshTokenResponse)
+@app.post("/auth/refresh")
 async def refresh_token(request: Request, refresh_request: RefreshTokenRequest = None):
     """Refresh access token using refresh token"""
 
@@ -203,11 +218,19 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
     if not new_access_token:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
-    return RefreshTokenResponse(
-        access_token=new_access_token,
-        token_type="bearer",
-        expires_in=3600,  # 1 hour in seconds
+    # Return success message and set new access token in cookie
+    response = JSONResponse(content={"message": "Token refreshed successfully"})
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,  # Prevents JavaScript access (XSS protection)
+        secure=True,  # Only send over HTTPS in production
+        samesite="strict",  # CSRF protection
+        max_age=3600,  # 1 hour in seconds
+        path="/",  # Cookie available for entire domain
     )
+
+    return response
 
 
 @app.post("/auth/logout")
@@ -232,9 +255,14 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
 
     response = JSONResponse(content={"message": "Successfully logged out"})
 
+    # Clear the access token cookie
+    response.delete_cookie(
+        key="access_token", path="/", httponly=True, secure=True, samesite="strict"
+    )
+
     # Clear the refresh token cookie
     response.delete_cookie(
-        key="refresh_token", path="/", httponly=True, secure=True, samesite="lax"
+        key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
     )
 
     return response
@@ -283,7 +311,13 @@ room_service = RoomService()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    id = await manager.connect(websocket, websocket.query_params.get("token", None))
+    # Extract access token from cookies
+    access_token = None
+    cookies = websocket.cookies
+    if cookies:
+        access_token = cookies.get("access_token")
+    
+    id = await manager.connect(websocket, access_token)
     room_id = room_service.add(id)
     if room_service.is_room_full(room_id):
         await emit_game_state_to_room(room_id)

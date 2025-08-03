@@ -15,7 +15,8 @@ export default function App() {
   // Check authentication status on app load
   useEffect(() => {
     const checkAuth = async () => {
-      if (authService.isAuthenticated()) {
+      const isAuth = await authService.isAuthenticated();
+      if (isAuth) {
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
       }
@@ -67,8 +68,8 @@ export default function App() {
     console.log("Loadout clicked - coming soon!");
   }
 
-  function handleLogout() {
-    authService.logout();
+  async function handleLogout() {
+    await authService.logout();
     setUser(null);
   }
 
