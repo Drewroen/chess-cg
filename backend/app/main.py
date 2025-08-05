@@ -1,4 +1,4 @@
-from app.svc.room import RoomService
+from app.svc.room import RoomService, RoomManager, ConnectionManager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -19,18 +19,17 @@ app.add_middleware(
 )
 
 # Initialize shared services
-room_service = RoomService()
+room_manager = RoomManager(ConnectionManager(), RoomService())
 
 # Set up shared services in routers
-websocket.room_service = room_service
-debug.room_service = room_service
+websocket.room_manager = room_manager
+debug.room_manager = room_manager
 
 # Include routers
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(websocket.router)
 app.include_router(debug.router)
-
 
 
 if __name__ == "__main__":

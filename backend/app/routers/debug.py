@@ -1,16 +1,17 @@
 from uuid import UUID
+from app.svc.room import RoomManager
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/debug", tags=["debug"])
 
 # This will be set by main.py
-room_service = None
+room_manager: RoomManager = None
 
 
 @router.get("/rooms")
 async def get_room():
-    room_map = room_service.id_to_room_map
+    room_map = room_manager.room_service.id_to_room_map
     return JSONResponse(
         content=[
             {
@@ -29,8 +30,7 @@ async def get_room():
 
 @router.get("/rooms/{room_id}")
 async def get_room_by_id(room_id: UUID):
-    print(room_service.rooms)
-    room = room_service.get_room(room_id)
+    room = room_manager.room_service.get_room(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     return {

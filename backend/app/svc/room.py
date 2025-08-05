@@ -1,81 +1,190 @@
 from uuid import UUID, uuid4
 from app.obj.game import Game
+from fastapi import WebSocket
+from ..auth import verify_jwt_token
+
+
+class WebSocketConnection:
+    def __init__(self, websocket: WebSocket):
+        self.websocket = websocket
+        self.id = uuid4()
+
+
+class ConnectionManager:
+    def __init__(self):
+        self.user_id_to_connection_map: dict[str, list[WebSocketConnection]] = {}
+        self.connection_id_to_user_id: dict = {}
+        self.user_id_to_name: dict[str, str] = {}
+
+    async def connect(self, websocket: WebSocket, jwt: str = None) -> str:
+        await websocket.accept()
+
+        # Extract name from JWT or generate guest name
+        if jwt:
+            token_data = verify_jwt_token(jwt)
+            if token_data and "sub" in token_data:
+                user_id = token_data["sub"]
+                name = token_data["name"]
+            else:
+                user_id = "guest_" + str(uuid4())
+                name = "Guest"
+        else:
+            user_id = "guest_" + str(uuid4())
+            name = "Guest"
+
+        # Create connection
+        connection = WebSocketConnection(websocket)
+
+        # Add to name mapping
+        if user_id not in self.user_id_to_connection_map:
+            self.user_id_to_connection_map[user_id] = []
+            self.user_id_to_name[user_id] = name
+        self.user_id_to_connection_map[user_id].append(connection)
+
+        # Track connection ID to name for cleanup
+        self.connection_id_to_user_id[connection.id] = user_id
+
+        return user_id
+
+    def disconnect(self, name: str):
+        """Disconnect all connections for a given name"""
+        if name in self.user_id_to_connection_map:
+            connections = self.user_id_to_connection_map[name]
+            for connection in connections:
+                if connection.id in self.connection_id_to_user_id:
+                    del self.connection_id_to_user_id[connection.id]
+            del self.user_id_to_connection_map[name]
+
+    def websocket(self, connection_id) -> bool:
+        """Return websocket for a given connection ID"""
+        return self.connection_id_to_user_id[connection_id]
 
 
 class Room:
     def __init__(self):
         self.id = uuid4()
-        self.white: int = None
-        self.black: int = None
+        self.white: str
+        self.black: str
         self.game: Game = Game()
-
-    def open(self):
-        return self.white is None or self.black is None
-
-    def join(self, player: int) -> bool:
-        if self.white is None:
-            self.white = player
-        elif self.black is None:
-            self.black = player
-        else:
-            return False
-        return True
-
-    def leave(self, player: int) -> bool:
-        if self.white == player:
-            self.white = None
-            return True
-        elif self.black == player:
-            self.black = None
-            return True
-        return False
-
-    def player_color(self, player: int) -> bool:
-        return (
-            "white"
-            if self.white == player
-            else "black"
-            if self.black == player
-            else None
-        )
 
 
 class RoomService:
     def __init__(self):
-        self.rooms: dict[int, Room] = {}
-        self.id_to_room_map: dict[int, Room] = {}
+        self.rooms: dict[UUID, Room] = {}
+        self.queue: list[str] = []
+        self.player_to_room_map: dict[str, UUID] = {}
 
-    def add(self, websocket_id: int) -> UUID:
-        for room in self.rooms.values():
-            if room.open():
-                room.join(websocket_id)
-                self.id_to_room_map[websocket_id] = room
-                return room.id
-        new_room = Room()
-        new_room.join(websocket_id)
-        self.rooms[new_room.id] = new_room
-        self.id_to_room_map[websocket_id] = new_room
-        return new_room.id
+    def add_to_queue(self, name: str):
+        """Add a player to the queue if not already present."""
+        if name not in self.queue:
+            self.queue.append(name)
 
-    def get_player_room(self, player_id: int) -> Room:
-        return self.id_to_room_map.get(player_id)
+    def queue_length(self) -> int:
+        """Return the number of players in the queue."""
+        return len(self.queue)
 
-    def get_room(self, room_id: str) -> Room:
+    def new_room(self, white: str, black: str) -> UUID:
+        """Create a new room with the given players."""
+        room = Room()
+        room.white = white
+        room.black = black
+        self.rooms[room.id] = room
+
+        if white in self.queue:
+            self.queue.remove(white)
+            self.player_to_room_map[white] = room.id
+        if black in self.queue:
+            self.queue.remove(black)
+            self.player_to_room_map[black] = room.id
+
+        return room.id
+
+    def find_player_room(self, player_name: str) -> Room:
+        """Find the room ID for a given player."""
+        print(player_name)
+        room_id = self.player_to_room_map.get(player_name)
+        if not room_id:
+            return None
+        return self.rooms[room_id]
+
+    def get_room(self, room_id: UUID) -> Room:
+        """Get a room by its ID."""
         return self.rooms.get(room_id)
 
-    def is_room_full(self, room_id: str) -> bool:
-        room = self.rooms.get(room_id)
-        if room:
-            return room.white is not None and room.black is not None
-        return False
 
-    def disconnect(self, player_id: int):
-        room: Room = self.id_to_room_map.get(player_id)
+class RoomManager:
+    def __init__(self, manager: ConnectionManager, room_service: RoomService):
+        self.room_service = room_service
+        self.manager = manager
+
+    async def connect(self, websocket, jwt: str = None) -> str:
+        """Connect a player to the WebSocket and return their name."""
+        name = await self.manager.connect(websocket, jwt)
+        existing_room = self.room_service.find_player_room(name)
+        if existing_room:
+            await self.emit_game_state_to_room(existing_room.id)
+        else:
+            # If the player is not already in a room, add them to the queue
+            self.room_service.add_to_queue(name)
+            if self.room_service.queue_length() >= 2:
+                room_id = self.room_service.new_room(
+                    self.room_service.queue[0], self.room_service.queue[1]
+                )
+                await self.emit_game_state_to_room(room_id)
+
+        return name
+
+    async def emit_game_state_to_room(self, room_id: UUID):
+        """Emit the current game state to all players in the room."""
+        if not room_id:
+            return
+        room = self.room_service.rooms[room_id]
+
         if room:
-            color = room.player_color(player_id)
-            room.leave(player_id)
-            if room.game.status != "complete":
-                room.game.mark_player_forfeit(color)
-            if room.white is None and room.black is None:
-                del self.rooms[room.id]
-            del self.id_to_room_map[player_id]
+            state = {
+                "squares": room.game.board.get_squares(),
+                "turn": room.game.turn,
+                "players": {
+                    "white": {
+                        "id": room.white,
+                        "name": self.manager.user_id_to_name.get(room.white, "Guest"),
+                        "connected": len(
+                            self.manager.user_id_to_connection_map.get(room.white, [])
+                        )
+                        > 0,
+                    },
+                    "black": {
+                        "id": room.black,
+                        "name": self.manager.user_id_to_name.get(room.black, "Guest"),
+                        "connected": len(
+                            self.manager.user_id_to_connection_map.get(room.black, [])
+                        )
+                        > 0,
+                    },
+                },
+                "kings_in_check": room.game.board.kings_in_check(),
+                "status": room.game.status.value,
+                "time": {
+                    "white": room.game.white_time_left,
+                    "black": room.game.black_time_left,
+                },
+                "moves": {
+                    "white": [
+                        (x.position_from.coordinates(), x.position_to.coordinates())
+                        for x in room.game.board.get_available_moves_for_color("white")
+                    ],
+                    "black": [
+                        (x.position_from.coordinates(), x.position_to.coordinates())
+                        for x in room.game.board.get_available_moves_for_color("black")
+                    ],
+                },
+            }
+        for player_name in [room.white, room.black]:
+            state["id"] = player_name
+            connections = self.manager.user_id_to_connection_map.get(player_name, [])
+            for connection in connections:
+                if connection and self.manager.websocket(connection.id) is not None:
+                    try:
+                        await connection.websocket.send_json(state)
+                    except Exception as e:
+                        print(f"Failed to send to {player_name}: {e}")
