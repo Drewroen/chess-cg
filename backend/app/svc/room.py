@@ -12,8 +12,9 @@ class WebSocketConnection:
 
 class ConnectionManager:
     def __init__(self):
+        self.id_to_websocket_connection: dict[UUID, WebSocketConnection] = {}
         self.user_id_to_connection_map: dict[str, list[WebSocketConnection]] = {}
-        self.connection_id_to_user_id: dict = {}
+        self.connection_id_to_user_id: dict[UUID, str] = {}
         self.user_id_to_name: dict[str, str] = {}
 
     async def connect(self, websocket: WebSocket, jwt: str = None) -> str:
@@ -34,6 +35,7 @@ class ConnectionManager:
 
         # Create connection
         connection = WebSocketConnection(websocket)
+        self.id_to_websocket_connection[connection.id] = connection
 
         # Add to name mapping
         if user_id not in self.user_id_to_connection_map:
@@ -44,16 +46,7 @@ class ConnectionManager:
         # Track connection ID to name for cleanup
         self.connection_id_to_user_id[connection.id] = user_id
 
-        return user_id
-
-    def disconnect(self, name: str):
-        """Disconnect all connections for a given name"""
-        if name in self.user_id_to_connection_map:
-            connections = self.user_id_to_connection_map[name]
-            for connection in connections:
-                if connection.id in self.connection_id_to_user_id:
-                    del self.connection_id_to_user_id[connection.id]
-            del self.user_id_to_connection_map[name]
+        return connection.id
 
     def websocket(self, connection_id) -> bool:
         """Return websocket for a given connection ID"""
@@ -119,7 +112,8 @@ class RoomManager:
 
     async def connect(self, websocket, jwt: str = None) -> str:
         """Connect a player to the WebSocket and return their name."""
-        name = await self.manager.connect(websocket, jwt)
+        connection_id = await self.manager.connect(websocket, jwt)
+        name = self.manager.connection_id_to_user_id.get(connection_id)
         existing_room = self.room_service.find_player_room(name)
         if existing_room:
             await self.emit_game_state_to_room(existing_room.id)
@@ -132,7 +126,21 @@ class RoomManager:
                 )
                 await self.emit_game_state_to_room(room_id)
 
-        return name
+        return connection_id
+
+    async def disconnect(self, connection_id: UUID):
+        """Disconnect a player by connection ID."""
+        user_id = self.manager.connection_id_to_user_id.get(connection_id)
+        if user_id and connection_id in self.manager.id_to_websocket_connection:
+            # Remove the specific connection
+            connection = self.manager.id_to_websocket_connection[connection_id]
+            if user_id in self.manager.user_id_to_connection_map:
+                self.manager.user_id_to_connection_map[user_id].remove(connection)
+                # Clean up empty lists
+                if not self.manager.user_id_to_connection_map[user_id]:
+                    del self.manager.user_id_to_connection_map[user_id]
+            del self.manager.id_to_websocket_connection[connection_id]
+            del self.manager.connection_id_to_user_id[connection_id]
 
     async def emit_game_state_to_room(self, room_id: UUID):
         """Emit the current game state to all players in the room."""
