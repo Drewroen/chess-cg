@@ -25,7 +25,7 @@ function useAuthToken() {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         const response = await fetch(`${BACKEND_URL}/auth/ws-token`, {
           method: "GET",
           credentials: "include",
@@ -70,15 +70,18 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
   useEffect(() => {
     // Wait for auth token to be loaded
     if (authLoading) return;
-    
+
     // Only connect if we don't already have an active connection
-    if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
+    if (
+      socketRef.current &&
+      socketRef.current.readyState !== WebSocket.CLOSED
+    ) {
       return;
     }
 
     const connect = async () => {
       let wsUrl = WEBSOCKET_URL;
-      
+
       // Add token to URL if available
       if (authToken) {
         wsUrl = `${WEBSOCKET_URL}?token=${encodeURIComponent(authToken)}`;
@@ -118,7 +121,10 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
     connect();
 
     return () => {
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      if (
+        socketRef.current &&
+        socketRef.current.readyState === WebSocket.OPEN
+      ) {
         socketRef.current.close();
       }
       socketRef.current = null;
@@ -149,6 +155,10 @@ export function GameView() {
 
   const playerColor =
     chessGame.players?.white.id === chessGame.id ? "white" : "black";
+
+  console.log(chessGame.id);
+  console.log(chessGame.players?.white.id);
+  console.log(playerColor);
 
   const updatePossibleMoves = useCallback((moves: Array<[number, number]>) => {
     setChessGame((prevGame) => ({ ...prevGame, possibleMoves: moves }));
@@ -207,8 +217,16 @@ export function GameView() {
             }}
           >
             <ConnectionStatus
-              connected={chessGame.players?.white?.connected || false}
-              username={chessGame.players?.white?.name}
+              connected={
+                playerColor === "white"
+                  ? chessGame.players?.black?.connected || false
+                  : chessGame.players?.white?.connected || false
+              }
+              username={
+                playerColor === "white"
+                  ? chessGame.players?.black?.name
+                  : chessGame.players?.white?.name
+              }
             />
             <Timer
               initialTime={
@@ -234,8 +252,16 @@ export function GameView() {
               }
             />
             <ConnectionStatus
-              connected={chessGame.players?.black?.connected || false}
-              username={chessGame.players?.black?.name}
+              connected={
+                playerColor === "white"
+                  ? chessGame.players?.white?.connected || false
+                  : chessGame.players?.black?.connected || false
+              }
+              username={
+                playerColor === "white"
+                  ? chessGame.players?.white?.name
+                  : chessGame.players?.black?.name
+              }
             />
           </div>
         </>
