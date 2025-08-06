@@ -12,6 +12,8 @@ from ..auth import (
     get_google_auth_url,
     FRONTEND_URL,
     verify_jwt_token,
+    create_guest_tokens,
+    refresh_guest_access_token,
 )
 from ..models import (
     UserResponse,
@@ -129,6 +131,7 @@ async def get_token_from_code(
                 email=user_info["email"],
                 name=user_info["name"],
                 picture=user_info.get("picture"),
+                user_type="authenticated",
             ),
         )
 
@@ -168,6 +171,7 @@ async def get_current_user(request: Request):
         email=payload["email"],
         name=payload["name"],
         picture=payload.get("picture"),
+        user_type=payload.get("user_type", "authenticated"),
     )
 
 
@@ -187,14 +191,28 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
     if not refresh_token_value:
         raise HTTPException(status_code=400, detail="Refresh token not provided")
 
-    new_access_token = await refresh_access_token(refresh_token_value)
-    if not new_access_token:
-        # Clear the invalid refresh token cookie
-        response = JSONResponse(content={"detail": "Invalid or expired refresh token"}, status_code=401)
-        response.delete_cookie(
-            key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
-        )
-        return response
+    # Handle guest refresh tokens
+    if refresh_token_value.startswith("guest_refresh_"):
+        new_access_token = await refresh_guest_access_token(refresh_token_value)
+        if not new_access_token:
+            response = JSONResponse(
+                content={"detail": "Invalid or expired guest refresh token"}, 
+                status_code=401
+            )
+            response.delete_cookie(
+                key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+            )
+            return response
+    else:
+        # Handle authenticated user refresh tokens (existing logic)
+        new_access_token = await refresh_access_token(refresh_token_value)
+        if not new_access_token:
+            # Clear the invalid refresh token cookie
+            response = JSONResponse(content={"detail": "Invalid or expired refresh token"}, status_code=401)
+            response.delete_cookie(
+                key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+            )
+            return response
 
     # Return success message and set new access token in cookie
     response = JSONResponse(content={"message": "Token refreshed successfully"})
@@ -257,4 +275,39 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
         key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
     )
 
+    return response
+
+
+@router.post("/guest-session")
+async def create_guest_session():
+    """Create a new guest session with refresh token"""
+    guest_access_token, guest_refresh_token = create_guest_tokens()
+    
+    response = JSONResponse(content={
+        "message": "Guest session created", 
+        "user_type": "guest"
+    })
+    
+    # Set guest access token cookie
+    response.set_cookie(
+        key="access_token",
+        value=guest_access_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=3600,  # 1 hour
+        path="/",
+    )
+    
+    # Set guest refresh token cookie  
+    response.set_cookie(
+        key="refresh_token",
+        value=guest_refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=7 * 24 * 60 * 60,  # 7 days
+        path="/",
+    )
+    
     return response

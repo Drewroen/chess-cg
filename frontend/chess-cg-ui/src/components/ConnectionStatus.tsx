@@ -14,6 +14,9 @@ export function ConnectionStatus({
     return "#6b7280";
   };
 
+  // Display just "Guest" instead of "Guest_12345" for guest users
+  const displayName = username?.startsWith("Guest_") ? "Guest" : username;
+
   return (
     <div
       style={{
@@ -51,7 +54,7 @@ export function ConnectionStatus({
           fontFamily: "sans-serif",
         }}
       >
-        {username}
+        {displayName}
       </span>
     </div>
   );

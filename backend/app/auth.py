@@ -5,6 +5,9 @@ import httpx
 from jose import JWTError, jwt
 from dotenv import load_dotenv
 import secrets
+import time
+import random
+from uuid import uuid4
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +30,9 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 # In-memory storage for refresh tokens (in production, use a database)
 refresh_token_store: dict[str, dict] = {}
+
+# In-memory storage for guest refresh tokens
+guest_refresh_tokens: dict[str, dict] = {}
 
 
 class GoogleOAuthError(Exception):
@@ -235,3 +241,79 @@ def get_google_auth_url() -> str:
 
     query_string = "&".join([f"{k}={v}" for k, v in params.items()])
     return f"https://accounts.google.com/o/oauth2/auth?{query_string}"
+
+
+def create_jwt_token(payload: dict, expires_minutes: int = 60) -> str:
+    """Create JWT token with given payload and expiration"""
+    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
+    payload_copy = payload.copy()
+    payload_copy.update({"exp": expire, "type": "access"})
+    return jwt.encode(payload_copy, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def create_guest_tokens(guest_name: str = None) -> Tuple[str, str]:
+    """Create guest access and refresh tokens"""
+    guest_id = "guest_" + str(uuid4())
+    guest_name = guest_name or f"Guest_{random.randint(10000, 99999)}"
+    
+    # Create guest access token (JWT)
+    guest_access_token = create_jwt_token({
+        "sub": guest_id,
+        "email": "guest@local",
+        "name": guest_name,
+        "user_type": "guest"
+    }, expires_minutes=60)
+    
+    # Create guest refresh token
+    guest_refresh_token = "guest_refresh_" + secrets.token_urlsafe(32)
+    
+    # Store guest session
+    guest_refresh_tokens[guest_refresh_token] = {
+        "guest_id": guest_id,
+        "guest_name": guest_name,
+        "created_at": time.time(),
+        "last_used": time.time(),
+        "expires_at": time.time() + (7 * 24 * 60 * 60)  # 7 days
+    }
+    
+    return guest_access_token, guest_refresh_token
+
+
+async def refresh_guest_access_token(guest_refresh_token: str) -> Optional[str]:
+    """Refresh guest access token using guest refresh token"""
+    if not guest_refresh_token.startswith("guest_refresh_"):
+        return None
+        
+    if guest_refresh_token not in guest_refresh_tokens:
+        return None
+        
+    token_data = guest_refresh_tokens[guest_refresh_token]
+    
+    # Check expiry
+    if time.time() > token_data["expires_at"]:
+        del guest_refresh_tokens[guest_refresh_token]
+        return None
+    
+    # Update last used
+    token_data["last_used"] = time.time()
+    
+    # Create new access token
+    return create_jwt_token({
+        "sub": token_data["guest_id"],
+        "email": "guest@local", 
+        "name": token_data["guest_name"],
+        "user_type": "guest"
+    }, expires_minutes=60)
+
+
+def cleanup_expired_guest_tokens():
+    """Remove expired guest tokens"""
+    current_time = time.time()
+    expired_tokens = [
+        token for token, data in guest_refresh_tokens.items()
+        if current_time > data["expires_at"]
+    ]
+    for token in expired_tokens:
+        del guest_refresh_tokens[token]
+    
+    return len(expired_tokens)

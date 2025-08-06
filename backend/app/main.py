@@ -8,6 +8,7 @@ import time
 
 from .routers import health, auth, websocket, debug
 from .obj.game import GameStatus
+from .auth import cleanup_expired_refresh_tokens, cleanup_expired_guest_tokens
 
 # Initialize shared services
 room_manager = RoomManager(ConnectionManager(), RoomService())
@@ -47,13 +48,29 @@ async def check_game_timers():
         await asyncio.sleep(1)  # Check every 1 second
 
 
+async def cleanup_expired_tokens():
+    """Background task to clean up expired tokens"""
+    while True:
+        try:
+            expired_refresh = cleanup_expired_refresh_tokens()  # existing function
+            expired_guest = cleanup_expired_guest_tokens()    # new function
+            if expired_refresh > 0 or expired_guest > 0:
+                print(f"Cleaned up {expired_refresh} expired refresh tokens and {expired_guest} expired guest tokens")
+        except Exception as e:
+            print(f"Error in token cleanup task: {e}")
+        
+        await asyncio.sleep(3600)  # Run every hour
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    task = asyncio.create_task(check_game_timers())
+    timer_task = asyncio.create_task(check_game_timers())
+    cleanup_task = asyncio.create_task(cleanup_expired_tokens())
     yield
     # Shutdown
-    task.cancel()
+    timer_task.cancel()
+    cleanup_task.cancel()
 
 
 app = FastAPI(

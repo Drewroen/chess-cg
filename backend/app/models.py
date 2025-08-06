@@ -7,6 +7,7 @@ class UserResponse(BaseModel):
     email: str
     name: str
     picture: Optional[str] = None
+    user_type: Optional[str] = "authenticated"
 
 
 class TokenResponse(BaseModel):

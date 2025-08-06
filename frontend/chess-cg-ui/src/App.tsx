@@ -4,22 +4,19 @@ import { GameView } from "./components/GameView";
 import { AuthCallback } from "./components/AuthCallback";
 import { AuthSuccess } from "./components/AuthSuccess";
 import { AuthError } from "./components/AuthError";
-import { cookieAuthService, User } from "./services/cookieAuth";
+import { cookieAuthService, User, GuestUser } from "./services/cookieAuth";
 import "./App.css";
 
 export default function App() {
   const [showGame, setShowGame] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | GuestUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Check authentication status on app load
   useEffect(() => {
     const checkAuth = async () => {
-      const isAuth = (await cookieAuthService.getCurrentUser()) != null;
-      if (isAuth) {
-        const currentUser = await cookieAuthService.getCurrentUser();
-        setUser(currentUser);
-      }
+      const currentUser = await cookieAuthService.getCurrentUser();
+      setUser(currentUser);
       setIsCheckingAuth(false);
     };
 
@@ -148,14 +145,22 @@ export default function App() {
                 style={{
                   marginTop: "1rem",
                   padding: "0.75rem 1rem",
-                  background: "rgba(76, 175, 80, 0.1)",
-                  border: "1px solid rgba(76, 175, 80, 0.3)",
+                  background:
+                    user.user_type === "guest"
+                      ? "rgba(255, 193, 7, 0.1)"
+                      : "rgba(76, 175, 80, 0.1)",
+                  border:
+                    user.user_type === "guest"
+                      ? "1px solid rgba(255, 193, 7, 0.3)"
+                      : "1px solid rgba(76, 175, 80, 0.3)",
                   borderRadius: "8px",
-                  color: "#4CAF50",
+                  color: user.user_type === "guest" ? "#FFC107" : "#4CAF50",
                   fontSize: "0.9rem",
                 }}
               >
-                Welcome back, {user.name}!
+                {user.user_type === "guest"
+                  ? `Playing as Guest`
+                  : `Playing as ${user.name}`}
               </div>
             )}
           </div>
@@ -206,37 +211,35 @@ export default function App() {
                 Play Now
               </button>
 
-              {!user ? (
+              {user?.user_type === "guest" ? (
                 <button
                   onClick={handleLogin}
                   style={{
                     padding: "1rem 2rem",
                     fontSize: "1rem",
                     fontWeight: "500",
-                    border: "2px solid #707070",
+                    border: "2px solid #4CAF50",
                     borderRadius: "8px",
                     background: "transparent",
-                    color: "#d0d0d0",
+                    color: "#4CAF50",
                     cursor: "pointer",
                     transition: "all 0.2s ease",
                     fontFamily: "inherit",
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.background = "#707070";
-                    e.currentTarget.style.color = "#1a1a1a";
-                    e.currentTarget.style.borderColor = "#808080";
+                    e.currentTarget.style.background = "#4CAF50";
+                    e.currentTarget.style.color = "#ffffff";
                     e.currentTarget.style.transform = "translateY(-1px)";
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#d0d0d0";
-                    e.currentTarget.style.borderColor = "#707070";
+                    e.currentTarget.style.color = "#4CAF50";
                     e.currentTarget.style.transform = "translateY(0)";
                   }}
                 >
                   Login with Google
                 </button>
-              ) : (
+              ) : user?.user_type === "authenticated" ? (
                 <button
                   onClick={handleLogout}
                   style={{
@@ -264,6 +267,17 @@ export default function App() {
                 >
                   Logout
                 </button>
+              ) : (
+                <div
+                  style={{
+                    padding: "1rem 2rem",
+                    fontSize: "1rem",
+                    color: "#888",
+                    textAlign: "center",
+                  }}
+                >
+                  Loading user session...
+                </div>
               )}
 
               <button

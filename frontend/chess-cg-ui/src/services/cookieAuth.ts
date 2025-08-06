@@ -8,6 +8,11 @@ export interface User {
   email: string;
   name: string;
   picture?: string;
+  user_type?: string;
+}
+
+export interface GuestUser extends User {
+  user_type: 'guest';
 }
 
 export class CookieAuthService {
@@ -20,6 +25,29 @@ export class CookieAuthService {
     return CookieAuthService.instance;
   }
 
+  // New method to create guest session
+  async createGuestSession(): Promise<GuestUser | null> {
+    try {
+      const response = await fetch(`${BACKEND_URL}/auth/guest-session`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Failed to create guest session");
+        return null;
+      }
+
+      // Get the guest user info from the new access token
+      return this.getCurrentUser() as Promise<GuestUser | null>;
+    } catch (error) {
+      console.error("Error creating guest session:", error);
+      return null;
+    }
+  }
 
   // Get current user information from backend
   async getCurrentUser(): Promise<User | null> {
@@ -36,9 +64,9 @@ export class CookieAuthService {
         // Check if the error is due to missing token vs expired token
         const errorData = await response.json().catch(() => ({ detail: "" }));
         
-        // If no access token found, don't bother trying to refresh
+        // If no access token found, try to create guest session
         if (errorData.detail === "Access token not found") {
-          return null;
+          return await this.createGuestSession();
         }
         
         // Try to refresh tokens if the access token is expired
@@ -51,7 +79,8 @@ export class CookieAuthService {
         });
 
         if (!refreshResponse.ok) {
-          return null;
+          // If refresh fails and no tokens exist, create guest session
+          return await this.createGuestSession();
         }
 
         // Retry fetching the current user after refresh
@@ -64,7 +93,7 @@ export class CookieAuthService {
         });
 
         if (!retryResponse.ok) {
-          return null;
+          return await this.createGuestSession();
         }
 
         const user = await retryResponse.json();
@@ -75,7 +104,8 @@ export class CookieAuthService {
       return user;
     } catch (error) {
       console.error("Error fetching current user:", error);
-      return null;
+      // Fallback to guest session on any error
+      return await this.createGuestSession();
     }
   }
 
