@@ -9,13 +9,17 @@ class GameStatus(Enum):
     COMPLETE = "complete"
 
 
+STARTING_TIME_IN_SECONDS = 180.0
+MOVE_INCREMENT_IN_SECONDS = 2.0
+
+
 class Game:
     def __init__(self):
         self.turn = "white"
         self.board = Board()
         self.status = GameStatus.NOT_STARTED
-        self.white_time_left = 300.0
-        self.black_time_left = 300.0
+        self.white_time_left = STARTING_TIME_IN_SECONDS
+        self.black_time_left = STARTING_TIME_IN_SECONDS
         self.last_move_time = time.time()
         self.winner = None
 
@@ -28,16 +32,28 @@ class Game:
             elapsed = current_time - self.last_move_time
             if self.turn == "white":
                 self.white_time_left = round(self.white_time_left - elapsed, 2)
+                if self.white_time_left <= 0:
+                    print("The player has run out of time")
+                    self.white_time_left = 0
+                    self.status = GameStatus.COMPLETE
+                    self.winner = "black"
+                    return
             else:
                 self.black_time_left = round(self.black_time_left - elapsed, 2)
+                if self.black_time_left <= 0:
+                    print("The player has run out of time")
+                    self.black_time_left = 0
+                    self.status = GameStatus.COMPLETE
+                    self.winner = "white"
+                    return
 
         moved = self.board.move(start, end, self.turn, promote_to)
         if moved:
             if self.status == GameStatus.IN_PROGRESS:
                 if self.turn == "white":
-                    self.white_time_left += 3
+                    self.white_time_left += MOVE_INCREMENT_IN_SECONDS
                 else:
-                    self.black_time_left += 3
+                    self.black_time_left += MOVE_INCREMENT_IN_SECONDS
 
             if self.status == GameStatus.NOT_STARTED and self.turn == "black":
                 self.status = GameStatus.IN_PROGRESS
