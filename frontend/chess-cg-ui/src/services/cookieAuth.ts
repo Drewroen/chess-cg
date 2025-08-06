@@ -20,6 +20,7 @@ export class CookieAuthService {
     return CookieAuthService.instance;
   }
 
+
   // Get current user information from backend
   async getCurrentUser(): Promise<User | null> {
     try {
@@ -32,6 +33,14 @@ export class CookieAuthService {
       });
 
       if (!response.ok) {
+        // Check if the error is due to missing token vs expired token
+        const errorData = await response.json().catch(() => ({ detail: "" }));
+        
+        // If no access token found, don't bother trying to refresh
+        if (errorData.detail === "Access token not found") {
+          return null;
+        }
+        
         // Try to refresh tokens if the access token is expired
         const refreshResponse = await fetch(`${BACKEND_URL}/auth/refresh`, {
           method: "POST",
@@ -41,23 +50,25 @@ export class CookieAuthService {
           },
         });
 
-        if (refreshResponse.ok) {
-          // Retry fetching the current user after refresh
-          const retryResponse = await fetch(`${BACKEND_URL}/auth/me`, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-
-          if (retryResponse.ok) {
-            const user = await retryResponse.json();
-            return user;
-          }
+        if (!refreshResponse.ok) {
+          return null;
         }
 
-        return null;
+        // Retry fetching the current user after refresh
+        const retryResponse = await fetch(`${BACKEND_URL}/auth/me`, {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!retryResponse.ok) {
+          return null;
+        }
+
+        const user = await retryResponse.json();
+        return user;
       }
 
       const user = await response.json();

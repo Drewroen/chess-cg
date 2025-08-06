@@ -153,7 +153,15 @@ async def get_current_user(request: Request):
 
     payload = verify_jwt_token(access_token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        # Clear cookies when access token is invalid
+        response = JSONResponse(content={"detail": "Invalid or expired token"}, status_code=401)
+        response.delete_cookie(
+            key="access_token", path="/", httponly=True, secure=True, samesite="strict"
+        )
+        response.delete_cookie(
+            key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+        )
+        return response
 
     return UserResponse(
         id=payload["sub"],
@@ -181,7 +189,12 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
 
     new_access_token = await refresh_access_token(refresh_token_value)
     if not new_access_token:
-        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+        # Clear the invalid refresh token cookie
+        response = JSONResponse(content={"detail": "Invalid or expired refresh token"}, status_code=401)
+        response.delete_cookie(
+            key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+        )
+        return response
 
     # Return success message and set new access token in cookie
     response = JSONResponse(content={"message": "Token refreshed successfully"})
