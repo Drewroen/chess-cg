@@ -10,6 +10,7 @@ export function Tile({
   isActive,
   isPossibleMove,
   isCheck,
+  onCoordinateLog,
 }: {
   type: string;
   color: string;
@@ -18,6 +19,7 @@ export function Tile({
   isActive: boolean;
   isPossibleMove?: boolean;
   isCheck?: boolean;
+  onCoordinateLog?: (x: number, y: number) => void;
 }) {
   const pieceStyle: CSSProperties = {
     position: "absolute",
@@ -54,6 +56,7 @@ export function Tile({
           type={type}
           color={color}
           style={pieceStyle}
+          onCoordinateLog={onCoordinateLog}
           key={`piece-${x}-${y}`}
         />
       </div>

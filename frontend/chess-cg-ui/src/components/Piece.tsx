@@ -12,15 +12,18 @@ import WhiteKnight from "../assets/white_knight.svg";
 import WhitePawn from "../assets/white_pawn.svg";
 import Empty from "../assets/empty.svg";
 import { CSSProperties } from "react";
+import Draggable from "react-draggable";
 
 export function Piece({
   type,
   color,
   style,
+  onCoordinateLog,
 }: {
   type: string;
   color: string;
   style: CSSProperties;
+  onCoordinateLog?: (x: number, y: number) => void;
 }) {
   function getSvg(type: string, color: string) {
     if (type === "pawn" && color === "white") return WhitePawn;
@@ -38,5 +41,25 @@ export function Piece({
     return Empty;
   }
 
-  return <img src={getSvg(type, color)} alt="" style={style} />;
+  if (!type || !color) {
+    return null;
+  }
+
+  return (
+    <Draggable
+      position={{ x: 0, y: 0 }}
+      onStop={(_e, data) => {
+        const boardSquareWidth = 75; // 600px board / 8 squares = 75px per square
+        const boardSquareHeight = 75;
+        const offset = 37.5; // Half of square size since dragging from center
+
+        const x = Math.floor((data.x + offset) / boardSquareWidth);
+        const y = Math.floor((data.y + offset) / boardSquareHeight);
+
+        onCoordinateLog?.(x, y);
+      }}
+    >
+      <img src={getSvg(type, color)} alt="" style={style} draggable={false} />
+    </Draggable>
+  );
 }
