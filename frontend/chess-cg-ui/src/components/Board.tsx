@@ -110,7 +110,7 @@ export function Board({
           row.map((square, j) => (
             <div
               style={{ cursor: "pointer" }}
-              onClick={() => onSquareClicked([i, j])}
+              onMouseDown={() => onSquareClicked([i, j])}
               key={`tile-div-${i}-${j}`}
             >
               <Tile
