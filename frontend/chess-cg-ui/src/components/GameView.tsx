@@ -42,7 +42,7 @@ function useAuthToken() {
         }
       } catch (err) {
         setError("Could not fetch access token");
-        console.log("Could not fetch access token:", err);
+        console.error("Could not fetch access token:", err);
       } finally {
         setIsLoading(false);
       }
@@ -92,7 +92,6 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
       socket.addEventListener("message", (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log("Received WebSocket data:", data);
           onMessageRef.current(data);
         } catch (error) {
           console.error("Failed to parse WebSocket message:", error);
@@ -156,10 +155,6 @@ export function GameView() {
 
   const playerColor =
     chessGame.players?.white.id === chessGame.id ? "white" : "black";
-
-  console.log(chessGame.id);
-  console.log(chessGame.players?.white.id);
-  console.log(playerColor);
 
   const updatePossibleMoves = useCallback((moves: Array<[number, number]>) => {
     setChessGame((prevGame) => ({ ...prevGame, possibleMoves: moves }));

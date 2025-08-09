@@ -259,7 +259,6 @@ def pgn_games():
 
     # Create PGN reader just once
     reader = PGNReader(pgn_file)
-    print(reader.get_file_stats())
 
     # Convert the generator to a list so it can be reused
     games_list = list(reader.read_games_generator())
@@ -280,7 +279,9 @@ def test_bishop_moves_correctly_flake():
         ("g2", "g4"),
     ]
     for move in moves:
-        game.move(position_from_notation(move[0]), position_from_notation(move[1]), game.turn)
+        game.move(
+            position_from_notation(move[0]), position_from_notation(move[1]), game.turn
+        )
 
     moves = {
         "moves": {

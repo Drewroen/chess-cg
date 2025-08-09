@@ -94,7 +94,6 @@ class RoomService:
 
     def find_player_room(self, player_name: str) -> Room:
         """Find the room ID for a given player."""
-        print(player_name)
         room_id = self.player_to_room_map.get(player_name)
         if not room_id:
             return None
