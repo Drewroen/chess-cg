@@ -22,12 +22,21 @@ export function Board({
   } | null>(null);
   const playerColor = game.players?.white.id === game.id ? "white" : "black";
   const [possibleMoves, setPossibleMoves] = useState<number[][]>([]);
+  const [premove, setPremove] = useState<{
+    from: [number, number];
+    to: [number, number];
+  } | null>(null);
 
   // Reset active square when board state changes (e.g., opponent makes a move)
   useEffect(() => {
     setActiveSquare(null);
     setPossibleMoves([]);
   }, [game.board, game.turn]);
+
+  // Clear premove when it's executed or game state changes
+  useEffect(() => {
+    setPremove(null);
+  }, [game.board?.squares]);
 
   function handlePieceDrop(
     dragX: number,
@@ -42,6 +51,9 @@ export function Board({
 
   function handlePromotion(pieceType: string) {
     if (promotionMove) {
+      if (game.turn !== playerColor) {
+        setPremove({ from: promotionMove.from, to: promotionMove.to });
+      }
       socket?.send(
         JSON.stringify({
           from: promotionMove.from,
@@ -125,6 +137,8 @@ export function Board({
               to: coords,
             })
           );
+          // Set the premove for visualization
+          setPremove({ from: activeSquare!, to: coords });
           setActiveSquare(null);
           setPossibleMoves([]);
         }
@@ -198,6 +212,11 @@ export function Board({
                 playerColor={playerColor}
                 onCoordinateLog={(dragX, dragY) =>
                   handlePieceDrop(dragX, dragY, i, j)
+                }
+                isPremove={
+                  !!premove &&
+                  ((premove.from[0] === i && premove.from[1] === j) ||
+                    (premove.to[0] === i && premove.to[1] === j))
                 }
                 key={`tile-${i}-${j}`}
               />

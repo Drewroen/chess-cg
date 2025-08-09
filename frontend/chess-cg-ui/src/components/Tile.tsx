@@ -13,6 +13,7 @@ export function Tile({
   isCheck,
   playerColor,
   onCoordinateLog,
+  isPremove,
 }: {
   type: string;
   color: string;
@@ -24,6 +25,7 @@ export function Tile({
   isCheck?: boolean;
   playerColor: string;
   onCoordinateLog?: (x: number, y: number) => void;
+  isPremove?: boolean;
 }) {
   const pieceStyle: CSSProperties = {
     position: "absolute",
@@ -39,6 +41,7 @@ export function Tile({
         <Square
           light={(x + y) % 2 === 0}
           style={pieceStyle}
+          premove={isPremove}
           key={`square-${x}-${y}`}
         ></Square>
         {isCheck && (

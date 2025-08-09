@@ -28,7 +28,7 @@ class Game:
 
     def move(self, start, end, player_color, promote_to=None):
         if self.status == GameStatus.COMPLETE:
-            return
+            return False
 
         if self.status == GameStatus.IN_PROGRESS:
             current_time = time.time()
@@ -40,7 +40,7 @@ class Game:
                     self.white_time_left = 0
                     self.status = GameStatus.COMPLETE
                     self.winner = "black"
-                    return
+                    return False
             else:
                 self.black_time_left = round(self.black_time_left - elapsed, 2)
                 if self.black_time_left <= 0:
@@ -48,7 +48,7 @@ class Game:
                     self.black_time_left = 0
                     self.status = GameStatus.COMPLETE
                     self.winner = "white"
-                    return
+                    return False
 
         if player_color == self.turn:
             # Regular move - it's the player's turn
@@ -59,7 +59,7 @@ class Game:
                 self.white_premove = (start, end, promote_to)
             else:
                 self.black_premove = (start, end, promote_to)
-            return
+            return False
 
         if moved:
             if self.status == GameStatus.IN_PROGRESS:
@@ -83,6 +83,10 @@ class Game:
                     self.winner = "black" if self.turn == "white" else "white"
                 else:
                     self.winner = "draw"
+
+            return True  # Move was successfully made
+        else:
+            return False  # Move was invalid
 
     def _execute_premove(self):
         """Execute a premove if one exists for the current player"""
