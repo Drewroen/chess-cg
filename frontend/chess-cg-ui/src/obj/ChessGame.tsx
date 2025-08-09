@@ -24,6 +24,7 @@ export class ChessGame {
   status: string = "";
   time: RemainingTime = new RemainingTime();
   moves: ChessMoves = new ChessMoves();
+  premoves: ChessMoves = new ChessMoves();
   id: number = -1;
 }
 export class ChessPlayers {
@@ -62,5 +63,6 @@ export class BoardEvent {
   status: string = "";
   time: RemainingTime = { white: 0, black: 0 };
   moves: ChessMoves = new ChessMoves();
+  premoves: ChessMoves = new ChessMoves();
   id: number = 0;
 }

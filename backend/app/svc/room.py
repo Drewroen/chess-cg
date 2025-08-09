@@ -186,6 +186,20 @@ class RoomManager:
                         for x in room.game.board.get_available_moves_for_color("black")
                     ],
                 },
+                "premoves": {
+                    "white": [
+                        (x.position_from.coordinates(), x.position_to.coordinates())
+                        for x in room.game.board.get_available_premoves_for_color(
+                            "white"
+                        )
+                    ],
+                    "black": [
+                        (x.position_from.coordinates(), x.position_to.coordinates())
+                        for x in room.game.board.get_available_premoves_for_color(
+                            "black"
+                        )
+                    ],
+                },
             }
         for player_name in [room.white, room.black]:
             state["id"] = player_name

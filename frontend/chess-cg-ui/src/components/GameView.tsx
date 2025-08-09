@@ -147,6 +147,7 @@ export function GameView() {
       status: data.status,
       time: data.time,
       moves: data.moves,
+      premoves: data.premoves,
       id: data.id,
     }));
   }, []);

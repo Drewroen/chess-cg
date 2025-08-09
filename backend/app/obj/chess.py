@@ -113,7 +113,9 @@ class Board:
 
         first_position = position_from.notation()
         second_position = position_to.notation()
-        available_moves: list[ChessMove] = self.get_available_moves(position_from)
+        available_moves: list[ChessMove] = self.get_available_moves(
+            position_from, ignore_check=False, ignore_illegal_moves=False
+        )
         move: ChessMove = next(
             filter(
                 lambda move: move.position_to.notation() == second_position
@@ -168,21 +170,37 @@ class Board:
 
         return False
 
-    def get_available_moves_for_color(
-        self, color: str, ignore_check: bool = False
-    ) -> list[ChessMove]:
+    def get_available_moves_for_color(self, color: str) -> list[ChessMove]:
         """
         Get all available moves for all pieces of the given color
         """
         moves = []
         for piece in self.pieces:
             if piece.color == color:
-                available_moves = self.get_available_moves(piece.position, ignore_check)
+                available_moves = self.get_available_moves(
+                    piece.position, ignore_check=False, ignore_illegal_moves=False
+                )
+                moves.extend(available_moves)
+        return moves
+
+    def get_available_premoves_for_color(self, color: str) -> list[ChessMove]:
+        """
+        Get all available moves for all pieces of the given color
+        """
+        moves = []
+        for piece in self.pieces:
+            if piece.color == color:
+                available_moves = self.get_available_moves(
+                    piece.position, ignore_check=True, ignore_illegal_moves=True
+                )
                 moves.extend(available_moves)
         return moves
 
     def get_available_moves(
-        self, position: Position, ignore_check: bool = False, recursive: bool = False
+        self,
+        position: Position,
+        ignore_check: bool = False,
+        ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         """
         Get the available moves for a piece in the given position
@@ -192,7 +210,7 @@ class Board:
             return []
         moves = []
         if piece.type == "pawn":
-            moves = self._get_pawn_moves(position)
+            moves = self._get_pawn_moves(position, ignore_illegal_moves)
         if piece.type == "rook":
             moves = self._get_rook_moves(position)
         if piece.type == "knight":
@@ -305,7 +323,7 @@ class Board:
                 piece = self.squares[r][c]
                 if piece and piece.color != color:
                     moves = self.get_available_moves(
-                        Position(r, c), ignore_check=True, recursive=True
+                        Position(r, c), ignore_check=True, ignore_illegal_moves=False
                     )
                     for move in moves:
                         if move.position_to.coordinates() == (row, col):
@@ -315,7 +333,9 @@ class Board:
     def chess_notation_from_index(self, row: int, col: int):
         return f"{chr(97+col)}{8-row}"
 
-    def _get_pawn_moves(self, position: Position) -> list[ChessMove]:
+    def _get_pawn_moves(
+        self, position: Position, ignore_illegal_moves: bool = False
+    ) -> list[ChessMove]:
         """
         Get all available moves for a pawn at the given position.
 
@@ -330,16 +350,32 @@ class Board:
         direction = PAWN_DIRECTIONS[color]
 
         moves = []
-        moves.extend(self._get_pawn_forward_moves(position, row, col, color, direction))
-        moves.extend(self._get_pawn_capture_moves(position, row, col, color, direction))
         moves.extend(
-            self._get_pawn_en_passant_moves(position, row, col, color, direction)
+            self._get_pawn_forward_moves(
+                position, row, col, color, direction, ignore_illegal_moves
+            )
+        )
+        moves.extend(
+            self._get_pawn_capture_moves(
+                position, row, col, color, direction, ignore_illegal_moves
+            )
+        )
+        moves.extend(
+            self._get_pawn_en_passant_moves(
+                position, row, col, color, direction, ignore_illegal_moves
+            )
         )
 
         return moves
 
     def _get_pawn_forward_moves(
-        self, position: Position, row: int, col: int, color: str, direction: int
+        self,
+        position: Position,
+        row: int,
+        col: int,
+        color: str,
+        direction: int,
+        ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         """Get forward moves for a pawn (1 or 2 squares)"""
         moves = []
@@ -348,7 +384,7 @@ class Board:
         # Check if one square forward is valid and empty
         if not (
             self._is_valid_position(target_row, col)
-            and self._is_empty_square(target_row, col)
+            and (self._is_empty_square(target_row, col) or ignore_illegal_moves)
         ):
             return moves
 
@@ -362,14 +398,23 @@ class Board:
             if (
                 row == PAWN_START_ROWS[color]
                 and self._is_valid_position(target_row + direction, col)
-                and self._is_empty_square(target_row + direction, col)
+                and (
+                    self._is_empty_square(target_row + direction, col)
+                    or ignore_illegal_moves
+                )
             ):
                 moves.append(ChessMove(position, Position(target_row + direction, col)))
 
         return moves
 
     def _get_pawn_capture_moves(
-        self, position: Position, row: int, col: int, color: str, direction: int
+        self,
+        position: Position,
+        row: int,
+        col: int,
+        color: str,
+        direction: int,
+        ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         """Get diagonal capture moves for a pawn"""
         moves = []
@@ -381,7 +426,10 @@ class Board:
 
             if not (
                 self._is_valid_position(target_row, target_col)
-                and self._is_enemy_piece(target_row, target_col, color)
+                and (
+                    self._is_enemy_piece(target_row, target_col, color)
+                    or ignore_illegal_moves
+                )
             ):
                 continue
 
@@ -398,7 +446,13 @@ class Board:
         return moves
 
     def _get_pawn_en_passant_moves(
-        self, position: Position, row: int, col: int, color: str, direction: int
+        self,
+        position: Position,
+        row: int,
+        col: int,
+        color: str,
+        direction: int,
+        ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         """Get en passant moves for a pawn"""
         moves = []
@@ -411,9 +465,10 @@ class Board:
         for col_offset in [-1, 1]:
             target_col = col + col_offset
 
-            if self._is_valid_position(
-                row, target_col
-            ) and self._can_capture_en_passant(row, target_col, color):
+            if self._is_valid_position(row, target_col) and (
+                self._can_capture_en_passant(row, target_col, color)
+                or ignore_illegal_moves
+            ):
                 capture_position = Position(row, target_col)
                 move_position = Position(row + direction, target_col)
                 moves.append(ChessMove(position, move_position, capture_position))
@@ -638,6 +693,8 @@ class Board:
                 piece = self.squares[row][col]
                 if piece and piece.color == color:
                     position = Position(row, col)
-                    if self.get_available_moves(position):
+                    if self.get_available_moves(
+                        position, ignore_check=False, ignore_illegal_moves=False
+                    ):
                         return True
         return False
