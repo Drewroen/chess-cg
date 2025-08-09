@@ -10,7 +10,7 @@ import WhiteRook from "../assets/white_rook.svg";
 import WhiteBishop from "../assets/white_bishop.svg";
 import WhiteKnight from "../assets/white_knight.svg";
 import WhitePawn from "../assets/white_pawn.svg";
-import { CSSProperties } from "react";
+import { CSSProperties, useRef } from "react";
 import Draggable from "react-draggable";
 
 export function Piece({
@@ -26,6 +26,7 @@ export function Piece({
   playerColor: string;
   onCoordinateLog?: (x: number, y: number) => void;
 }) {
+  const nodeRef = useRef(null);
   function getSvg(type: string, color: string) {
     if (type === "pawn" && color === "white") return WhitePawn;
     if (type === "knight" && color === "white") return WhiteKnight;
@@ -52,6 +53,7 @@ export function Piece({
 
   const pieceImage = (
     <img 
+      ref={nodeRef}
       src={svgSrc} 
       alt="" 
       style={{...style, zIndex: color === playerColor ? 1001 : 1000}} 
@@ -61,6 +63,7 @@ export function Piece({
 
   return color === playerColor ? (
     <Draggable
+      nodeRef={nodeRef}
       position={{ x: 0, y: 0 }}
       onStop={(_e, data) => {
         const boardSquareWidth = 75;
