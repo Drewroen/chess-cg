@@ -59,7 +59,12 @@ export function Piece({
         onCoordinateLog?.(x, y);
       }}
     >
-      <img src={getSvg(type, color)} alt="" style={style} draggable={false} />
+      <img 
+        src={getSvg(type, color)} 
+        alt="" 
+        style={{...style, zIndex: 1000}} 
+        draggable={false} 
+      />
     </Draggable>
   );
 }
