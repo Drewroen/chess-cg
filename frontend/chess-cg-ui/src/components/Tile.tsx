@@ -9,6 +9,7 @@ export function Tile({
   y,
   isActive,
   isPossibleMove,
+  isPlayerTurn,
   isCheck,
   onCoordinateLog,
 }: {
@@ -18,6 +19,7 @@ export function Tile({
   y: number;
   isActive: boolean;
   isPossibleMove?: boolean;
+  isPlayerTurn?: boolean;
   isCheck?: boolean;
   onCoordinateLog?: (x: number, y: number) => void;
 }) {
@@ -65,16 +67,18 @@ export function Tile({
           <div
             style={{
               ...pieceStyle,
-              background:
-                "radial-gradient(rgba(20, 85, 30, 0.5) 19%, rgba(0, 0, 0, 0) 20%)",
+              background: isPlayerTurn
+                ? "radial-gradient(rgba(20, 85, 30, 0.5) 19%, rgba(0, 0, 0, 0) 20%)"
+                : "radial-gradient(rgba(20, 30, 85, 0.5) 19%, rgba(0, 0, 0, 0) 20%)",
             }}
           ></div>
         ) : (
           <div
             style={{
               ...pieceStyle,
-              background:
-                "radial-gradient(transparent 0%, transparent 79%, rgba(20, 85, 0, 0.3) 80%)",
+              background: isPlayerTurn
+                ? "radial-gradient(transparent 0%, transparent 79%, rgba(20, 85, 0, 0.3) 80%)"
+                : "radial-gradient(transparent 0%, transparent 79%, rgba(20, 30, 85, 0.3) 80%)",
             }}
           ></div>
         ))}

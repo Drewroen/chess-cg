@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChessGame } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { PromotionSelector } from "./PromotionSelector";
@@ -22,6 +22,12 @@ export function Board({
   } | null>(null);
   const playerColor = game.players?.white.id === game.id ? "white" : "black";
   const [possibleMoves, setPossibleMoves] = useState<number[][]>([]);
+
+  // Reset active square when board state changes (e.g., opponent makes a move)
+  useEffect(() => {
+    setActiveSquare(null);
+    setPossibleMoves([]);
+  }, [game.board, game.turn]);
 
   function handlePieceDrop(
     dragX: number,
@@ -51,7 +57,14 @@ export function Board({
   }
 
   function onSquareClicked(coords: [number, number]) {
-    if (game.turn === playerColor && game.status !== "complete") {
+    if (game.status === "complete") {
+      setActiveSquare(null);
+      setPossibleMoves([]);
+      return;
+    }
+
+    if (game.turn === playerColor) {
+      // It's the player's turn - show regular moves
       if (isPossibleMove(coords)) {
         if (
           ((playerColor === "white" && coords[0] === 0) ||
@@ -93,8 +106,27 @@ export function Board({
         setPossibleMoves([]);
       }
     } else {
-      setActiveSquare(null);
-      setPossibleMoves([]);
+      // It's not the player's turn - show premoves instead of available moves
+      if (game.board?.squares![coords[0]][coords[1]] === null) {
+        setActiveSquare(null);
+        setPossibleMoves([]);
+      } else if (
+        game.board?.squares![coords[0]][coords[1]]?.color === playerColor
+      ) {
+        let gamePremoves = game.premoves[playerColor];
+        let availablePremoves = [];
+        for (let premove of gamePremoves) {
+          let from = premove[0];
+          if (from[0] === coords[0] && from[1] === coords[1]) {
+            availablePremoves.push(premove[1]);
+          }
+        }
+        setPossibleMoves(availablePremoves);
+        setActiveSquare(coords);
+      } else {
+        setActiveSquare(null);
+        setPossibleMoves([]);
+      }
     }
   }
 
@@ -133,6 +165,7 @@ export function Board({
                 isPossibleMove={possibleMoves.some(
                   (move) => move[0] === i && move[1] === j
                 )}
+                isPlayerTurn={game.turn === playerColor}
                 isCheck={
                   (square?.type === "king" &&
                     square?.color === "white" &&
