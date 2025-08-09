@@ -195,6 +195,7 @@ export function Board({
                     square?.color === "black" &&
                     game.kingsInCheck?.black)
                 }
+                playerColor={playerColor}
                 onCoordinateLog={(dragX, dragY) =>
                   handlePieceDrop(dragX, dragY, i, j)
                 }

@@ -18,11 +18,13 @@ export function Piece({
   type,
   color,
   style,
+  playerColor,
   onCoordinateLog,
 }: {
   type: string;
   color: string;
   style: CSSProperties;
+  playerColor: string;
   onCoordinateLog?: (x: number, y: number) => void;
 }) {
   function getSvg(type: string, color: string) {
@@ -45,13 +47,22 @@ export function Piece({
     return null;
   }
 
-  return (
+  const pieceImage = (
+    <img 
+      src={getSvg(type, color)} 
+      alt="" 
+      style={{...style, zIndex: 1000}} 
+      draggable={false} 
+    />
+  );
+
+  return color === playerColor ? (
     <Draggable
       position={{ x: 0, y: 0 }}
       onStop={(_e, data) => {
-        const boardSquareWidth = 75; // 600px board / 8 squares = 75px per square
+        const boardSquareWidth = 75;
         const boardSquareHeight = 75;
-        const offset = 37.5; // Half of square size since dragging from center
+        const offset = 37.5;
 
         const x = Math.floor((data.x + offset) / boardSquareWidth);
         const y = Math.floor((data.y + offset) / boardSquareHeight);
@@ -59,12 +70,7 @@ export function Piece({
         onCoordinateLog?.(x, y);
       }}
     >
-      <img 
-        src={getSvg(type, color)} 
-        alt="" 
-        style={{...style, zIndex: 1000}} 
-        draggable={false} 
-      />
+      {pieceImage}
     </Draggable>
-  );
+  ) : pieceImage;
 }
