@@ -1,5 +1,3 @@
-import LightSquare from "../assets/light_square.svg";
-import DarkSquare from "../assets/dark_square.svg";
 import { CSSProperties } from "react";
 
 export function Square({
@@ -9,5 +7,12 @@ export function Square({
   light: boolean;
   style: CSSProperties;
 }) {
-  return <img src={light ? LightSquare : DarkSquare} style={style} alt="" />;
+  return (
+    <div
+      style={{
+        ...style,
+        backgroundColor: light ? "#e8eaec" : "#798495",
+      }}
+    />
+  );
 }

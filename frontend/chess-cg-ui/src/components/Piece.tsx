@@ -10,7 +10,6 @@ import WhiteRook from "../assets/white_rook.svg";
 import WhiteBishop from "../assets/white_bishop.svg";
 import WhiteKnight from "../assets/white_knight.svg";
 import WhitePawn from "../assets/white_pawn.svg";
-import Empty from "../assets/empty.svg";
 import { CSSProperties } from "react";
 import Draggable from "react-draggable";
 
@@ -40,16 +39,20 @@ export function Piece({
     if (type === "rook" && color === "black") return BlackRook;
     if (type === "queen" && color === "black") return BlackQueen;
     if (type === "king" && color === "black") return BlackKing;
-    return Empty;
   }
 
   if (!type || !color) {
     return null;
   }
 
+  const svgSrc = getSvg(type, color);
+  if (!svgSrc) {
+    return null;
+  }
+
   const pieceImage = (
     <img 
-      src={getSvg(type, color)} 
+      src={svgSrc} 
       alt="" 
       style={{...style, zIndex: color === playerColor ? 1001 : 1000}} 
       draggable={false} 
