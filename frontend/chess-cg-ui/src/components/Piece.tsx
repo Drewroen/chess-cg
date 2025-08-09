@@ -51,7 +51,7 @@ export function Piece({
     <img 
       src={getSvg(type, color)} 
       alt="" 
-      style={{...style, zIndex: 1000}} 
+      style={{...style, zIndex: color === playerColor ? 1001 : 1000}} 
       draggable={false} 
     />
   );
