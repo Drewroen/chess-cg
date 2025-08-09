@@ -1,6 +1,7 @@
 from app.svc.room import RoomManager
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.obj.objects import Position
+from app.obj.game import GameStatus
 
 router = APIRouter()
 
@@ -28,6 +29,9 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                 moved = room.game.move(start, end, player_color, promote_to)
                 if moved:
                     await room_manager.emit_game_state_to_room(room.id)
+                    # Clean up if game completed
+                    if room.game.status == GameStatus.COMPLETE:
+                        room_manager.room_service.cleanup_room(room.id)
 
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for player {user_id}")

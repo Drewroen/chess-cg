@@ -36,6 +36,7 @@ async def check_game_timers():
                             room.game.completed_at = current_time
                             room.game.winner = "black"
                             await room_manager.emit_game_state_to_room(room_id)
+                            room_manager.room_service.cleanup_room(room_id)
                     else:  # black's turn
                         if room.game.black_time_left - elapsed <= 0:
                             print(f"Black player has run out of time in room {room_id}")
@@ -44,6 +45,7 @@ async def check_game_timers():
                             room.game.completed_at = current_time
                             room.game.winner = "white"
                             await room_manager.emit_game_state_to_room(room_id)
+                            room_manager.room_service.cleanup_room(room_id)
         except Exception as e:
             print(f"Error in timer check task: {e}")
         
@@ -69,12 +71,10 @@ async def lifespan(app: FastAPI):
     # Startup
     timer_task = asyncio.create_task(check_game_timers())
     cleanup_task = asyncio.create_task(cleanup_expired_tokens())
-    room_manager.room_service.start_cleanup_task()
     yield
     # Shutdown
     timer_task.cancel()
     cleanup_task.cancel()
-    room_manager.room_service.stop_cleanup_task()
 
 
 app = FastAPI(

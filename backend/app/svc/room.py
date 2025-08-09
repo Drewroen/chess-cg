@@ -1,8 +1,7 @@
 from uuid import UUID, uuid4
-from app.obj.game import Game, GameStatus
+from app.obj.game import Game
 from fastapi import WebSocket
 from ..auth import verify_jwt_token
-import asyncio
 
 
 class WebSocketConnection:
@@ -67,7 +66,6 @@ class RoomService:
         self.rooms: dict[UUID, Room] = {}
         self.queue: list[str] = []
         self.player_to_room_map: dict[str, UUID] = {}
-        self._cleanup_task = None
 
     def add_to_queue(self, name: str):
         """Add a player to the queue if not already present."""
@@ -105,49 +103,20 @@ class RoomService:
         """Get a room by its ID."""
         return self.rooms.get(room_id)
 
-    def cleanup_completed_games(self):
-        """Remove all completed games from the service."""
-        rooms_to_remove = []
-
-        for room_id, room in self.rooms.items():
-            if room.game.status == GameStatus.COMPLETE:
-                rooms_to_remove.append(room_id)
-
-        for room_id in rooms_to_remove:
-            room = self.rooms[room_id]
-            # Clean up player mappings
-            if room.white in self.player_to_room_map:
-                del self.player_to_room_map[room.white]
-            if room.black in self.player_to_room_map:
-                del self.player_to_room_map[room.black]
-            # Remove the room
-            del self.rooms[room_id]
-
-        if rooms_to_remove:
-            print(f"Cleaned up {len(rooms_to_remove)} completed games")
-
-    async def _periodic_cleanup(self):
-        """Background task that runs cleanup every minute."""
-        while True:
-            try:
-                await asyncio.sleep(15)  # Wait 1 minute
-                self.cleanup_completed_games()
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"Error during periodic cleanup: {e}")
-
-    def start_cleanup_task(self):
-        """Start the periodic cleanup background task."""
-        if self._cleanup_task is None or self._cleanup_task.done():
-            self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
-            print("Started periodic game cleanup task")
-
-    def stop_cleanup_task(self):
-        """Stop the periodic cleanup background task."""
-        if self._cleanup_task and not self._cleanup_task.done():
-            self._cleanup_task.cancel()
-            print("Stopped periodic game cleanup task")
+    def cleanup_room(self, room_id: UUID):
+        """Remove a completed game and clean up player mappings."""
+        if room_id not in self.rooms:
+            return
+        
+        room = self.rooms[room_id]
+        # Clean up player mappings
+        if room.white in self.player_to_room_map:
+            del self.player_to_room_map[room.white]
+        if room.black in self.player_to_room_map:
+            del self.player_to_room_map[room.black]
+        # Remove the room
+        del self.rooms[room_id]
+        print(f"Cleaned up completed game {room_id}")
 
 
 class RoomManager:
