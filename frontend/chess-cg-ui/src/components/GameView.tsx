@@ -182,18 +182,20 @@ export function GameView() {
         justifyContent: "center",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          top: "10px",
-          right: "10px",
-          padding: "10px",
-          background: "lightgray",
-          borderRadius: "5px",
-        }}
-      >
-        Status: {getStatusDisplay(connectionStatus)}
-      </div>
+      {process.env.NODE_ENV === "development" && (
+        <div
+          style={{
+            position: "absolute",
+            top: "10px",
+            right: "10px",
+            padding: "10px",
+            background: "lightgray",
+            borderRadius: "5px",
+          }}
+        >
+          Status: {getStatusDisplay(connectionStatus)}
+        </div>
+      )}
       {chessGame.board?.squares ? (
         <>
           {socket && (
