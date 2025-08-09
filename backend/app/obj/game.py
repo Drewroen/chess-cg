@@ -11,6 +11,7 @@ class GameStatus(Enum):
 
 STARTING_TIME_IN_SECONDS = 180.0
 MOVE_INCREMENT_IN_SECONDS = 2.0
+PREMOVE_PENALTY_IN_SECONDS = 0.1
 
 
 class Game:
@@ -22,8 +23,10 @@ class Game:
         self.black_time_left = STARTING_TIME_IN_SECONDS
         self.last_move_time = time.time()
         self.winner = None
+        self.white_premove = None
+        self.black_premove = None
 
-    def move(self, start, end, promote_to=None):
+    def move(self, start, end, player_color, promote_to=None):
         if self.status == GameStatus.COMPLETE:
             return
 
@@ -47,7 +50,17 @@ class Game:
                     self.winner = "white"
                     return
 
-        moved = self.board.move(start, end, self.turn, promote_to)
+        if player_color == self.turn:
+            # Regular move - it's the player's turn
+            moved = self.board.move(start, end, self.turn, promote_to)
+        else:
+            # Premove - store for later execution
+            if player_color == "white":
+                self.white_premove = (start, end, promote_to)
+            else:
+                self.black_premove = (start, end, promote_to)
+            return
+
         if moved:
             if self.status == GameStatus.IN_PROGRESS:
                 if self.turn == "white":
@@ -61,12 +74,40 @@ class Game:
             self.turn = "black" if self.turn == "white" else "white"
             self.last_move_time = time.time()
 
+            # Execute premove if one exists for the current player
+            self._execute_premove()
+
             if not self.board.can_player_move(self.turn):
                 self.status = GameStatus.COMPLETE
                 if self.board.is_king_in_check(self.turn):
                     self.winner = "black" if self.turn == "white" else "white"
                 else:
                     self.winner = "draw"
+
+    def _execute_premove(self):
+        """Execute a premove if one exists for the current player"""
+        premove = None
+        if self.turn == "white" and self.white_premove:
+            premove = self.white_premove
+            self.white_premove = None
+        elif self.turn == "black" and self.black_premove:
+            premove = self.black_premove
+            self.black_premove = None
+
+        if premove:
+            start, end, promote_to = premove
+            # Subtract 0.1 seconds for premove penalty only if game hasn't started
+            if self.status != GameStatus.NOT_STARTED:
+                if self.turn == "white":
+                    self.white_time_left = max(
+                        0, self.white_time_left - PREMOVE_PENALTY_IN_SECONDS
+                    )
+                else:
+                    self.black_time_left = max(
+                        0, self.black_time_left - PREMOVE_PENALTY_IN_SECONDS
+                    )
+            # Recursively call move with the premove as a regular move
+            self.move(start, end, self.turn, promote_to)
 
     def mark_player_forfeit(self, color):
         if self.status != GameStatus.COMPLETE:

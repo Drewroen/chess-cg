@@ -280,7 +280,7 @@ def test_bishop_moves_correctly_flake():
         ("g2", "g4"),
     ]
     for move in moves:
-        game.move(position_from_notation(move[0]), position_from_notation(move[1]))
+        game.move(position_from_notation(move[0]), position_from_notation(move[1]), game.turn)
 
     moves = {
         "moves": {
@@ -315,6 +315,7 @@ def test_read_pgn(pgn_games, board):
         chess_game.move(
             position,
             position_from_notation(extracted_pgn["to_square"]),
+            chess_game.turn,
             promote_to=extracted_pgn["promotion"],
         )
         assert (

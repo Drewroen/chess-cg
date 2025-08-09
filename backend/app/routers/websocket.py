@@ -23,7 +23,9 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
             promote_to = data.get("promotion", None)
             room = room_manager.room_service.find_player_room(user_id)
             if room:
-                room.game.move(start, end, promote_to)
+                # Determine player color
+                player_color = "white" if room.white == user_id else "black"
+                room.game.move(start, end, player_color, promote_to)
                 await room_manager.emit_game_state_to_room(room.id)
 
     except WebSocketDisconnect:
