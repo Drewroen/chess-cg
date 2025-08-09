@@ -106,8 +106,29 @@ export function Board({
         setPossibleMoves([]);
       }
     } else {
-      // It's not the player's turn - show premoves instead of available moves
-      if (game.board?.squares![coords[0]][coords[1]] === null) {
+      // It's not the player's turn - handle premoves
+      if (isPossibleMove(coords)) {
+        if (
+          ((playerColor === "white" && coords[0] === 0) ||
+            (playerColor === "black" && coords[0] === 7)) &&
+          game.board?.squares![activeSquare![0]][activeSquare![1]]?.type ===
+            "pawn"
+        ) {
+          // Show promotion selector for premove
+          setPromotionMove({ from: activeSquare!, to: coords });
+          setShowPromotion(true);
+        } else {
+          // Send the premove to the backend
+          socket?.send(
+            JSON.stringify({
+              from: activeSquare,
+              to: coords,
+            })
+          );
+          setActiveSquare(null);
+          setPossibleMoves([]);
+        }
+      } else if (game.board?.squares![coords[0]][coords[1]] === null) {
         setActiveSquare(null);
         setPossibleMoves([]);
       } else if (

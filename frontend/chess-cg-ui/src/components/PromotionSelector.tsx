@@ -28,6 +28,7 @@ export function PromotionSelector({
     flexDirection: "column",
     alignItems: "center",
     gap: "10px",
+    zIndex: 1000,
   };
 
   const piecesContainerStyle: CSSProperties = {
