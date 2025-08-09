@@ -212,15 +212,17 @@ class Board:
         if piece.type == "pawn":
             moves = self._get_pawn_moves(position, ignore_illegal_moves)
         if piece.type == "rook":
-            moves = self._get_rook_moves(position)
+            moves = self._get_rook_moves(position, ignore_illegal_moves)
         if piece.type == "knight":
-            moves = self._get_knight_moves(position)
+            moves = self._get_knight_moves(position, ignore_illegal_moves)
         if piece.type == "bishop":
-            moves = self._get_bishop_moves(position)
+            moves = self._get_bishop_moves(position, ignore_illegal_moves)
         if piece.type == "queen":
-            moves = self._get_rook_moves(position) + self._get_bishop_moves(position)
+            moves = self._get_rook_moves(
+                position, ignore_illegal_moves
+            ) + self._get_bishop_moves(position, ignore_illegal_moves)
         if piece.type == "king":
-            moves = self._get_king_moves(position, ignore_check)
+            moves = self._get_king_moves(position, ignore_check, ignore_illegal_moves)
 
         if not ignore_check:
             moves = [
@@ -518,7 +520,10 @@ class Board:
         return "black" if color == "white" else "white"
 
     def _get_sliding_moves(
-        self, position: Position, directions: list[tuple[int, int]]
+        self,
+        position: Position,
+        directions: list[tuple[int, int]],
+        ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         moves = []
         row, col = position.coordinates()
@@ -528,7 +533,13 @@ class Board:
             current_row, current_col = row + dr, col + dc
             while self._is_valid_position(current_row, current_col):
                 target_piece = self.squares[current_row][current_col]
-                if target_piece is None:
+
+                if ignore_illegal_moves:
+                    # When ignoring illegal moves, add all valid positions and continue sliding
+                    moves.append(
+                        ChessMove(position, Position(current_row, current_col))
+                    )
+                elif target_piece is None:
                     moves.append(
                         ChessMove(position, Position(current_row, current_col))
                     )
@@ -543,10 +554,16 @@ class Board:
 
         return moves
 
-    def _get_rook_moves(self, position: Position) -> list[ChessMove]:
-        return self._get_sliding_moves(position, [(0, 1), (0, -1), (1, 0), (-1, 0)])
+    def _get_rook_moves(
+        self, position: Position, ignore_illegal_moves: bool = False
+    ) -> list[ChessMove]:
+        return self._get_sliding_moves(
+            position, [(0, 1), (0, -1), (1, 0), (-1, 0)], ignore_illegal_moves
+        )
 
-    def _get_knight_moves(self, position: Position) -> list[ChessMove]:
+    def _get_knight_moves(
+        self, position: Position, ignore_illegal_moves: bool = False
+    ) -> list[ChessMove]:
         moves = []
         row, col = position.coordinates()
         piece = self.piece_from_position(position)
@@ -555,16 +572,25 @@ class Board:
             new_row, new_col = row + dr, col + dc
             if self._is_valid_position(new_row, new_col):
                 target_piece = self.squares[new_row][new_col]
-                if target_piece is None or target_piece.color != piece.color:
+                if ignore_illegal_moves or (
+                    target_piece is None or target_piece.color != piece.color
+                ):
                     moves.append(ChessMove(position, Position(new_row, new_col)))
 
         return moves
 
-    def _get_bishop_moves(self, position: Position) -> list[ChessMove]:
-        return self._get_sliding_moves(position, [(1, 1), (1, -1), (-1, -1), (-1, 1)])
+    def _get_bishop_moves(
+        self, position: Position, ignore_illegal_moves: bool = False
+    ) -> list[ChessMove]:
+        return self._get_sliding_moves(
+            position, [(1, 1), (1, -1), (-1, -1), (-1, 1)], ignore_illegal_moves
+        )
 
     def _get_king_moves(
-        self, position: Position, ignore_check: bool = False
+        self,
+        position: Position,
+        ignore_check: bool = False,
+        ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         moves = []
         row, col = position.coordinates()
@@ -575,28 +601,32 @@ class Board:
             new_row, new_col = row + dr, col + dc
             if self._is_valid_position(new_row, new_col):
                 target_piece = self.squares[new_row][new_col]
-                if target_piece is None or target_piece.color != piece.color:
+                if ignore_illegal_moves or (
+                    target_piece is None or target_piece.color != piece.color
+                ):
                     moves.append(ChessMove(position, Position(new_row, new_col)))
 
         # Castling logic
-        if not ignore_check and not piece.moved:
-            moves.extend(self._get_castling_moves(position))
+        if (not ignore_check or ignore_illegal_moves) and not piece.moved:
+            moves.extend(self._get_castling_moves(position, ignore_illegal_moves))
 
         return moves
 
-    def _get_castling_moves(self, position: Position) -> list[ChessMove]:
+    def _get_castling_moves(
+        self, position: Position, ignore_illegal_moves: bool = False
+    ) -> list[ChessMove]:
         moves = []
         row, col = position.coordinates()
         piece = self.piece_from_position(position)
 
         # Kingside castling
-        if self._can_castle_kingside(row, col, piece.color):
+        if self._can_castle_kingside(row, col, piece.color) or ignore_illegal_moves:
             move = ChessMove(position, Position(row, col + 2))
             move.additional_move = (Position(row, col + 3), Position(row, col + 1))
             moves.append(move)
 
         # Queenside castling
-        if self._can_castle_queenside(row, col, piece.color):
+        if self._can_castle_queenside(row, col, piece.color) or ignore_illegal_moves:
             move = ChessMove(position, Position(row, col - 2))
             move.additional_move = (Position(row, col - 4), Position(row, col - 1))
             moves.append(move)

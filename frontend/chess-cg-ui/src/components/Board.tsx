@@ -23,7 +23,12 @@ export function Board({
   const playerColor = game.players?.white.id === game.id ? "white" : "black";
   const [possibleMoves, setPossibleMoves] = useState<number[][]>([]);
 
-  function handlePieceDrop(dragX: number, dragY: number, boardX: number, boardY: number) {
+  function handlePieceDrop(
+    dragX: number,
+    dragY: number,
+    boardX: number,
+    boardY: number
+  ) {
     const newX = playerColor === "white" ? boardX + dragY : boardX - dragY;
     const newY = playerColor === "white" ? boardY + dragX : boardY - dragX;
     onSquareClicked([newX, newY]);
@@ -136,7 +141,9 @@ export function Board({
                     square?.color === "black" &&
                     game.kingsInCheck?.black)
                 }
-                onCoordinateLog={(dragX, dragY) => handlePieceDrop(dragX, dragY, i, j)}
+                onCoordinateLog={(dragX, dragY) =>
+                  handlePieceDrop(dragX, dragY, i, j)
+                }
                 key={`tile-${i}-${j}`}
               />
             </div>
