@@ -25,6 +25,7 @@ class Game:
         self.winner = None
         self.white_premove = None
         self.black_premove = None
+        self.completed_at = None
 
     def move(self, start, end, player_color, promote_to=None):
         if self.status == GameStatus.COMPLETE:
@@ -39,6 +40,7 @@ class Game:
                     print("The player has run out of time")
                     self.white_time_left = 0
                     self.status = GameStatus.COMPLETE
+                    self.completed_at = time.time()
                     self.winner = "black"
                     return False
             else:
@@ -47,6 +49,7 @@ class Game:
                     print("The player has run out of time")
                     self.black_time_left = 0
                     self.status = GameStatus.COMPLETE
+                    self.completed_at = time.time()
                     self.winner = "white"
                     return False
 
@@ -79,6 +82,7 @@ class Game:
 
             if not self.board.can_player_move(self.turn):
                 self.status = GameStatus.COMPLETE
+                self.completed_at = time.time()
                 if self.board.is_king_in_check(self.turn):
                     self.winner = "black" if self.turn == "white" else "white"
                 else:
@@ -116,4 +120,5 @@ class Game:
     def mark_player_forfeit(self, color):
         if self.status != GameStatus.COMPLETE:
             self.status = GameStatus.COMPLETE
+            self.completed_at = time.time()
             self.winner = "black" if color == "white" else "white"
