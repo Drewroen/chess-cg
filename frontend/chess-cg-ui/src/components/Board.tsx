@@ -46,7 +46,7 @@ export function Board({
   ) {
     const newX = playerColor === "white" ? boardX + dragY : boardX - dragY;
     const newY = playerColor === "white" ? boardY + dragX : boardY - dragX;
-    onSquareClicked([newX, newY]);
+    if (newX !== boardX || newY !== boardY) onSquareClicked([newX, newY]);
   }
 
   function handlePromotion(pieceType: string) {
@@ -143,7 +143,8 @@ export function Board({
           setPossibleMoves([]);
         }
       } else if (
-        game.board?.squares![coords[0]][coords[1]]?.color === playerColor
+        game.board?.squares![coords[0]][coords[1]]?.color === playerColor &&
+        !activeSquare
       ) {
         let gamePremoves = game.premoves[playerColor];
         let availablePremoves = [];
@@ -157,10 +158,12 @@ export function Board({
         setActiveSquare(coords);
       } else {
         // Clicked on empty square or opponent piece - reset premove
-        socket?.send(JSON.stringify({
-          from: null,
-          to: null,
-        }));
+        socket?.send(
+          JSON.stringify({
+            from: null,
+            to: null,
+          })
+        );
         // Reset premove state
         setPremove(null);
         setActiveSquare(null);
@@ -192,7 +195,9 @@ export function Board({
           row.map((square, j) => (
             <div
               style={{ cursor: "pointer" }}
-              onMouseDown={() => onSquareClicked([i, j])}
+              onMouseDown={() => {
+                onSquareClicked([i, j]);
+              }}
               key={`tile-div-${i}-${j}`}
             >
               <Tile
