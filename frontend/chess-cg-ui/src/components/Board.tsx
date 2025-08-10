@@ -142,9 +142,6 @@ export function Board({
           setActiveSquare(null);
           setPossibleMoves([]);
         }
-      } else if (game.board?.squares![coords[0]][coords[1]] === null) {
-        setActiveSquare(null);
-        setPossibleMoves([]);
       } else if (
         game.board?.squares![coords[0]][coords[1]]?.color === playerColor
       ) {
@@ -159,6 +156,13 @@ export function Board({
         setPossibleMoves(availablePremoves);
         setActiveSquare(coords);
       } else {
+        // Clicked on empty square or opponent piece - reset premove
+        socket?.send(JSON.stringify({
+          from: null,
+          to: null,
+        }));
+        // Reset premove state
+        setPremove(null);
         setActiveSquare(null);
         setPossibleMoves([]);
       }

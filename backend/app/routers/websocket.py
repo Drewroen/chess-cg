@@ -19,19 +19,31 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
     try:
         while True:
             data = await websocket.receive_json()
-            start = Position(data["from"][0], data["from"][1])
-            end = Position(data["to"][0], data["to"][1])
-            promote_to = data.get("promotion", None)
             room = room_manager.room_service.find_player_room(user_id)
             if room:
                 # Determine player color
                 player_color = "white" if room.white == user_id else "black"
-                moved = room.game.move(start, end, player_color, promote_to)
-                if moved:
+                
+                # Check if this is an empty move to reset premove
+                if data["from"] is None or data["to"] is None:
+                    # Reset the premove for this player
+                    if player_color == "white":
+                        room.game.white_premove = None
+                    else:
+                        room.game.black_premove = None
+                    # Emit updated game state to show premove cleared
                     await room_manager.emit_game_state_to_room(room.id)
-                    # Clean up if game completed
-                    if room.game.status == GameStatus.COMPLETE:
-                        room_manager.room_service.cleanup_room(room.id)
+                else:
+                    # Regular move handling
+                    start = Position(data["from"][0], data["from"][1])
+                    end = Position(data["to"][0], data["to"][1])
+                    promote_to = data.get("promotion", None)
+                    moved = room.game.move(start, end, player_color, promote_to)
+                    if moved:
+                        await room_manager.emit_game_state_to_room(room.id)
+                        # Clean up if game completed
+                        if room.game.status == GameStatus.COMPLETE:
+                            room_manager.room_service.cleanup_room(room.id)
 
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for player {user_id}")
