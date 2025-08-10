@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChessGame } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { PromotionSelector } from "./PromotionSelector";
@@ -26,6 +26,8 @@ export function Board({
     from: [number, number];
     to: [number, number];
   } | null>(null);
+  const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
+  const boardRef = useRef<HTMLDivElement>(null);
 
   // Reset active square when board state changes (e.g., opponent makes a move)
   useEffect(() => {
@@ -38,7 +40,23 @@ export function Board({
     setPremove(null);
   }, [game.board?.squares]);
 
-  function handlePieceDrop(
+  // Track board dimensions with ResizeObserver
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        setBoardDimensions({ width, height });
+      }
+    });
+
+    if (boardRef.current) {
+      resizeObserver.observe(boardRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  function onPieceDrop(
     dragX: number,
     dragY: number,
     boardX: number,
@@ -180,12 +198,15 @@ export function Board({
     );
   }
 
+  const boardSize = 600;
+  
   return (
     <div
+      ref={boardRef}
       style={{
         position: "relative",
-        width: "600px",
-        height: "600px",
+        width: `${boardSize}px`,
+        height: `${boardSize}px`,
         padding: 0,
         margin: 0,
       }}
@@ -219,14 +240,13 @@ export function Board({
                     game.kingsInCheck?.black)
                 }
                 playerColor={playerColor}
-                onPieceDrop={(dragX, dragY) =>
-                  handlePieceDrop(dragX, dragY, i, j)
-                }
+                onPieceDrop={(dragX, dragY) => onPieceDrop(dragX, dragY, i, j)}
                 isPremove={
                   !!premove &&
                   ((premove.from[0] === i && premove.from[1] === j) ||
                     (premove.to[0] === i && premove.to[1] === j))
                 }
+                boardDimensions={boardDimensions}
                 key={`tile-${i}-${j}`}
               />
             </div>

@@ -19,12 +19,14 @@ export function Piece({
   style,
   playerColor,
   onPieceDrop,
+  boardDimensions,
 }: {
   type: string;
   color: string;
   style: CSSProperties;
   playerColor: string;
   onPieceDrop?: (x: number, y: number) => void;
+  boardDimensions: { width: number; height: number };
 }) {
   const nodeRef = useRef(null);
   function getSvg(type: string, color: string) {
@@ -66,9 +68,9 @@ export function Piece({
       nodeRef={nodeRef}
       position={{ x: 0, y: 0 }}
       onStop={(_e, data) => {
-        const boardSquareWidth = 75;
-        const boardSquareHeight = 75;
-        const offset = 37.5;
+        const boardSquareWidth = boardDimensions.width / 8;
+        const boardSquareHeight = boardDimensions.height / 8;
+        const offset = boardSquareWidth / 2;
 
         const x = Math.floor((data.x + offset) / boardSquareWidth);
         const y = Math.floor((data.y + offset) / boardSquareHeight);
