@@ -18,13 +18,13 @@ export function Piece({
   color,
   style,
   playerColor,
-  onCoordinateLog,
+  onPieceDrop,
 }: {
   type: string;
   color: string;
   style: CSSProperties;
   playerColor: string;
-  onCoordinateLog?: (x: number, y: number) => void;
+  onPieceDrop?: (x: number, y: number) => void;
 }) {
   const nodeRef = useRef(null);
   function getSvg(type: string, color: string) {
@@ -52,12 +52,12 @@ export function Piece({
   }
 
   const pieceImage = (
-    <img 
+    <img
       ref={nodeRef}
-      src={svgSrc} 
-      alt="" 
-      style={{...style, zIndex: color === playerColor ? 1001 : 1000}} 
-      draggable={false} 
+      src={svgSrc}
+      alt=""
+      style={{ ...style, zIndex: color === playerColor ? 1001 : 1000 }}
+      draggable={false}
     />
   );
 
@@ -73,10 +73,12 @@ export function Piece({
         const x = Math.floor((data.x + offset) / boardSquareWidth);
         const y = Math.floor((data.y + offset) / boardSquareHeight);
 
-        onCoordinateLog?.(x, y);
+        onPieceDrop?.(x, y);
       }}
     >
       {pieceImage}
     </Draggable>
-  ) : pieceImage;
+  ) : (
+    pieceImage
+  );
 }

@@ -219,7 +219,7 @@ export function Board({
                     game.kingsInCheck?.black)
                 }
                 playerColor={playerColor}
-                onCoordinateLog={(dragX, dragY) =>
+                onPieceDrop={(dragX, dragY) =>
                   handlePieceDrop(dragX, dragY, i, j)
                 }
                 isPremove={

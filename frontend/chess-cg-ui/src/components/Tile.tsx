@@ -12,7 +12,7 @@ export function Tile({
   isPlayerTurn,
   isCheck,
   playerColor,
-  onCoordinateLog,
+  onPieceDrop,
   isPremove,
 }: {
   type: string;
@@ -24,7 +24,7 @@ export function Tile({
   isPlayerTurn?: boolean;
   isCheck?: boolean;
   playerColor: string;
-  onCoordinateLog?: (x: number, y: number) => void;
+  onPieceDrop?: (x: number, y: number) => void;
   isPremove?: boolean;
 }) {
   const pieceStyle: CSSProperties = {
@@ -64,7 +64,7 @@ export function Tile({
           color={color}
           style={pieceStyle}
           playerColor={playerColor}
-          onCoordinateLog={onCoordinateLog}
+          onPieceDrop={onPieceDrop}
           key={`piece-${x}-${y}`}
         />
       </div>
