@@ -31,6 +31,7 @@ export function Board({
     height: 0,
   });
   const boardRef = useRef<HTMLDivElement>(null);
+  const touchUsedRef = useRef(false);
 
   // Reset active square when board state changes (e.g., opponent makes a move)
   useEffect(() => {
@@ -220,6 +221,14 @@ export function Board({
             <div
               style={{ cursor: "pointer" }}
               onMouseDown={() => {
+                if (touchUsedRef.current) {
+                  touchUsedRef.current = false;
+                  return;
+                }
+                onSquareClicked([i, j]);
+              }}
+              onTouchStart={() => {
+                touchUsedRef.current = true;
                 onSquareClicked([i, j]);
               }}
               key={`tile-div-${i}-${j}`}
