@@ -14,6 +14,22 @@ const WEBSOCKET_URL = "ws://127.0.0.1:8000/ws";
 const BACKEND_URL =
   process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
+// Custom hook for responsive design
+function useResponsive() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+}
+
 // Custom hook for auth token management
 function useAuthToken() {
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -135,6 +151,7 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
 
 export function GameView() {
   const [chessGame, setChessGame] = useState<ChessGame>(new ChessGame());
+  const isMobile = useResponsive();
 
   const updateGameState = useCallback((data: BoardEvent) => {
     setChessGame((prevGame) => ({
@@ -174,6 +191,7 @@ export function GameView() {
     <div
       style={{
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
         gap: "20px",
         padding: "20px",
         margin: 0,
@@ -198,6 +216,43 @@ export function GameView() {
       )}
       {chessGame.board?.squares ? (
         <>
+          {/* Top timer for mobile layout */}
+          {isMobile && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <ConnectionStatus
+                connected={
+                  playerColor === "white"
+                    ? chessGame.players?.black?.connected || false
+                    : chessGame.players?.white?.connected || false
+                }
+                username={
+                  playerColor === "white"
+                    ? chessGame.players?.black?.name
+                    : chessGame.players?.white?.name
+                }
+              />
+              <Timer
+                initialTime={
+                  playerColor === "white"
+                    ? chessGame.time?.black || 0
+                    : chessGame.time?.white || 0
+                }
+                isActive={
+                  chessGame.turn !== playerColor &&
+                  chessGame.status === "in progress"
+                }
+                isMobile={isMobile}
+              />
+            </div>
+          )}
+          
           {socket && (
             <Board
               game={chessGame}
@@ -206,62 +261,102 @@ export function GameView() {
               socket={socket}
             />
           )}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "6px",
-              justifyContent: "center",
-            }}
-          >
-            <ConnectionStatus
-              connected={
-                playerColor === "white"
-                  ? chessGame.players?.black?.connected || false
-                  : chessGame.players?.white?.connected || false
-              }
-              username={
-                playerColor === "white"
-                  ? chessGame.players?.black?.name
-                  : chessGame.players?.white?.name
-              }
-            />
-            <Timer
-              initialTime={
-                playerColor === "white"
-                  ? chessGame.time?.black || 0
-                  : chessGame.time?.white || 0
-              }
-              isActive={
-                chessGame.turn !== playerColor &&
-                chessGame.status === "in progress"
-              }
-            />
-            <div style={{ height: 20 }}></div>
-            <Timer
-              initialTime={
-                playerColor === "white"
-                  ? chessGame.time?.white || 0
-                  : chessGame.time?.black || 0
-              }
-              isActive={
-                chessGame.turn === playerColor &&
-                chessGame.status === "in progress"
-              }
-            />
-            <ConnectionStatus
-              connected={
-                playerColor === "white"
-                  ? chessGame.players?.white?.connected || false
-                  : chessGame.players?.black?.connected || false
-              }
-              username={
-                playerColor === "white"
-                  ? chessGame.players?.white?.name
-                  : chessGame.players?.black?.name
-              }
-            />
-          </div>
+          
+          {/* Bottom timer for mobile layout or side timers for desktop */}
+          {isMobile ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <Timer
+                initialTime={
+                  playerColor === "white"
+                    ? chessGame.time?.white || 0
+                    : chessGame.time?.black || 0
+                }
+                isActive={
+                  chessGame.turn === playerColor &&
+                  chessGame.status === "in progress"
+                }
+                isMobile={isMobile}
+              />
+              <ConnectionStatus
+                connected={
+                  playerColor === "white"
+                    ? chessGame.players?.white?.connected || false
+                    : chessGame.players?.black?.connected || false
+                }
+                username={
+                  playerColor === "white"
+                    ? chessGame.players?.white?.name
+                    : chessGame.players?.black?.name
+                }
+              />
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+                justifyContent: "center",
+              }}
+            >
+              <ConnectionStatus
+                connected={
+                  playerColor === "white"
+                    ? chessGame.players?.black?.connected || false
+                    : chessGame.players?.white?.connected || false
+                }
+                username={
+                  playerColor === "white"
+                    ? chessGame.players?.black?.name
+                    : chessGame.players?.white?.name
+                }
+              />
+              <Timer
+                initialTime={
+                  playerColor === "white"
+                    ? chessGame.time?.black || 0
+                    : chessGame.time?.white || 0
+                }
+                isActive={
+                  chessGame.turn !== playerColor &&
+                  chessGame.status === "in progress"
+                }
+                isMobile={isMobile}
+              />
+              <div style={{ height: 20 }}></div>
+              <Timer
+                initialTime={
+                  playerColor === "white"
+                    ? chessGame.time?.white || 0
+                    : chessGame.time?.black || 0
+                }
+                isActive={
+                  chessGame.turn === playerColor &&
+                  chessGame.status === "in progress"
+                }
+                isMobile={isMobile}
+              />
+              <ConnectionStatus
+                connected={
+                  playerColor === "white"
+                    ? chessGame.players?.white?.connected || false
+                    : chessGame.players?.black?.connected || false
+                }
+                username={
+                  playerColor === "white"
+                    ? chessGame.players?.white?.name
+                    : chessGame.players?.black?.name
+                }
+              />
+            </div>
+          )}
         </>
       ) : (
         <div>Loading...</div>

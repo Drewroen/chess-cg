@@ -3,9 +3,10 @@ import React, { useState, useEffect } from "react";
 interface TimerProps {
   initialTime: number;
   isActive: boolean;
+  isMobile?: boolean;
 }
 
-export const Timer: React.FC<TimerProps> = ({ initialTime, isActive }) => {
+export const Timer: React.FC<TimerProps> = ({ initialTime, isActive, isMobile = false }) => {
   const [timeRemaining, setTimeRemaining] = useState(initialTime);
 
   useEffect(() => {
@@ -41,11 +42,12 @@ export const Timer: React.FC<TimerProps> = ({ initialTime, isActive }) => {
   return (
     <div
       style={{
-        width: 200,
+        width: isMobile ? "100%" : 200,
+        maxWidth: isMobile ? 300 : 200,
         height: 48,
         border: "1px solid #e5e7eb",
         borderRadius: 4,
-        fontSize: 36,
+        fontSize: isMobile ? 32 : 36,
         fontWeight: 200,
         display: "flex",
         alignItems: "center",

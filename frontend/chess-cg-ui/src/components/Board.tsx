@@ -26,7 +26,10 @@ export function Board({
     from: [number, number];
     to: [number, number];
   } | null>(null);
-  const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
+  const [boardDimensions, setBoardDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
   const boardRef = useRef<HTMLDivElement>(null);
 
   // Reset active square when board state changes (e.g., opponent makes a move)
@@ -42,7 +45,7 @@ export function Board({
 
   // Track board dimensions with ResizeObserver
   useEffect(() => {
-    const resizeObserver = new ResizeObserver(entries => {
+    const resizeObserver = new ResizeObserver((entries) => {
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
         setBoardDimensions({ width, height });
@@ -198,15 +201,15 @@ export function Board({
     );
   }
 
-  const boardSize = 600;
-  
   return (
     <div
       ref={boardRef}
       style={{
         position: "relative",
-        width: `${boardSize}px`,
-        height: `${boardSize}px`,
+        width: "100%",
+        aspectRatio: "1 / 1",
+        maxWidth: "600px",
+        maxHeight: "600px",
         padding: 0,
         margin: 0,
       }}
