@@ -5,10 +5,15 @@ from contextlib import asynccontextmanager
 import uvicorn
 import asyncio
 import time
+import os
+from dotenv import load_dotenv
 
 from .routers import health, auth, websocket, debug
 from .obj.game import GameStatus
 from .auth import cleanup_expired_refresh_tokens, cleanup_expired_guest_tokens
+from .database import db_manager
+
+load_dotenv()
 
 # Initialize shared services
 room_manager = RoomManager(ConnectionManager(), RoomService())
@@ -69,12 +74,17 @@ async def cleanup_expired_tokens():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        db_manager.initialize(database_url)
+    
     timer_task = asyncio.create_task(check_game_timers())
     cleanup_task = asyncio.create_task(cleanup_expired_tokens())
     yield
     # Shutdown
     timer_task.cancel()
     cleanup_task.cancel()
+    await db_manager.close()
 
 
 app = FastAPI(
