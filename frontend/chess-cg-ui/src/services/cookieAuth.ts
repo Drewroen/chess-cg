@@ -7,12 +7,12 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  picture?: string;
+  username: string;
   user_type?: string;
 }
 
 export interface GuestUser extends User {
-  user_type: 'guest';
+  user_type: "guest";
 }
 
 export class CookieAuthService {
@@ -63,12 +63,12 @@ export class CookieAuthService {
       if (!response.ok) {
         // Check if the error is due to missing token vs expired token
         const errorData = await response.json().catch(() => ({ detail: "" }));
-        
+
         // If no access token found, try to create guest session
         if (errorData.detail === "Access token not found") {
           return await this.createGuestSession();
         }
-        
+
         // Try to refresh tokens if the access token is expired
         const refreshResponse = await fetch(`${BACKEND_URL}/auth/refresh`, {
           method: "POST",

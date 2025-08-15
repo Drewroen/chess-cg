@@ -6,8 +6,8 @@ class UserResponse(BaseModel):
     id: str
     email: str
     name: str
-    picture: Optional[str] = None
     user_type: Optional[str] = "authenticated"
+    username: Optional[str] = None
 
 
 class TokenResponse(BaseModel):

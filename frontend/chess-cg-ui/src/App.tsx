@@ -147,7 +147,7 @@ export default function App() {
               >
                 {user.user_type === "guest"
                   ? `Playing as Guest`
-                  : `Playing as ${user.name}`}
+                  : `Playing as ${user.username}`}
               </div>
             )}
           </div>

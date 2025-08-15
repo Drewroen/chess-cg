@@ -193,11 +193,11 @@ async def get_token_from_code(
             token_type="bearer",
             expires_in=3600,  # 1 hour in seconds
             user=UserResponse(
-                id=user_info["id"],
-                email=user_info["email"],
-                name=user_info["name"],
-                picture=user_info.get("picture"),
+                id=user_data["id"],
+                email=user_data["email"],
+                name=user_data["name"],
                 user_type="authenticated",
+                username=user_data["username"],
             ),
         )
 
@@ -212,8 +212,8 @@ async def get_token_from_code(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user(request: Request):
-    """Get current user information from JWT token in cookie"""
+async def get_current_user(request: Request, db_session: AsyncSession = Depends(get_db_session)):
+    """Get current user information from database"""
 
     # Get access token from cookie
     access_token = request.cookies.get("access_token")
@@ -234,12 +234,28 @@ async def get_current_user(request: Request):
         )
         return response
 
+    # For guest users, return data from token since they're not in the database
+    if payload.get("user_type") == "guest":
+        return UserResponse(
+            id=payload["sub"],
+            email=payload.get("email"),
+            name=payload.get("name"),
+            user_type="guest",
+        )
+
+    # For authenticated users, fetch data from database
+    db_service = DatabaseService(db_session)
+    user = await db_service.get_user_by_id(payload["sub"])
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found in database")
+
     return UserResponse(
-        id=payload["sub"],
-        email=payload["email"],
-        name=payload["name"],
-        picture=payload.get("picture"),
-        user_type=payload.get("user_type", "authenticated"),
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        user_type="authenticated",
+        username=user.username,
     )
 
 
