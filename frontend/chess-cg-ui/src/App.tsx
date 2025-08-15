@@ -145,9 +145,7 @@ export default function App() {
                   fontSize: "0.9rem",
                 }}
               >
-                {user.user_type === "guest"
-                  ? `Playing as Guest`
-                  : `Playing as ${user.username}`}
+                {`Playing as ${user.username}`}
               </div>
             )}
           </div>

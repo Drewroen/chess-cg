@@ -122,7 +122,7 @@ async def auth_callback(
 
         # Get or create user in database
         db_service = DatabaseService(db_session)
-        user_data = await get_or_create_user(user_info, db_service)
+        await get_or_create_user(user_info, db_service)
 
         # Create both access and refresh tokens for our application
         access_token, refresh_token = create_tokens(user_info, token_data)
@@ -212,7 +212,9 @@ async def get_token_from_code(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user(request: Request, db_session: AsyncSession = Depends(get_db_session)):
+async def get_current_user(
+    request: Request, db_session: AsyncSession = Depends(get_db_session)
+):
     """Get current user information from database"""
 
     # Get access token from cookie
@@ -234,27 +236,17 @@ async def get_current_user(request: Request, db_session: AsyncSession = Depends(
         )
         return response
 
-    # For guest users, return data from token since they're not in the database
-    if payload.get("user_type") == "guest":
-        return UserResponse(
-            id=payload["sub"],
-            email=payload.get("email"),
-            name=payload.get("name"),
-            user_type="guest",
-        )
-
-    # For authenticated users, fetch data from database
     db_service = DatabaseService(db_session)
     user = await db_service.get_user_by_id(payload["sub"])
-    
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found in database")
 
     return UserResponse(
         id=user.id,
-        email=user.email,
+        email=user.email if user.email else "",
         name=user.name,
-        user_type="authenticated",
+        user_type=user.user_type,
         username=user.username,
     )
 
@@ -373,9 +365,57 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
 
 
 @router.post("/guest-session")
-async def create_guest_session():
-    """Create a new guest session with refresh token"""
+async def create_guest_session(
+    request: Request, db_session: AsyncSession = Depends(get_db_session)
+):
+    """Create or reuse guest session with refresh token and store guest user in database"""
+
+    # Check for existing refresh token first - prioritize reuse over creation
+    existing_refresh_token = request.cookies.get("refresh_token")
+
+    if existing_refresh_token and existing_refresh_token.startswith("guest_refresh_"):
+        # Try to refresh the existing guest session
+        try:
+            new_access_token = await refresh_guest_access_token(existing_refresh_token)
+            if new_access_token:
+                # Existing session is valid, return refreshed access token (no DB operations needed)
+                response = JSONResponse(
+                    content={"message": "Guest session refreshed", "user_type": "guest"}
+                )
+
+                # Set refreshed access token cookie
+                response.set_cookie(
+                    key="access_token",
+                    value=new_access_token,
+                    httponly=True,
+                    secure=True,
+                    samesite="strict",
+                    max_age=3600,  # 1 hour
+                    path="/",
+                )
+
+                return response
+        except Exception as e:
+            print(f"Failed to refresh existing guest session: {e}")
+            # Continue to create new session below
+
+    # Create new guest session only if no existing valid session found
     guest_access_token, guest_refresh_token = create_guest_tokens()
+
+    token_payload = verify_jwt_token(guest_access_token)
+    if token_payload and token_payload.get("user_type") == "guest":
+        guest_id = token_payload["sub"]
+        guest_name = token_payload.get("name", "Guest")
+
+        # Store guest user in database
+        try:
+            db_service = DatabaseService(db_session)
+            # Check if guest user already exists
+            existing_user = await db_service.get_user_by_id(guest_id)
+            if not existing_user:
+                await db_service.create_guest_user(guest_id, guest_name)
+        except Exception as e:
+            print(f"Failed to store guest user {guest_id}: {e}")
 
     response = JSONResponse(
         content={"message": "Guest session created", "user_type": "guest"}
