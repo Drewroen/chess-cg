@@ -72,20 +72,7 @@ export default function App() {
 
   // Loading screen while checking authentication
   if (isCheckingAuth) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          color: "#ffffff",
-          fontSize: "1.2rem",
-        }}
-      >
-        Loading...
-      </div>
-    );
+    return <></>;
   }
 
   // Landing page component

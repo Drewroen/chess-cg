@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from typing import Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+import random
 
 from ..auth import (
     GoogleOAuthError,
@@ -20,8 +22,62 @@ from ..models import (
     TokenResponse,
     RefreshTokenRequest,
 )
+from ..database import get_db_session
+from ..svc.database_service import DatabaseService
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
+
+
+async def generate_unique_username(db_service: DatabaseService) -> str:
+    """Generate a unique username in format user_12345678"""
+    max_attempts = 10
+    for _ in range(max_attempts):
+        # Generate 8 random digits
+        random_digits = "".join([str(random.randint(0, 9)) for _ in range(8)])
+        username = f"user_{random_digits}"
+
+        # Check if username already exists
+        existing_user = await db_service.get_user_by_username(username)
+        if not existing_user:
+            return username
+
+    # Fallback if we couldn't generate a unique username after max_attempts
+    import time
+
+    timestamp = str(int(time.time()))[-8:]  # Use last 8 digits of timestamp
+    return f"user_{timestamp}"
+
+
+async def get_or_create_user(user_info: dict, db_service: DatabaseService) -> dict:
+    """Get existing user or create new user from Google OAuth info"""
+    # Check if user already exists
+    existing_user = await db_service.get_user_by_id(user_info["id"])
+
+    if existing_user:
+        # Return existing user data
+        return {
+            "id": existing_user.id,
+            "email": existing_user.email,
+            "name": existing_user.name,
+            "username": existing_user.username,
+        }
+
+    # Create new user
+    username = await generate_unique_username(db_service)
+    user_data = {
+        "id": user_info["id"],
+        "email": user_info["email"],
+        "name": user_info["name"],
+        "username": username,
+    }
+
+    new_user = await db_service.create_user(user_data)
+    return {
+        "id": new_user.id,
+        "email": new_user.email,
+        "name": new_user.name,
+        "username": new_user.username,
+    }
 
 
 @router.get("/google")
@@ -41,6 +97,7 @@ async def auth_callback(
     code: Optional[str] = Query(None, description="Authorization code from Google"),
     error: Optional[str] = Query(None, description="Error from Google OAuth"),
     state: Optional[str] = Query(None, description="State parameter"),
+    db_session: AsyncSession = Depends(get_db_session),
 ):
     """Handle Google OAuth callback"""
 
@@ -62,6 +119,10 @@ async def auth_callback(
 
         # Get user information from Google
         user_info = await get_user_info(token_data["access_token"])
+
+        # Get or create user in database
+        db_service = DatabaseService(db_session)
+        user_data = await get_or_create_user(user_info, db_service)
 
         # Create both access and refresh tokens for our application
         access_token, refresh_token = create_tokens(user_info, token_data)
@@ -108,6 +169,7 @@ async def auth_callback(
 @router.post("/token", response_model=TokenResponse)
 async def get_token_from_code(
     authorization_code: str,
+    db_session: AsyncSession = Depends(get_db_session),
 ):
     """Exchange authorization code for tokens (JSON response)"""
 
@@ -117,6 +179,10 @@ async def get_token_from_code(
 
         # Get user information from Google
         user_info = await get_user_info(token_data["access_token"])
+
+        # Get or create user in database
+        db_service = DatabaseService(db_session)
+        user_data = await get_or_create_user(user_info, db_service)
 
         # Create both access and refresh tokens for our application
         access_token, refresh_token = create_tokens(user_info, token_data)
@@ -157,7 +223,9 @@ async def get_current_user(request: Request):
     payload = verify_jwt_token(access_token)
     if not payload:
         # Clear cookies when access token is invalid
-        response = JSONResponse(content={"detail": "Invalid or expired token"}, status_code=401)
+        response = JSONResponse(
+            content={"detail": "Invalid or expired token"}, status_code=401
+        )
         response.delete_cookie(
             key="access_token", path="/", httponly=True, secure=True, samesite="strict"
         )
@@ -196,11 +264,15 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
         new_access_token = await refresh_guest_access_token(refresh_token_value)
         if not new_access_token:
             response = JSONResponse(
-                content={"detail": "Invalid or expired guest refresh token"}, 
-                status_code=401
+                content={"detail": "Invalid or expired guest refresh token"},
+                status_code=401,
             )
             response.delete_cookie(
-                key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+                key="refresh_token",
+                path="/",
+                httponly=True,
+                secure=True,
+                samesite="strict",
             )
             return response
     else:
@@ -208,9 +280,15 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
         new_access_token = await refresh_access_token(refresh_token_value)
         if not new_access_token:
             # Clear the invalid refresh token cookie
-            response = JSONResponse(content={"detail": "Invalid or expired refresh token"}, status_code=401)
+            response = JSONResponse(
+                content={"detail": "Invalid or expired refresh token"}, status_code=401
+            )
             response.delete_cookie(
-                key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+                key="refresh_token",
+                path="/",
+                httponly=True,
+                secure=True,
+                samesite="strict",
             )
             return response
 
@@ -282,12 +360,11 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
 async def create_guest_session():
     """Create a new guest session with refresh token"""
     guest_access_token, guest_refresh_token = create_guest_tokens()
-    
-    response = JSONResponse(content={
-        "message": "Guest session created", 
-        "user_type": "guest"
-    })
-    
+
+    response = JSONResponse(
+        content={"message": "Guest session created", "user_type": "guest"}
+    )
+
     # Set guest access token cookie
     response.set_cookie(
         key="access_token",
@@ -298,8 +375,8 @@ async def create_guest_session():
         max_age=3600,  # 1 hour
         path="/",
     )
-    
-    # Set guest refresh token cookie  
+
+    # Set guest refresh token cookie
     response.set_cookie(
         key="refresh_token",
         value=guest_refresh_token,
@@ -309,5 +386,5 @@ async def create_guest_session():
         max_age=7 * 24 * 60 * 60,  # 7 days
         path="/",
     )
-    
+
     return response
