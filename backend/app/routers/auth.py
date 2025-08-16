@@ -240,7 +240,16 @@ async def get_current_user(
     user = await db_service.get_user_by_id(payload["sub"])
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found in database")
+        response = JSONResponse(
+            content={"detail": "User not found in database"}, status_code=404
+        )
+        response.delete_cookie(
+            key="access_token", path="/", httponly=True, secure=True, samesite="strict"
+        )
+        response.delete_cookie(
+            key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+        )
+        return response
 
     return UserResponse(
         id=user.id,
