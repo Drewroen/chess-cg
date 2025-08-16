@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 interface TimerProps {
   initialTime: number;
@@ -6,24 +6,65 @@ interface TimerProps {
   isMobile?: boolean;
 }
 
-export const Timer: React.FC<TimerProps> = ({ initialTime, isActive, isMobile = false }) => {
+export const Timer: React.FC<TimerProps> = ({
+  initialTime,
+  isActive,
+  isMobile = false,
+}) => {
   const [timeRemaining, setTimeRemaining] = useState(initialTime);
+  const startTimeRef = useRef<number | null>(null);
+  const initialTimeRef = useRef(initialTime);
 
   useEffect(() => {
     setTimeRemaining(initialTime);
-  }, [initialTime]);
+    initialTimeRef.current = initialTime;
+    if (isActive) {
+      startTimeRef.current = Date.now();
+    }
+  }, [initialTime, isActive]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let animationFrame: number | null = null;
+
+    const updateTimer = () => {
+      if (!isActive || !startTimeRef.current) return;
+
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      const remaining = Math.max(0, initialTimeRef.current - elapsed);
+      setTimeRemaining(remaining);
+
+      if (remaining > 0) {
+        animationFrame = requestAnimationFrame(updateTimer);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+          animationFrame = null;
+        }
+      } else if (isActive && timeRemaining > 0) {
+        updateTimer();
+      }
+    };
 
     if (isActive && timeRemaining > 0) {
-      interval = setInterval(() => {
-        setTimeRemaining((prevTime) => (prevTime <= 0.1 ? 0 : prevTime - 0.1));
-      }, 100);
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now();
+      }
+
+      updateTimer();
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    } else {
+      startTimeRef.current = null;
     }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [isActive, timeRemaining]);
 
