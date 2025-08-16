@@ -21,14 +21,10 @@ class ConnectionManager:
         await websocket.accept()
 
         # Extract name from JWT or generate guest name
-        if jwt:
-            token_data = verify_jwt_token(jwt)
-            if token_data and "sub" in token_data:
-                user_id = token_data["sub"]
-                name = token_data["name"]
-            else:
-                user_id = "guest_" + str(uuid4())
-                name = "Guest"
+        token_data = verify_jwt_token(jwt)
+        if token_data and "sub" in token_data:
+            user_id = token_data["sub"]
+            name = token_data["name"]
         else:
             user_id = "guest_" + str(uuid4())
             name = "Guest"
@@ -107,7 +103,7 @@ class RoomService:
         """Remove a completed game and clean up player mappings."""
         if room_id not in self.rooms:
             return
-        
+
         room = self.rooms[room_id]
         # Clean up player mappings
         if room.white in self.player_to_room_map:
