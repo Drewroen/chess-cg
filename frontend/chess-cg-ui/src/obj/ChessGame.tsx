@@ -29,12 +29,12 @@ export class ChessGame {
   id: number = -1;
 }
 export class ChessPlayers {
-  white: { id: number; name: string; connected: boolean } = {
+  white: { id: number; name: string; connected: boolean; elo?: number } = {
     id: -1,
     name: "Disconnected",
     connected: false,
   };
-  black: { id: number; name: string; connected: boolean } = {
+  black: { id: number; name: string; connected: boolean; elo?: number } = {
     id: -1,
     name: "Disconnected",
     connected: false,

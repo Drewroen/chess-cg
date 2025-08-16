@@ -238,6 +238,11 @@ export function GameView() {
                     ? chessGame.players?.black?.name
                     : chessGame.players?.white?.name
                 }
+                elo={
+                  playerColor === "white"
+                    ? chessGame.players?.black?.elo
+                    : chessGame.players?.white?.elo
+                }
                 playerColor={playerColor === "white" ? "black" : "white"}
                 gameStatus={chessGame.status}
                 winner={chessGame.winner}
@@ -287,6 +292,11 @@ export function GameView() {
                     ? chessGame.players?.white?.name
                     : chessGame.players?.black?.name
                 }
+                elo={
+                  playerColor === "white"
+                    ? chessGame.players?.white?.elo
+                    : chessGame.players?.black?.elo
+                }
                 playerColor={playerColor}
                 gameStatus={chessGame.status}
                 winner={chessGame.winner}
@@ -323,6 +333,11 @@ export function GameView() {
                   playerColor === "white"
                     ? chessGame.players?.black?.name
                     : chessGame.players?.white?.name
+                }
+                elo={
+                  playerColor === "white"
+                    ? chessGame.players?.black?.elo
+                    : chessGame.players?.white?.elo
                 }
                 playerColor={playerColor === "white" ? "black" : "white"}
                 gameStatus={chessGame.status}
@@ -363,6 +378,11 @@ export function GameView() {
                   playerColor === "white"
                     ? chessGame.players?.white?.name
                     : chessGame.players?.black?.name
+                }
+                elo={
+                  playerColor === "white"
+                    ? chessGame.players?.white?.elo
+                    : chessGame.players?.black?.elo
                 }
                 playerColor={playerColor}
                 gameStatus={chessGame.status}

@@ -3,6 +3,7 @@ import React from "react";
 interface ConnectionStatusProps {
   connected: boolean;
   username?: string;
+  elo?: number;
   playerColor?: "white" | "black";
   gameStatus?: string;
   winner?: string;
@@ -11,6 +12,7 @@ interface ConnectionStatusProps {
 export function ConnectionStatus({
   connected,
   username = "Guest",
+  elo,
   playerColor,
   gameStatus,
   winner,
@@ -22,6 +24,9 @@ export function ConnectionStatus({
 
   // Display just "Guest" instead of "Guest_12345" for guest users
   const displayName = username?.startsWith("Guest_") ? "Guest" : username;
+
+  // Add ELO in parentheses if available
+  const nameWithElo = elo ? `${displayName} (${elo})` : displayName;
 
   // Check if this player won the game
   const isWinner = gameStatus === "complete" && winner === playerColor;
@@ -66,7 +71,7 @@ export function ConnectionStatus({
           gap: "6px",
         }}
       >
-        {displayName}
+        {nameWithElo}
         {isWinner && <span style={{ fontSize: "16px" }}>🏆</span>}
       </span>
     </div>

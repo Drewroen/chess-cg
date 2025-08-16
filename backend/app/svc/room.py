@@ -2,6 +2,8 @@ from uuid import UUID, uuid4
 from app.obj.game import Game, GameStatus
 from fastapi import WebSocket
 from ..auth import verify_jwt_token
+from ..database import db_manager
+from ..svc.database_service import DatabaseService
 import time
 
 
@@ -121,6 +123,20 @@ class RoomManager:
         self.room_service = room_service
         self.manager = manager
 
+    async def get_user_elo(self, user_id: str) -> int:
+        """Get the ELO rating for a user."""
+        if not user_id or user_id.startswith("guest_"):
+            return None
+        
+        try:
+            async with db_manager.async_session_maker() as session:
+                db_service = DatabaseService(session)
+                user = await db_service.get_user_by_id(user_id)
+                return user.elo if user else None
+        except Exception as e:
+            print(f"Error fetching ELO for user {user_id}: {e}")
+            return None
+
     async def connect(self, websocket, jwt: str = None) -> str:
         """Connect a player to the WebSocket and return their name."""
         connection_id = await self.manager.connect(websocket, jwt)
@@ -160,6 +176,10 @@ class RoomManager:
         room = self.room_service.rooms[room_id]
 
         if room:
+            # Get ELO ratings for both players
+            white_elo = await self.get_user_elo(room.white)
+            black_elo = await self.get_user_elo(room.black)
+            
             state = {
                 "squares": room.game.board.get_squares(),
                 "turn": room.game.turn,
@@ -167,6 +187,7 @@ class RoomManager:
                     "white": {
                         "id": room.white,
                         "name": self.manager.user_id_to_name.get(room.white, "Guest"),
+                        "elo": white_elo,
                         "connected": len(
                             self.manager.user_id_to_connection_map.get(room.white, [])
                         )
@@ -175,6 +196,7 @@ class RoomManager:
                     "black": {
                         "id": room.black,
                         "name": self.manager.user_id_to_name.get(room.black, "Guest"),
+                        "elo": black_elo,
                         "connected": len(
                             self.manager.user_id_to_connection_map.get(room.black, [])
                         )
