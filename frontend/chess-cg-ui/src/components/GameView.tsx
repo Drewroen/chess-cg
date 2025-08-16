@@ -23,8 +23,8 @@ function useResponsive() {
       setIsMobile(window.innerWidth <= 768);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return isMobile;
@@ -252,7 +252,7 @@ export function GameView() {
               />
             </div>
           )}
-          
+
           {socket && (
             <Board
               game={chessGame}
@@ -261,7 +261,7 @@ export function GameView() {
               socket={socket}
             />
           )}
-          
+
           {/* Bottom timer for mobile layout or side timers for desktop */}
           {isMobile ? (
             <div
@@ -272,18 +272,6 @@ export function GameView() {
                 gap: "6px",
               }}
             >
-              <Timer
-                initialTime={
-                  playerColor === "white"
-                    ? chessGame.time?.white || 0
-                    : chessGame.time?.black || 0
-                }
-                isActive={
-                  chessGame.turn === playerColor &&
-                  chessGame.status === "in progress"
-                }
-                isMobile={isMobile}
-              />
               <ConnectionStatus
                 connected={
                   playerColor === "white"
@@ -295,6 +283,18 @@ export function GameView() {
                     ? chessGame.players?.white?.name
                     : chessGame.players?.black?.name
                 }
+              />
+              <Timer
+                initialTime={
+                  playerColor === "white"
+                    ? chessGame.time?.white || 0
+                    : chessGame.time?.black || 0
+                }
+                isActive={
+                  chessGame.turn === playerColor &&
+                  chessGame.status === "in progress"
+                }
+                isMobile={isMobile}
               />
             </div>
           ) : (
