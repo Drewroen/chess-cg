@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from dotenv import load_dotenv
 
 from app.database import Base
+from app.db_models import User  # Import models so they're registered with Base.metadata
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool

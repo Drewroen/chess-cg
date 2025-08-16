@@ -9,6 +9,12 @@ class DatabaseService:
         self.session = session
 
     async def create_user(self, user_data: dict) -> User:
+        # Set ELO based on user type
+        if user_data.get("user_type") == "authenticated":
+            user_data["elo"] = 1200
+        elif user_data.get("user_type") == "guest":
+            user_data["elo"] = None
+        
         user = User(**user_data)
         self.session.add(user)
         await self.session.commit()
