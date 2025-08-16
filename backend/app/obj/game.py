@@ -13,6 +13,7 @@ class GameStatus(Enum):
 STARTING_TIME_IN_SECONDS = 180.0
 MOVE_INCREMENT_IN_SECONDS = 2.0
 PREMOVE_PENALTY_IN_SECONDS = 0.1
+GAME_START_TIMEOUT_SECONDS = 10.0
 
 
 class Game:
@@ -23,6 +24,7 @@ class Game:
         self.white_time_left = STARTING_TIME_IN_SECONDS
         self.black_time_left = STARTING_TIME_IN_SECONDS
         self.last_move_time = time.time()
+        self.created_at = time.time()
         self.winner = None
         self.white_premove = None
         self.black_premove = None

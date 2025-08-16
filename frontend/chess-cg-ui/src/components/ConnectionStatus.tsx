@@ -3,11 +3,17 @@ import React from "react";
 interface ConnectionStatusProps {
   connected: boolean;
   username?: string;
+  playerColor?: "white" | "black";
+  gameStatus?: string;
+  winner?: string;
 }
 
 export function ConnectionStatus({
   connected,
   username = "Guest",
+  playerColor,
+  gameStatus,
+  winner,
 }: ConnectionStatusProps) {
   const getStatusColor = () => {
     if (connected) return "#22c55e";
@@ -16,6 +22,9 @@ export function ConnectionStatus({
 
   // Display just "Guest" instead of "Guest_12345" for guest users
   const displayName = username?.startsWith("Guest_") ? "Guest" : username;
+
+  // Check if this player won the game
+  const isWinner = gameStatus === "complete" && winner === playerColor;
 
   return (
     <div
@@ -52,9 +61,13 @@ export function ConnectionStatus({
           color: "white",
           fontWeight: 100,
           fontFamily: "sans-serif",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
         }}
       >
         {displayName}
+        {isWinner && <span style={{ fontSize: "16px" }}>🏆</span>}
       </span>
     </div>
   );

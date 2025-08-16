@@ -22,6 +22,7 @@ export class ChessGame {
   kingsInCheck?: KingsInCheck = new KingsInCheck();
   turn: string = "";
   status: string = "";
+  winner?: string;
   time: RemainingTime = new RemainingTime();
   moves: ChessMoves = new ChessMoves();
   premoves: ChessMoves = new ChessMoves();
@@ -61,6 +62,7 @@ export class BoardEvent {
   turn: string = "white";
   kings_in_check: KingsInCheck = new KingsInCheck();
   status: string = "";
+  winner?: string;
   time: RemainingTime = { white: 0, black: 0 };
   moves: ChessMoves = new ChessMoves();
   premoves: ChessMoves = new ChessMoves();

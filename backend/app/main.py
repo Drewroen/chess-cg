@@ -9,7 +9,7 @@ import os
 from dotenv import load_dotenv
 
 from .routers import health, auth, websocket, debug
-from .obj.game import GameStatus
+from .obj.game import GameStatus, GAME_START_TIMEOUT_SECONDS
 from .auth import cleanup_expired_refresh_tokens, cleanup_expired_guest_tokens
 from .database import db_manager
 
@@ -53,6 +53,29 @@ async def check_game_timers():
                             room_manager.room_service.cleanup_room(room_id)
 
                 elif room.game.status == GameStatus.NOT_STARTED:
+                    # Check for game start timeout
+                    elapsed_since_creation = current_time - room.game.created_at
+                    elapsed_since_last_move = current_time - room.game.last_move_time
+                    
+                    should_abort = False
+                    if room.game.turn == "white":
+                        # White hasn't moved yet, check time since game creation
+                        if elapsed_since_creation >= GAME_START_TIMEOUT_SECONDS:
+                            print(f"White player timed out in room {room_id} (no first move)")
+                            should_abort = True
+                    else:
+                        # Black's turn, check time since white's move
+                        if elapsed_since_last_move >= GAME_START_TIMEOUT_SECONDS:
+                            print(f"Black player timed out in room {room_id} (no response)")
+                            should_abort = True
+                    
+                    if should_abort:
+                        room.game.status = GameStatus.ABORTED
+                        room.game.completed_at = current_time
+                        await room_manager.emit_game_state_to_room(room_id)
+                        room_manager.room_service.cleanup_room(room_id)
+                        continue
+                    
                     # Check if both players are disconnected
                     white_connected = (
                         len(

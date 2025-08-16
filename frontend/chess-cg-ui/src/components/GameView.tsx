@@ -161,6 +161,7 @@ export function GameView() {
       players: data.players,
       kingsInCheck: data.kings_in_check,
       status: data.status,
+      winner: data.winner,
       time: data.time,
       moves: data.moves,
       premoves: data.premoves,
@@ -237,6 +238,9 @@ export function GameView() {
                     ? chessGame.players?.black?.name
                     : chessGame.players?.white?.name
                 }
+                playerColor={playerColor === "white" ? "black" : "white"}
+                gameStatus={chessGame.status}
+                winner={chessGame.winner}
               />
               <Timer
                 initialTime={
@@ -283,6 +287,9 @@ export function GameView() {
                     ? chessGame.players?.white?.name
                     : chessGame.players?.black?.name
                 }
+                playerColor={playerColor}
+                gameStatus={chessGame.status}
+                winner={chessGame.winner}
               />
               <Timer
                 initialTime={
@@ -317,6 +324,9 @@ export function GameView() {
                     ? chessGame.players?.black?.name
                     : chessGame.players?.white?.name
                 }
+                playerColor={playerColor === "white" ? "black" : "white"}
+                gameStatus={chessGame.status}
+                winner={chessGame.winner}
               />
               <Timer
                 initialTime={
@@ -354,6 +364,9 @@ export function GameView() {
                     ? chessGame.players?.white?.name
                     : chessGame.players?.black?.name
                 }
+                playerColor={playerColor}
+                gameStatus={chessGame.status}
+                winner={chessGame.winner}
               />
             </div>
           )}

@@ -183,6 +183,7 @@ class RoomManager:
                 },
                 "kings_in_check": room.game.board.kings_in_check(),
                 "status": room.game.status.value,
+                "winner": room.game.winner,
                 "time": {
                     "white": self._get_current_time_remaining(room.game, "white"),
                     "black": self._get_current_time_remaining(room.game, "black"),
