@@ -1,7 +1,8 @@
 from uuid import UUID, uuid4
-from app.obj.game import Game
+from app.obj.game import Game, GameStatus
 from fastapi import WebSocket
 from ..auth import verify_jwt_token
+import time
 
 
 class WebSocketConnection:
@@ -183,8 +184,8 @@ class RoomManager:
                 "kings_in_check": room.game.board.kings_in_check(),
                 "status": room.game.status.value,
                 "time": {
-                    "white": room.game.white_time_left,
-                    "black": room.game.black_time_left,
+                    "white": self._get_current_time_remaining(room.game, "white"),
+                    "black": self._get_current_time_remaining(room.game, "black"),
                 },
                 "moves": {
                     "white": [
@@ -220,3 +221,22 @@ class RoomManager:
                         await connection.websocket.send_json(state)
                     except Exception as e:
                         print(f"Failed to send to {player_name}: {e}")
+
+    def _get_current_time_remaining(self, game, player_color):
+        """Calculate the current time remaining for a player, accounting for elapsed time since last move."""
+        base_time = (
+            game.white_time_left if player_color == "white" else game.black_time_left
+        )
+        if game.status != GameStatus.IN_PROGRESS:
+            # If game is not in progress, return the stored time
+            return base_time
+
+        # If it's this player's turn, subtract elapsed time since last move
+        if game.turn == player_color:
+            current_time = time.time()
+            elapsed_since_last_move = current_time - game.last_move_time
+            current_time_remaining = max(0, base_time - elapsed_since_last_move)
+            return round(current_time_remaining, 2)
+        else:
+            # If it's not this player's turn, return their stored time
+            return base_time

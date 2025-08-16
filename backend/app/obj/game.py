@@ -7,6 +7,7 @@ class GameStatus(Enum):
     NOT_STARTED = "not started"
     IN_PROGRESS = "in progress"
     COMPLETE = "complete"
+    ABORTED = "aborted"
 
 
 STARTING_TIME_IN_SECONDS = 180.0
