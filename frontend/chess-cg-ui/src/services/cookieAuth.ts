@@ -64,8 +64,7 @@ export class CookieAuthService {
         // Check if the error is due to missing token vs expired token
         const errorData = await response.json().catch(() => ({ detail: "" }));
 
-        // If no access token found, try to create guest session
-        if (errorData.detail === "Access token not found") {
+        if (errorData.detail !== "Access token not found") {
           return await this.createGuestSession();
         }
 
