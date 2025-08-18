@@ -16,8 +16,8 @@ export function Tile({
   isPremove,
   boardDimensions,
 }: {
-  type: string;
-  color: string;
+  type?: string;
+  color?: string;
   x: number;
   y: number;
   isActive: boolean;

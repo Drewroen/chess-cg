@@ -21,8 +21,8 @@ export function Piece({
   onPieceDrop,
   boardDimensions,
 }: {
-  type: string;
-  color: string;
+  type?: string;
+  color?: string;
   style: CSSProperties;
   playerColor: string;
   onPieceDrop?: (x: number, y: number) => void;

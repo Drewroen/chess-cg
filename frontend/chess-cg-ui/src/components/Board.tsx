@@ -7,10 +7,12 @@ export function Board({
   game,
   updatePossibleMoves,
   socket,
+  onMoveLocal,
 }: {
   game: ChessGame;
   updatePossibleMoves: (moves: Array<[number, number]>) => void;
   socket: WebSocket | null;
+  onMoveLocal?: (from: [number, number], to: [number, number]) => void;
 }) {
   const [activeSquare, setActiveSquare] = useState<[number, number] | null>(
     null
@@ -110,6 +112,11 @@ export function Board({
           setPromotionMove({ from: activeSquare!, to: coords });
           setShowPromotion(true);
         } else {
+          // Call local move update for instant feedback
+          if (onMoveLocal && activeSquare) {
+            onMoveLocal(activeSquare, coords);
+          }
+
           socket?.send(
             JSON.stringify({
               from: activeSquare,

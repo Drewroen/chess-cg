@@ -1,5 +1,5 @@
 export class ChessBoard {
-  squares?: ChessPiece[][];
+  squares?: (ChessPiece | null)[][];
   constructor(squares?: ChessPiece[][]) {
     this.squares = squares;
   }
