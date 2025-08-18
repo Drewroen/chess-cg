@@ -249,13 +249,17 @@ export function GameView() {
               />
               <Timer
                 initialTime={
-                  playerColor === "white"
-                    ? chessGame.time?.black || 0
-                    : chessGame.time?.white || 0
+                  chessGame.status === "not started" 
+                    ? 10
+                    : (playerColor === "white"
+                        ? chessGame.time?.black || 0
+                        : chessGame.time?.white || 0)
                 }
                 isActive={
-                  chessGame.turn !== playerColor &&
-                  chessGame.status === "in progress"
+                  chessGame.status === "not started" 
+                    ? chessGame.turn !== playerColor
+                    : (chessGame.turn !== playerColor &&
+                       chessGame.status === "in progress")
                 }
                 isMobile={isMobile}
               />
@@ -303,13 +307,17 @@ export function GameView() {
               />
               <Timer
                 initialTime={
-                  playerColor === "white"
-                    ? chessGame.time?.white || 0
-                    : chessGame.time?.black || 0
+                  chessGame.status === "not started" 
+                    ? 10
+                    : (playerColor === "white"
+                        ? chessGame.time?.white || 0
+                        : chessGame.time?.black || 0)
                 }
                 isActive={
-                  chessGame.turn === playerColor &&
-                  chessGame.status === "in progress"
+                  chessGame.status === "not started" 
+                    ? chessGame.turn === playerColor
+                    : (chessGame.turn === playerColor &&
+                       chessGame.status === "in progress")
                 }
                 isMobile={isMobile}
               />
@@ -345,26 +353,34 @@ export function GameView() {
               />
               <Timer
                 initialTime={
-                  playerColor === "white"
-                    ? chessGame.time?.black || 0
-                    : chessGame.time?.white || 0
+                  chessGame.status === "not started" 
+                    ? 10
+                    : (playerColor === "white"
+                        ? chessGame.time?.black || 0
+                        : chessGame.time?.white || 0)
                 }
                 isActive={
-                  chessGame.turn !== playerColor &&
-                  chessGame.status === "in progress"
+                  chessGame.status === "not started" 
+                    ? chessGame.turn !== playerColor
+                    : (chessGame.turn !== playerColor &&
+                       chessGame.status === "in progress")
                 }
                 isMobile={isMobile}
               />
               <div style={{ height: 20 }}></div>
               <Timer
                 initialTime={
-                  playerColor === "white"
-                    ? chessGame.time?.white || 0
-                    : chessGame.time?.black || 0
+                  chessGame.status === "not started" 
+                    ? 10
+                    : (playerColor === "white"
+                        ? chessGame.time?.white || 0
+                        : chessGame.time?.black || 0)
                 }
                 isActive={
-                  chessGame.turn === playerColor &&
-                  chessGame.status === "in progress"
+                  chessGame.status === "not started" 
+                    ? chessGame.turn === playerColor
+                    : (chessGame.turn === playerColor &&
+                       chessGame.status === "in progress")
                 }
                 isMobile={isMobile}
               />
