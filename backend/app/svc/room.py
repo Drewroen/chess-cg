@@ -102,12 +102,29 @@ class RoomService:
         """Get a room by its ID."""
         return self.rooms.get(room_id)
 
-    def cleanup_room(self, room_id: UUID):
+    async def cleanup_room(self, room_id: UUID):
         """Remove a completed game and clean up player mappings."""
         if room_id not in self.rooms:
             return
 
         room = self.rooms[room_id]
+        
+        # Save game to database if it was completed or aborted
+        if room.game.status in [GameStatus.COMPLETE, GameStatus.ABORTED]:
+            try:
+                async with db_manager.async_session_maker() as session:
+                    db_service = DatabaseService(session)
+                    winner = room.game.winner if room.game.status == GameStatus.COMPLETE else "aborted"
+                    await db_service.create_chess_game(
+                        white_player_id=room.white,
+                        black_player_id=room.black,
+                        winner=winner
+                    )
+                    status_text = "completed" if room.game.status == GameStatus.COMPLETE else "aborted"
+                    print(f"Saved {status_text} game {room_id} to database")
+            except Exception as e:
+                print(f"Error saving game {room_id} to database: {e}")
+        
         # Clean up player mappings
         if room.white in self.player_to_room_map:
             del self.player_to_room_map[room.white]
@@ -127,7 +144,7 @@ class RoomManager:
         """Get the ELO rating for a user."""
         if not user_id or user_id.startswith("guest_"):
             return None
-        
+
         try:
             async with db_manager.async_session_maker() as session:
                 db_service = DatabaseService(session)
@@ -179,7 +196,7 @@ class RoomManager:
             # Get ELO ratings for both players
             white_elo = await self.get_user_elo(room.white)
             black_elo = await self.get_user_elo(room.black)
-            
+
             state = {
                 "squares": room.game.board.get_squares(),
                 "turn": room.game.turn,

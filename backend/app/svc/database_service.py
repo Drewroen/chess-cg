@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.db_models import User
+from app.db_models import User, ChessGame
 from typing import Optional
+from uuid import uuid4
 
 
 class DatabaseService:
@@ -49,3 +50,16 @@ class DatabaseService:
             select(User).where(User.user_type == "guest")
         )
         return result.scalars().all()
+
+    async def create_chess_game(self, white_player_id: str, black_player_id: str, winner: str = None) -> ChessGame:
+        game_data = {
+            "id": str(uuid4()),
+            "white_player_id": white_player_id,
+            "black_player_id": black_player_id,
+            "winner": winner
+        }
+        chess_game = ChessGame(**game_data)
+        self.session.add(chess_game)
+        await self.session.commit()
+        await self.session.refresh(chess_game)
+        return chess_game
