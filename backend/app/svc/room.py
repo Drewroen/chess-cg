@@ -229,23 +229,23 @@ class RoomManager:
                 },
                 "moves": {
                     "white": [
-                        (x.position_from.coordinates(), x.position_to.coordinates())
+                        x.to_dict()
                         for x in room.game.board.get_available_moves_for_color("white")
                     ],
                     "black": [
-                        (x.position_from.coordinates(), x.position_to.coordinates())
+                        x.to_dict()
                         for x in room.game.board.get_available_moves_for_color("black")
                     ],
                 },
                 "premoves": {
                     "white": [
-                        (x.position_from.coordinates(), x.position_to.coordinates())
+                        x.to_dict()
                         for x in room.game.board.get_available_premoves_for_color(
                             "white"
                         )
                     ],
                     "black": [
-                        (x.position_from.coordinates(), x.position_to.coordinates())
+                        x.to_dict()
                         for x in room.game.board.get_available_premoves_for_color(
                             "black"
                         )

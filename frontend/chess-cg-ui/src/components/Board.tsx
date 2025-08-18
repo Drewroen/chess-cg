@@ -135,9 +135,9 @@ export function Board({
         let gameMoves = game.moves[playerColor];
         let availableMoves = [];
         for (let move of gameMoves) {
-          let from = move[0];
-          if (from[0] === coords[0] && from[1] === coords[1]) {
-            availableMoves.push(move[1]);
+          let from = move.from;
+          if (from.row === coords[0] && from.col === coords[1]) {
+            availableMoves.push([move.to.row, move.to.col]);
           }
         }
         setPossibleMoves(availableMoves);
@@ -178,9 +178,9 @@ export function Board({
         let gamePremoves = game.premoves[playerColor];
         let availablePremoves = [];
         for (let premove of gamePremoves) {
-          let from = premove[0];
-          if (from[0] === coords[0] && from[1] === coords[1]) {
-            availablePremoves.push(premove[1]);
+          let from = premove.from;
+          if (from.row === coords[0] && from.col === coords[1]) {
+            availablePremoves.push([premove.to.row, premove.to.col]);
           }
         }
         setPossibleMoves(availablePremoves);

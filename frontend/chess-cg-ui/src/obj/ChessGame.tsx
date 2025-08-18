@@ -46,9 +46,14 @@ export class KingsInCheck {
   black: boolean = false;
 }
 
+export interface ChessMove {
+  from: { row: number; col: number };
+  to: { row: number; col: number };
+}
+
 export class ChessMoves {
-  white: number[][][] = [];
-  black: number[][][] = [];
+  white: ChessMove[] = [];
+  black: ChessMove[] = [];
 }
 
 export class RemainingTime {

@@ -29,8 +29,8 @@ class ChessMove:
 
     def to_dict(self):
         return {
-            "position_to_move": self.position_to.to_dict(),
-            "position_to_capture": self.position_to_capture.to_dict(),
+            "from": self.position_from.to_dict(),
+            "to": self.position_to.to_dict(),
         }
 
 
