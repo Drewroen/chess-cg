@@ -125,7 +125,7 @@ async def auth_callback(
         await get_or_create_user(user_info, db_service)
 
         # Create both access and refresh tokens for our application
-        access_token, refresh_token = create_tokens(user_info, token_data)
+        access_token, refresh_token = await create_tokens(user_info, token_data)
 
         # Redirect to frontend without access token in URL
         redirect_url = f"{FRONTEND_URL}/auth/success"
@@ -185,7 +185,7 @@ async def get_token_from_code(
         user_data = await get_or_create_user(user_info, db_service)
 
         # Create both access and refresh tokens for our application
-        access_token, refresh_token = create_tokens(user_info, token_data)
+        access_token, refresh_token = await create_tokens(user_info, token_data)
 
         return TokenResponse(
             access_token=access_token,
@@ -356,7 +356,7 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
 
     # Try to revoke the refresh token if it exists, but don't fail if it doesn't
     if refresh_token_value:
-        revoke_refresh_token(refresh_token_value)
+        await revoke_refresh_token(refresh_token_value)
 
     response = JSONResponse(content={"message": "Successfully logged out"})
 

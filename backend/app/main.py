@@ -108,7 +108,7 @@ async def cleanup_expired_tokens():
     """Background task to clean up expired tokens"""
     while True:
         try:
-            expired_refresh = cleanup_expired_refresh_tokens()  # existing function
+            expired_refresh = await cleanup_expired_refresh_tokens()  # existing function
             expired_guest = cleanup_expired_guest_tokens()  # new function
             if expired_refresh > 0 or expired_guest > 0:
                 print(

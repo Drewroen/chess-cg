@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.db_models import User, ChessGame
+from app.db_models import User, ChessGame, RefreshToken
 from typing import Optional
 from uuid import uuid4
+from datetime import datetime, timezone
 
 
 class DatabaseService:
@@ -63,3 +64,45 @@ class DatabaseService:
         await self.session.commit()
         await self.session.refresh(chess_game)
         return chess_game
+
+    async def create_refresh_token(self, token_data: dict) -> RefreshToken:
+        """Create a new refresh token in the database"""
+        refresh_token_obj = RefreshToken(**token_data)
+        self.session.add(refresh_token_obj)
+        await self.session.commit()
+        await self.session.refresh(refresh_token_obj)
+        return refresh_token_obj
+
+    async def get_refresh_token(self, token: str) -> Optional[RefreshToken]:
+        """Get refresh token by token string"""
+        result = await self.session.execute(
+            select(RefreshToken).where(RefreshToken.token == token)
+        )
+        return result.scalar_one_or_none()
+
+    async def update_refresh_token(self, token_obj: RefreshToken) -> RefreshToken:
+        """Update refresh token data"""
+        await self.session.commit()
+        await self.session.refresh(token_obj)
+        return token_obj
+
+    async def delete_refresh_token(self, token_obj: RefreshToken) -> bool:
+        """Delete a refresh token"""
+        await self.session.delete(token_obj)
+        await self.session.commit()
+        return True
+
+    async def cleanup_expired_refresh_tokens(self) -> int:
+        """Remove expired refresh tokens from storage"""
+        current_time = datetime.now(timezone.utc)
+        result = await self.session.execute(
+            select(RefreshToken).where(RefreshToken.expires_at < current_time)
+        )
+        expired_tokens = result.scalars().all()
+
+        count = len(expired_tokens)
+        for token in expired_tokens:
+            await self.session.delete(token)
+
+        await self.session.commit()
+        return count

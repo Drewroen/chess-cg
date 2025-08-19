@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 import httpx
 from jose import JWTError, jwt
@@ -8,6 +8,8 @@ import secrets
 import time
 import random
 from uuid import uuid4
+from app.database import get_db_session
+from app.svc.database_service import DatabaseService
 
 # Load environment variables
 load_dotenv()
@@ -28,8 +30,6 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
-# In-memory storage for refresh tokens (in production, use a database)
-refresh_token_store: dict[str, dict] = {}
 
 # In-memory storage for guest refresh tokens
 guest_refresh_tokens: dict[str, dict] = {}
@@ -92,10 +92,12 @@ async def refresh_google_token(google_refresh_token: str) -> dict:
         return response.json()
 
 
-def create_tokens(user_data: dict, google_token_data: dict = None) -> Tuple[str, str]:
+async def create_tokens(
+    user_data: dict, google_token_data: dict = None
+) -> Tuple[str, str]:
     """Create both access and refresh tokens for authenticated user"""
     # Create access token with shorter expiry
-    access_expire = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+    access_expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
     access_payload = {
         "sub": user_data["id"],
         "email": user_data["email"],
@@ -107,113 +109,139 @@ def create_tokens(user_data: dict, google_token_data: dict = None) -> Tuple[str,
     access_token = jwt.encode(access_payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
     # Create refresh token with longer expiry
-    refresh_expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
+    refresh_expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
     refresh_token = secrets.token_urlsafe(32)
 
-    # Store refresh token with user info, expiry, and Google tokens
-    refresh_token_store[refresh_token] = {
-        "user_id": user_data["id"],
-        "email": user_data["email"],
-        "name": user_data["name"],
-        "picture": user_data.get("picture"),
-        "expires_at": refresh_expire,
-        "created_at": datetime.utcnow(),
-        # Store Google's tokens for proper refresh capability
-        "google_access_token": google_token_data.get("access_token")
-        if google_token_data
-        else None,
-        "google_refresh_token": google_token_data.get("refresh_token")
-        if google_token_data
-        else None,
-        "google_token_expires_at": datetime.utcnow()
-        + timedelta(seconds=google_token_data.get("expires_in", 3600))
-        if google_token_data
-        else None,
-    }
+    # Store refresh token in database
+    async for session in get_db_session():
+        db_service = DatabaseService(session)
+        token_data = {
+            "token": refresh_token,
+            "user_id": user_data["id"],
+            "email": user_data["email"],
+            "name": user_data["name"],
+            "picture": user_data.get("picture"),
+            "expires_at": refresh_expire.replace(tzinfo=None),
+            "google_access_token": google_token_data.get("access_token")
+            if google_token_data
+            else None,
+            "google_refresh_token": google_token_data.get("refresh_token")
+            if google_token_data
+            else None,
+            "google_token_expires_at": (datetime.now(timezone.utc)
+            + timedelta(seconds=google_token_data.get("expires_in", 3600))).replace(tzinfo=None)
+            if google_token_data
+            else None,
+        }
+        await db_service.create_refresh_token(token_data)
+        break
 
     return access_token, refresh_token
 
 
 async def refresh_access_token(refresh_token: str) -> Optional[str]:
     """Create a new access token using a valid refresh token"""
-    if refresh_token not in refresh_token_store:
-        return None
+    async for session in get_db_session():
+        db_service = DatabaseService(session)
+        token_obj = await db_service.get_refresh_token(refresh_token)
 
-    token_data = refresh_token_store[refresh_token]
+        if not token_obj:
+            return None
 
-    # Check if refresh token is expired
-    if datetime.utcnow() > token_data["expires_at"]:
-        # Clean up expired token
-        del refresh_token_store[refresh_token]
-        return None
+        # Check if refresh token is expired
+        if datetime.now(timezone.utc).replace(tzinfo=None) > token_obj.expires_at:
+            # Clean up expired token
+            await db_service.delete_refresh_token(token_obj)
+            return None
 
-    try:
-        # Check if we have a Google refresh token and if Google token is expired
-        google_refresh_token = token_data.get("google_refresh_token")
-        google_token_expires_at = token_data.get("google_token_expires_at")
+        try:
+            # Check if we have a Google refresh token and if Google token is expired
+            google_refresh_token = token_obj.google_refresh_token
+            google_token_expires_at = token_obj.google_token_expires_at
 
-        if (
-            google_refresh_token
-            and google_token_expires_at
-            and datetime.utcnow() > google_token_expires_at
-        ):
-            # Refresh Google token
-            refreshed_google_token = await refresh_google_token(google_refresh_token)
+            if (
+                google_refresh_token
+                and google_token_expires_at
+                and datetime.now(timezone.utc).replace(tzinfo=None) > google_token_expires_at
+            ):
+                # Refresh Google token
+                refreshed_google_token = await refresh_google_token(
+                    google_refresh_token
+                )
 
-            # Update stored Google token data
-            token_data["google_access_token"] = refreshed_google_token["access_token"]
-            token_data["google_token_expires_at"] = datetime.utcnow() + timedelta(
-                seconds=refreshed_google_token.get("expires_in", 3600)
-            )
+                # Update stored Google token data
+                token_obj.google_access_token = refreshed_google_token["access_token"]
+                token_obj.google_token_expires_at = (datetime.now(timezone.utc) + timedelta(
+                    seconds=refreshed_google_token.get("expires_in", 3600)
+                )).replace(tzinfo=None)
+                await db_service.update_refresh_token(token_obj)
 
-            # Get fresh user info from Google
-            user_data = await get_user_info(refreshed_google_token["access_token"])
-        else:
-            # Use existing user data if Google token is still valid
-            user_data = {
-                "id": token_data["user_id"],
-                "email": token_data["email"],
-                "name": token_data["name"],
-                "picture": token_data.get("picture"),
+                # Get fresh user info from Google
+                user_data = await get_user_info(refreshed_google_token["access_token"])
+            else:
+                # Use existing user data if Google token is still valid
+                user_data = {
+                    "id": token_obj.user_id,
+                    "email": token_obj.email,
+                    "name": token_obj.name,
+                    "picture": token_obj.picture,
+                }
+
+            # Create new access token (just the JWT, don't create new refresh token)
+            access_expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
+            access_payload = {
+                "sub": user_data["id"],
+                "email": user_data["email"],
+                "name": user_data["name"],
+                "picture": user_data.get("picture"),
+                "exp": access_expire,
+                "type": "access",
             }
+            access_token = jwt.encode(
+                access_payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM
+            )
+            return access_token
 
-        # Create new access token
-        access_token, _ = create_tokens(user_data)
-        return access_token
+        except GoogleOAuthError:
+            # If Google token refresh fails, fall back to existing user data
+            user_data = {
+                "id": token_obj.user_id,
+                "email": token_obj.email,
+                "name": token_obj.name,
+                "picture": token_obj.picture,
+            }
+            access_expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
+            access_payload = {
+                "sub": user_data["id"],
+                "email": user_data["email"],
+                "name": user_data["name"],
+                "picture": user_data.get("picture"),
+                "exp": access_expire,
+                "type": "access",
+            }
+            access_token = jwt.encode(
+                access_payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM
+            )
+            return access_token
 
-    except GoogleOAuthError:
-        # If Google token refresh fails, fall back to existing user data
-        user_data = {
-            "id": token_data["user_id"],
-            "email": token_data["email"],
-            "name": token_data["name"],
-            "picture": token_data.get("picture"),
-        }
-        access_token, _ = create_tokens(user_data)
-        return access_token
 
-
-def revoke_refresh_token(refresh_token: str) -> bool:
+async def revoke_refresh_token(refresh_token: str) -> bool:
     """Revoke a refresh token"""
-    if refresh_token in refresh_token_store:
-        del refresh_token_store[refresh_token]
-        return True
-    return False
+    async for session in get_db_session():
+        db_service = DatabaseService(session)
+        token_obj = await db_service.get_refresh_token(refresh_token)
+
+        if token_obj:
+            await db_service.delete_refresh_token(token_obj)
+            return True
+        return False
 
 
-def cleanup_expired_refresh_tokens():
+async def cleanup_expired_refresh_tokens():
     """Remove expired refresh tokens from storage"""
-    current_time = datetime.utcnow()
-    expired_tokens = [
-        token
-        for token, data in refresh_token_store.items()
-        if current_time > data["expires_at"]
-    ]
-
-    for token in expired_tokens:
-        del refresh_token_store[token]
-
-    return len(expired_tokens)
+    async for session in get_db_session():
+        db_service = DatabaseService(session)
+        return await db_service.cleanup_expired_refresh_tokens()
 
 
 def verify_jwt_token(token: str) -> Optional[dict]:
@@ -245,7 +273,7 @@ def get_google_auth_url() -> str:
 
 def create_jwt_token(payload: dict, expires_minutes: int = 60) -> str:
     """Create JWT token with given payload and expiration"""
-    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
     payload_copy = payload.copy()
     payload_copy.update({"exp": expire, "type": "access"})
     return jwt.encode(payload_copy, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
@@ -255,27 +283,30 @@ def create_guest_tokens(guest_name: str = None) -> Tuple[str, str]:
     """Create guest access and refresh tokens"""
     guest_id = "guest_" + str(uuid4())
     guest_name = guest_name or f"Guest_{random.randint(10000, 99999)}"
-    
+
     # Create guest access token (JWT)
-    guest_access_token = create_jwt_token({
-        "sub": guest_id,
-        "email": "guest@local",
-        "name": guest_name,
-        "user_type": "guest"
-    }, expires_minutes=60)
-    
+    guest_access_token = create_jwt_token(
+        {
+            "sub": guest_id,
+            "email": "guest@local",
+            "name": guest_name,
+            "user_type": "guest",
+        },
+        expires_minutes=60,
+    )
+
     # Create guest refresh token
     guest_refresh_token = "guest_refresh_" + secrets.token_urlsafe(32)
-    
+
     # Store guest session
     guest_refresh_tokens[guest_refresh_token] = {
         "guest_id": guest_id,
         "guest_name": guest_name,
         "created_at": time.time(),
         "last_used": time.time(),
-        "expires_at": time.time() + (7 * 24 * 60 * 60)  # 7 days
+        "expires_at": time.time() + (7 * 24 * 60 * 60),  # 7 days
     }
-    
+
     return guest_access_token, guest_refresh_token
 
 
@@ -283,37 +314,41 @@ async def refresh_guest_access_token(guest_refresh_token: str) -> Optional[str]:
     """Refresh guest access token using guest refresh token"""
     if not guest_refresh_token.startswith("guest_refresh_"):
         return None
-        
+
     if guest_refresh_token not in guest_refresh_tokens:
         return None
-        
+
     token_data = guest_refresh_tokens[guest_refresh_token]
-    
+
     # Check expiry
     if time.time() > token_data["expires_at"]:
         del guest_refresh_tokens[guest_refresh_token]
         return None
-    
+
     # Update last used
     token_data["last_used"] = time.time()
-    
+
     # Create new access token
-    return create_jwt_token({
-        "sub": token_data["guest_id"],
-        "email": "guest@local", 
-        "name": token_data["guest_name"],
-        "user_type": "guest"
-    }, expires_minutes=60)
+    return create_jwt_token(
+        {
+            "sub": token_data["guest_id"],
+            "email": "guest@local",
+            "name": token_data["guest_name"],
+            "user_type": "guest",
+        },
+        expires_minutes=60,
+    )
 
 
 def cleanup_expired_guest_tokens():
     """Remove expired guest tokens"""
     current_time = time.time()
     expired_tokens = [
-        token for token, data in guest_refresh_tokens.items()
+        token
+        for token, data in guest_refresh_tokens.items()
         if current_time > data["expires_at"]
     ]
     for token in expired_tokens:
         del guest_refresh_tokens[token]
-    
+
     return len(expired_tokens)
