@@ -219,7 +219,7 @@ export function GameView() {
         padding: isMobile ? "0" : "20px",
         margin: 0,
         minHeight: "100vh",
-        alignItems: isMobile ? "center" : "flex-start",
+        alignItems: "center",
         justifyContent: "center",
         backgroundColor: "#1d1a17",
       }}

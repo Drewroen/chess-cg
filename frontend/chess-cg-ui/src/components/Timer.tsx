@@ -83,10 +83,9 @@ export const Timer: React.FC<TimerProps> = ({
   return (
     <div
       style={{
-        width: isMobile ? "auto" : 200,
-        maxWidth: isMobile ? "auto" : 200,
+        width: "auto",
         height: 48,
-        border: isMobile ? "none" : "1px solid #e5e7eb",
+        border: "none",
         borderRadius: 4,
         fontSize: isMobile ? 18 : 36,
         fontWeight: 200,
