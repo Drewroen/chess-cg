@@ -34,11 +34,6 @@ class RefreshToken(Base):
 
     token = Column(String, primary_key=True)
     user_id = Column(String, nullable=False)
-    email = Column(String, nullable=False)
-    name = Column(String, nullable=False)
-    picture = Column(String, nullable=True)
     expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
-    google_access_token = Column(Text, nullable=True)
     google_refresh_token = Column(Text, nullable=True)
     google_token_expires_at = Column(DateTime, nullable=True)

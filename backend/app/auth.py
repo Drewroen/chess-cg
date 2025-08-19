@@ -102,14 +102,15 @@ async def create_tokens(
         "sub": user_data["id"],
         "email": user_data["email"],
         "name": user_data["name"],
-        "picture": user_data.get("picture"),
         "exp": access_expire,
         "type": "access",
     }
     access_token = jwt.encode(access_payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
     # Create refresh token with longer expiry
-    refresh_expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS)
+    refresh_expire = datetime.now(timezone.utc) + timedelta(
+        days=REFRESH_TOKEN_EXPIRATION_DAYS
+    )
     refresh_token = secrets.token_urlsafe(32)
 
     # Store refresh token in database
@@ -118,18 +119,14 @@ async def create_tokens(
         token_data = {
             "token": refresh_token,
             "user_id": user_data["id"],
-            "email": user_data["email"],
-            "name": user_data["name"],
-            "picture": user_data.get("picture"),
             "expires_at": refresh_expire.replace(tzinfo=None),
-            "google_access_token": google_token_data.get("access_token")
-            if google_token_data
-            else None,
             "google_refresh_token": google_token_data.get("refresh_token")
             if google_token_data
             else None,
-            "google_token_expires_at": (datetime.now(timezone.utc)
-            + timedelta(seconds=google_token_data.get("expires_in", 3600))).replace(tzinfo=None)
+            "google_token_expires_at": (
+                datetime.now(timezone.utc)
+                + timedelta(seconds=google_token_data.get("expires_in", 3600 * 24 * 7))
+            ).replace(tzinfo=None)
             if google_token_data
             else None,
         }
@@ -162,38 +159,42 @@ async def refresh_access_token(refresh_token: str) -> Optional[str]:
             if (
                 google_refresh_token
                 and google_token_expires_at
-                and datetime.now(timezone.utc).replace(tzinfo=None) > google_token_expires_at
+                and datetime.now(timezone.utc).replace(tzinfo=None)
+                > google_token_expires_at
             ):
                 # Refresh Google token
                 refreshed_google_token = await refresh_google_token(
                     google_refresh_token
                 )
 
-                # Update stored Google token data
-                token_obj.google_access_token = refreshed_google_token["access_token"]
-                token_obj.google_token_expires_at = (datetime.now(timezone.utc) + timedelta(
-                    seconds=refreshed_google_token.get("expires_in", 3600)
-                )).replace(tzinfo=None)
+                # Update stored Google token expiration
+                token_obj.google_token_expires_at = (
+                    datetime.now(timezone.utc)
+                    + timedelta(seconds=refreshed_google_token.get("expires_in", 3600))
+                ).replace(tzinfo=None)
                 await db_service.update_refresh_token(token_obj)
 
                 # Get fresh user info from Google
                 user_data = await get_user_info(refreshed_google_token["access_token"])
             else:
-                # Use existing user data if Google token is still valid
+                # Get user data from database if Google token is still valid
+                user = await db_service.get_user_by_id(token_obj.user_id)
+                if not user:
+                    return None
                 user_data = {
-                    "id": token_obj.user_id,
-                    "email": token_obj.email,
-                    "name": token_obj.name,
-                    "picture": token_obj.picture,
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
                 }
 
             # Create new access token (just the JWT, don't create new refresh token)
-            access_expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
+            access_expire = datetime.now(timezone.utc) + timedelta(
+                hours=JWT_EXPIRATION_HOURS
+            )
             access_payload = {
                 "sub": user_data["id"],
                 "email": user_data["email"],
                 "name": user_data["name"],
-                "picture": user_data.get("picture"),
                 "exp": access_expire,
                 "type": "access",
             }
@@ -203,19 +204,22 @@ async def refresh_access_token(refresh_token: str) -> Optional[str]:
             return access_token
 
         except GoogleOAuthError:
-            # If Google token refresh fails, fall back to existing user data
+            # If Google token refresh fails, fall back to user data from database
+            user = await db_service.get_user_by_id(token_obj.user_id)
+            if not user:
+                return None
             user_data = {
-                "id": token_obj.user_id,
-                "email": token_obj.email,
-                "name": token_obj.name,
-                "picture": token_obj.picture,
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
             }
-            access_expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
+            access_expire = datetime.now(timezone.utc) + timedelta(
+                hours=JWT_EXPIRATION_HOURS
+            )
             access_payload = {
                 "sub": user_data["id"],
                 "email": user_data["email"],
                 "name": user_data["name"],
-                "picture": user_data.get("picture"),
                 "exp": access_expire,
                 "type": "access",
             }
