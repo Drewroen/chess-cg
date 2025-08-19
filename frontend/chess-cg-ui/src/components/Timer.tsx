@@ -83,19 +83,20 @@ export const Timer: React.FC<TimerProps> = ({
   return (
     <div
       style={{
-        width: isMobile ? "100%" : 200,
-        maxWidth: isMobile ? 300 : 200,
+        width: isMobile ? "auto" : 200,
+        maxWidth: isMobile ? "auto" : 200,
         height: 48,
-        border: "1px solid #e5e7eb",
+        border: isMobile ? "none" : "1px solid #e5e7eb",
         borderRadius: 4,
-        fontSize: isMobile ? 32 : 36,
+        fontSize: isMobile ? 18 : 36,
         fontWeight: 200,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         gap: 12,
-        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+        boxShadow: isMobile ? "none" : "0 1px 3px rgba(0, 0, 0, 0.1)",
         color: "#374151",
+        padding: isMobile ? "0 8px" : "0",
       }}
     >
       <div

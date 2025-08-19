@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { BoardEvent, ChessGame, ChessPiece } from "../obj/ChessGame";
 import { Board } from "./Board";
 import { Timer } from "./Timer";
-import { ConnectionStatus } from "./ConnectionStatus";
+import { GamePanel } from "./GamePanel";
 
 type ConnectionStatusType =
   | "connecting"
@@ -215,12 +215,13 @@ export function GameView() {
       style={{
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
-        gap: "20px",
-        padding: "20px",
+        gap: isMobile ? "0" : "20px",
+        padding: isMobile ? "0" : "20px",
         margin: 0,
         minHeight: "100vh",
-        alignItems: "center",
+        alignItems: isMobile ? "center" : "flex-start",
         justifyContent: "center",
+        backgroundColor: "#1d1a17",
       }}
     >
       {process.env.NODE_ENV === "development" && (
@@ -239,195 +240,250 @@ export function GameView() {
       )}
       {chessGame.board?.squares ? (
         <>
-          {/* Top timer for mobile layout */}
-          {isMobile && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <ConnectionStatus
-                connected={
-                  playerColor === "white"
-                    ? chessGame.players?.black?.connected || false
-                    : chessGame.players?.white?.connected || false
-                }
-                username={
-                  playerColor === "white"
-                    ? chessGame.players?.black?.name
-                    : chessGame.players?.white?.name
-                }
-                elo={
-                  playerColor === "white"
-                    ? chessGame.players?.black?.elo
-                    : chessGame.players?.white?.elo
-                }
-                playerColor={playerColor === "white" ? "black" : "white"}
-                gameStatus={chessGame.status}
-                winner={chessGame.winner}
-              />
-              <Timer
-                initialTime={
-                  chessGame.status === "not started"
-                    ? 10
-                    : playerColor === "white"
-                    ? chessGame.time?.black || 0
-                    : chessGame.time?.white || 0
-                }
-                isActive={
-                  chessGame.status === "not started"
-                    ? chessGame.turn !== playerColor
-                    : chessGame.turn !== playerColor &&
-                      chessGame.status === "in progress"
-                }
-                isMobile={isMobile}
-              />
-            </div>
-          )}
-
-          {socket && (
-            <Board
-              game={chessGame}
-              updatePossibleMoves={updatePossibleMoves}
-              key="board"
-              socket={socket}
-              onMoveLocal={handleLocalMove}
-            />
-          )}
-
-          {/* Bottom timer for mobile layout or side timers for desktop */}
+          {/* Mobile layout - player info above and below board */}
           {isMobile ? (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <ConnectionStatus
-                connected={
-                  playerColor === "white"
-                    ? chessGame.players?.white?.connected || false
-                    : chessGame.players?.black?.connected || false
-                }
-                username={
-                  playerColor === "white"
-                    ? chessGame.players?.white?.name
-                    : chessGame.players?.black?.name
-                }
-                elo={
-                  playerColor === "white"
-                    ? chessGame.players?.white?.elo
-                    : chessGame.players?.black?.elo
-                }
-                playerColor={playerColor}
-                gameStatus={chessGame.status}
-                winner={chessGame.winner}
-              />
-              <Timer
-                initialTime={
-                  chessGame.status === "not started"
-                    ? 10
-                    : playerColor === "white"
-                    ? chessGame.time?.white || 0
-                    : chessGame.time?.black || 0
-                }
-                isActive={
-                  chessGame.status === "not started"
-                    ? chessGame.turn === playerColor
-                    : chessGame.turn === playerColor &&
-                      chessGame.status === "in progress"
-                }
-                isMobile={isMobile}
-              />
-            </div>
+            <>
+              {/* Opponent info at top */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  width: "100%",
+                  maxWidth: "600px",
+                  padding: "12px 16px",
+                  backgroundColor: "#2b2927",
+                  borderRadius: "8px",
+                  marginBottom: "0",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <div
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      backgroundColor: (
+                        playerColor === "white"
+                          ? chessGame.players?.black?.connected
+                          : chessGame.players?.white?.connected
+                      )
+                        ? "#4CAF50"
+                        : "#f44336",
+                    }}
+                  />
+                  <span
+                    style={{
+                      color: "#fff",
+                      fontSize: "16px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    {playerColor === "white"
+                      ? chessGame.players?.black?.name
+                      : chessGame.players?.white?.name}
+                  </span>
+                  <span style={{ color: "#888", fontSize: "14px" }}>
+                    {playerColor === "white"
+                      ? chessGame.players?.black?.elo
+                      : chessGame.players?.white?.elo}
+                  </span>
+                </div>
+                <Timer
+                  initialTime={
+                    chessGame.status === "not started"
+                      ? 10
+                      : playerColor === "white"
+                      ? chessGame.time?.black || 0
+                      : chessGame.time?.white || 0
+                  }
+                  isActive={
+                    chessGame.status === "not started"
+                      ? chessGame.turn !== playerColor
+                      : chessGame.turn !== playerColor &&
+                        chessGame.status === "in progress"
+                  }
+                  isMobile={true}
+                />
+              </div>
+
+              {/* Chess board */}
+              {socket && (
+                <Board
+                  game={chessGame}
+                  updatePossibleMoves={updatePossibleMoves}
+                  key="board"
+                  socket={socket}
+                  onMoveLocal={handleLocalMove}
+                />
+              )}
+
+              {/* Current player timer right under the board */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  width: "100%",
+                  maxWidth: "600px",
+                  padding: "12px 16px",
+                  backgroundColor: "#2b2927",
+                  borderRadius: "8px",
+                  marginTop: "0",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <div
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      backgroundColor: (
+                        playerColor === "white"
+                          ? chessGame.players?.white?.connected
+                          : chessGame.players?.black?.connected
+                      )
+                        ? "#4CAF50"
+                        : "#f44336",
+                    }}
+                  />
+                  <span
+                    style={{
+                      color: "#fff",
+                      fontSize: "16px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    {playerColor === "white"
+                      ? chessGame.players?.white?.name
+                      : chessGame.players?.black?.name}
+                  </span>
+                  <span style={{ color: "#888", fontSize: "14px" }}>
+                    {playerColor === "white"
+                      ? chessGame.players?.white?.elo
+                      : chessGame.players?.black?.elo}
+                  </span>
+                </div>
+                <Timer
+                  initialTime={
+                    chessGame.status === "not started"
+                      ? 10
+                      : playerColor === "white"
+                      ? chessGame.time?.white || 0
+                      : chessGame.time?.black || 0
+                  }
+                  isActive={
+                    chessGame.status === "not started"
+                      ? chessGame.turn === playerColor
+                      : chessGame.turn === playerColor &&
+                        chessGame.status === "in progress"
+                  }
+                  isMobile={true}
+                />
+              </div>
+
+              {/* Game control buttons */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: "16px",
+                  margin: "12px 0",
+                  width: "100%",
+                  maxWidth: "600px",
+                  boxSizing: "border-box",
+                }}
+              >
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "transparent",
+                    color: "#888",
+                    border: "1px solid #555",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  ✕
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "transparent",
+                    color: "#888",
+                    border: "1px solid #555",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  ½
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "transparent",
+                    color: "#888",
+                    border: "1px solid #555",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  ⚐
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "transparent",
+                    color: "#888",
+                    border: "1px solid #555",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  ☰
+                </button>
+              </div>
+            </>
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "6px",
-                justifyContent: "center",
-              }}
-            >
-              <ConnectionStatus
-                connected={
-                  playerColor === "white"
-                    ? chessGame.players?.black?.connected || false
-                    : chessGame.players?.white?.connected || false
-                }
-                username={
-                  playerColor === "white"
-                    ? chessGame.players?.black?.name
-                    : chessGame.players?.white?.name
-                }
-                elo={
-                  playerColor === "white"
-                    ? chessGame.players?.black?.elo
-                    : chessGame.players?.white?.elo
-                }
-                playerColor={playerColor === "white" ? "black" : "white"}
-                gameStatus={chessGame.status}
-                winner={chessGame.winner}
-              />
-              <Timer
-                initialTime={
-                  chessGame.status === "not started"
-                    ? 10
-                    : playerColor === "white"
-                    ? chessGame.time?.black || 0
-                    : chessGame.time?.white || 0
-                }
-                isActive={
-                  chessGame.status === "not started"
-                    ? chessGame.turn !== playerColor
-                    : chessGame.turn !== playerColor &&
-                      chessGame.status === "in progress"
-                }
-                isMobile={isMobile}
-              />
-              <div style={{ height: 20 }}></div>
-              <Timer
-                initialTime={
-                  chessGame.status === "not started"
-                    ? 10
-                    : playerColor === "white"
-                    ? chessGame.time?.white || 0
-                    : chessGame.time?.black || 0
-                }
-                isActive={
-                  chessGame.status === "not started"
-                    ? chessGame.turn === playerColor
-                    : chessGame.turn === playerColor &&
-                      chessGame.status === "in progress"
-                }
-                isMobile={isMobile}
-              />
-              <ConnectionStatus
-                connected={
-                  playerColor === "white"
-                    ? chessGame.players?.white?.connected || false
-                    : chessGame.players?.black?.connected || false
-                }
-                username={
-                  playerColor === "white"
-                    ? chessGame.players?.white?.name
-                    : chessGame.players?.black?.name
-                }
-                elo={
-                  playerColor === "white"
-                    ? chessGame.players?.white?.elo
-                    : chessGame.players?.black?.elo
-                }
+            /* Desktop layout - board on left, panel on right */
+            <>
+              {socket && (
+                <Board
+                  game={chessGame}
+                  updatePossibleMoves={updatePossibleMoves}
+                  key="board"
+                  socket={socket}
+                  onMoveLocal={handleLocalMove}
+                />
+              )}
+              <GamePanel
+                game={chessGame}
                 playerColor={playerColor}
-                gameStatus={chessGame.status}
-                winner={chessGame.winner}
+                isMobile={false}
               />
-            </div>
+            </>
           )}
         </>
       ) : (
