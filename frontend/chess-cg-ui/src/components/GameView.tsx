@@ -478,11 +478,7 @@ export function GameView() {
                   onMoveLocal={handleLocalMove}
                 />
               )}
-              <GamePanel
-                game={chessGame}
-                playerColor={playerColor}
-                isMobile={false}
-              />
+              <GamePanel game={chessGame} playerColor={playerColor} />
             </>
           )}
         </>
