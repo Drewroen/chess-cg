@@ -51,6 +51,11 @@ export interface ChessMove {
   to: { row: number; col: number };
 }
 
+export interface Move {
+  from: [number, number];
+  to: [number, number];
+}
+
 export class ChessMoves {
   white: ChessMove[] = [];
   black: ChessMove[] = [];

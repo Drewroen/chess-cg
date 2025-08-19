@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ChessGame } from "../obj/ChessGame";
+import { ChessGame, Move } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { PromotionSelector } from "./PromotionSelector";
 
@@ -18,16 +18,10 @@ export function Board({
     null
   );
   const [showPromotion, setShowPromotion] = useState(false);
-  const [promotionMove, setPromotionMove] = useState<{
-    from: [number, number];
-    to: [number, number];
-  } | null>(null);
+  const [promotionMove, setPromotionMove] = useState<Move | null>(null);
   const playerColor = game.players?.white.id === game.id ? "white" : "black";
   const [possibleMoves, setPossibleMoves] = useState<number[][]>([]);
-  const [premove, setPremove] = useState<{
-    from: [number, number];
-    to: [number, number];
-  } | null>(null);
+  const [premove, setPremove] = useState<Move | null>(null);
   const [boardDimensions, setBoardDimensions] = useState({
     width: 0,
     height: 0,
