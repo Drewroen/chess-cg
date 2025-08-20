@@ -1,26 +1,28 @@
 import { ChessGame } from "../obj/ChessGame";
 import { Timer } from "./Timer";
+import { GameInfo } from "../services/gameService";
 
 interface GamePanelProps {
   game: ChessGame;
+  gameInfo: GameInfo | null;
   playerColor: string;
 }
 
-export function GamePanel({ game, playerColor }: GamePanelProps) {
+export function GamePanel({ game, gameInfo, playerColor }: GamePanelProps) {
   // Determine opponent and current player info
   const opponentInfo =
     playerColor === "white"
       ? {
-          connected: game.players?.black?.connected || false,
-          name: game.players?.black?.name,
-          elo: game.players?.black?.elo,
+          connected: game.opponentConnected,
+          name: gameInfo?.players.black?.name || "Opponent",
+          elo: gameInfo?.players.black?.elo,
           color: "black" as const,
           time: game.time?.black || 0,
         }
       : {
-          connected: game.players?.white?.connected || false,
-          name: game.players?.white?.name,
-          elo: game.players?.white?.elo,
+          connected: game.opponentConnected,
+          name: gameInfo?.players.white?.name || "Opponent",
+          elo: gameInfo?.players.white?.elo,
           color: "white" as const,
           time: game.time?.white || 0,
         };
@@ -28,16 +30,16 @@ export function GamePanel({ game, playerColor }: GamePanelProps) {
   const currentPlayerInfo =
     playerColor === "white"
       ? {
-          connected: game.players?.white?.connected || false,
-          name: game.players?.white?.name,
-          elo: game.players?.white?.elo,
+          connected: true, // Player is always connected (it's us)
+          name: gameInfo?.players.white?.name || "You",
+          elo: gameInfo?.players.white?.elo,
           color: "white" as const,
           time: game.time?.white || 0,
         }
       : {
-          connected: game.players?.black?.connected || false,
-          name: game.players?.black?.name,
-          elo: game.players?.black?.elo,
+          connected: true, // Player is always connected (it's us)
+          name: gameInfo?.players.black?.name || "You",
+          elo: gameInfo?.players.black?.elo,
           color: "black" as const,
           time: game.time?.black || 0,
         };

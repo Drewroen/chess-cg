@@ -8,18 +8,19 @@ export function Board({
   updatePossibleMoves,
   socket,
   onMoveLocal,
+  playerColor,
 }: {
   game: ChessGame;
   updatePossibleMoves: (moves: Array<[number, number]>) => void;
   socket: WebSocket | null;
   onMoveLocal?: (from: [number, number], to: [number, number]) => void;
+  playerColor: string;
 }) {
   const [activeSquare, setActiveSquare] = useState<[number, number] | null>(
     null
   );
   const [showPromotion, setShowPromotion] = useState(false);
   const [promotionMove, setPromotionMove] = useState<Move | null>(null);
-  const playerColor = game.players?.white.id === game.id ? "white" : "black";
   const [possibleMoves, setPossibleMoves] = useState<number[][]>([]);
   const [premove, setPremove] = useState<Move | null>(null);
   const [boardDimensions, setBoardDimensions] = useState({
@@ -126,7 +127,7 @@ export function Board({
       } else if (
         game.board?.squares![coords[0]][coords[1]]?.color === playerColor
       ) {
-        let gameMoves = game.moves[playerColor];
+        let gameMoves = game.moves; // Now simplified to single array
         let availableMoves = [];
         for (let move of gameMoves) {
           let from = move.from;
@@ -169,7 +170,7 @@ export function Board({
         game.board?.squares![coords[0]][coords[1]]?.color === playerColor &&
         !activeSquare
       ) {
-        let gamePremoves = game.premoves[playerColor];
+        let gamePremoves = game.moves; // Now simplified to single array (premoves when not your turn)
         let availablePremoves = [];
         for (let premove of gamePremoves) {
           let from = premove.from;

@@ -193,33 +193,9 @@ class RoomManager:
         room = self.room_service.rooms[room_id]
 
         if room:
-            # Get ELO ratings for both players
-            white_elo = await self.get_user_elo(room.white)
-            black_elo = await self.get_user_elo(room.black)
-
             state = {
                 "squares": room.game.board.get_squares(),
                 "turn": room.game.turn,
-                "players": {
-                    "white": {
-                        "id": room.white,
-                        "name": self.manager.user_id_to_name.get(room.white, "Guest"),
-                        "elo": white_elo,
-                        "connected": len(
-                            self.manager.user_id_to_connection_map.get(room.white, [])
-                        )
-                        > 0,
-                    },
-                    "black": {
-                        "id": room.black,
-                        "name": self.manager.user_id_to_name.get(room.black, "Guest"),
-                        "elo": black_elo,
-                        "connected": len(
-                            self.manager.user_id_to_connection_map.get(room.black, [])
-                        )
-                        > 0,
-                    },
-                },
                 "kings_in_check": room.game.board.kings_in_check(),
                 "status": room.game.status.value,
                 "winner": room.game.winner,
@@ -227,33 +203,32 @@ class RoomManager:
                     "white": self._get_current_time_remaining(room.game, "white"),
                     "black": self._get_current_time_remaining(room.game, "black"),
                 },
-                "moves": {
-                    "white": [
-                        x.to_dict()
-                        for x in room.game.board.get_available_moves_for_color("white")
-                    ],
-                    "black": [
-                        x.to_dict()
-                        for x in room.game.board.get_available_moves_for_color("black")
-                    ],
-                },
-                "premoves": {
-                    "white": [
-                        x.to_dict()
-                        for x in room.game.board.get_available_premoves_for_color(
-                            "white"
-                        )
-                    ],
-                    "black": [
-                        x.to_dict()
-                        for x in room.game.board.get_available_premoves_for_color(
-                            "black"
-                        )
-                    ],
-                },
             }
         for player_name in [room.white, room.black]:
-            state["id"] = player_name
+            state["id"] = str(room.id)  # Room ID for fetching game info
+            state["player_id"] = player_name  # Player ID to identify which player this is
+            
+            # Determine player color
+            player_color = "white" if player_name == room.white else "black"
+            
+            # Add turn-based moves: regular moves if it's their turn, premoves if not
+            if room.game.turn == player_color:
+                state["moves"] = [
+                    x.to_dict()
+                    for x in room.game.board.get_available_moves_for_color(player_color)
+                ]
+            else:
+                state["moves"] = [
+                    x.to_dict()
+                    for x in room.game.board.get_available_premoves_for_color(player_color)
+                ]
+            
+            # Add opponent connection status
+            opponent_name = room.black if player_name == room.white else room.white
+            state["opponent_connected"] = len(
+                self.manager.user_id_to_connection_map.get(opponent_name, [])
+            ) > 0
+            
             connections = self.manager.user_id_to_connection_map.get(player_name, [])
             for connection in connections:
                 if connection and self.manager.websocket(connection.id) is not None:

@@ -24,9 +24,10 @@ export class ChessGame {
   status: string = "";
   winner?: string;
   time: RemainingTime = new RemainingTime();
-  moves: ChessMoves = new ChessMoves();
-  premoves: ChessMoves = new ChessMoves();
-  id: number = -1;
+  moves: ChessMove[] = []; // Simplified - now just one array based on turn
+  opponentConnected: boolean = false; // New field for opponent connection status
+  id: string = ""; // Room ID for fetching game info
+  playerId: string = ""; // Player ID to identify which player this is
 }
 export class ChessPlayers {
   white: { id: number; name: string; connected: boolean; elo?: number } = {
@@ -68,13 +69,13 @@ export class RemainingTime {
 
 export class BoardEvent {
   squares: ChessPiece[][] = [];
-  players: ChessPlayers = new ChessPlayers();
   turn: string = "white";
   kings_in_check: KingsInCheck = new KingsInCheck();
   status: string = "";
   winner?: string;
   time: RemainingTime = { white: 0, black: 0 };
-  moves: ChessMoves = new ChessMoves();
-  premoves: ChessMoves = new ChessMoves();
-  id: number = 0;
+  moves: ChessMove[] = []; // Simplified - turn-based moves/premoves
+  opponent_connected: boolean = false; // New field for opponent connection
+  id: string = ""; // Room ID for fetching game info
+  player_id: string = ""; // Player ID to identify which player this is
 }

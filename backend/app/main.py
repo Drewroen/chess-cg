@@ -8,7 +8,7 @@ import time
 import os
 from dotenv import load_dotenv
 
-from .routers import health, auth, websocket, debug
+from .routers import health, auth, websocket, debug, game
 from .obj.game import GameStatus, GAME_START_TIMEOUT_SECONDS
 from .auth import cleanup_expired_refresh_tokens, cleanup_expired_guest_tokens
 from .database import db_manager
@@ -21,6 +21,7 @@ room_manager = RoomManager(ConnectionManager(), RoomService())
 # Set up shared services in routers
 websocket.room_manager = room_manager
 debug.room_manager = room_manager
+game.room_manager = room_manager
 
 
 async def check_game_timers():
@@ -157,6 +158,7 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(websocket.router)
 app.include_router(debug.router)
+app.include_router(game.router)
 
 
 if __name__ == "__main__":

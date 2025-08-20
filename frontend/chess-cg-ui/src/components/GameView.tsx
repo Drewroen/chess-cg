@@ -3,6 +3,7 @@ import { BoardEvent, ChessGame, ChessPiece } from "../obj/ChessGame";
 import { Board } from "./Board";
 import { Timer } from "./Timer";
 import { GamePanel } from "./GamePanel";
+import { fetchGameInfo, GameInfo } from "../services/gameService";
 
 type ConnectionStatusType =
   | "connecting"
@@ -151,6 +152,7 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
 
 export function GameView() {
   const [chessGame, setChessGame] = useState<ChessGame>(new ChessGame());
+  const [gameInfo, setGameInfo] = useState<GameInfo | null>(null);
   const isMobile = useResponsive();
 
   const updateGameState = useCallback((data: BoardEvent) => {
@@ -158,21 +160,30 @@ export function GameView() {
       ...prevGame,
       board: { squares: data.squares },
       turn: data.turn,
-      players: data.players,
       kingsInCheck: data.kings_in_check,
       status: data.status,
       winner: data.winner,
       time: data.time,
-      moves: data.moves,
-      premoves: data.premoves,
-      id: data.id,
+      moves: data.moves, // Now simplified to single array
+      opponentConnected: data.opponent_connected,
+      id: data.id, // Room ID
+      playerId: data.player_id, // Player ID
     }));
   }, []);
+
+  // Fetch static game info when we get our first update with room ID
+  useEffect(() => {
+    if (chessGame.id && !gameInfo) {
+      fetchGameInfo(chessGame.id)
+        .then(setGameInfo)
+        .catch(console.error);
+    }
+  }, [chessGame.id, gameInfo]);
 
   const { socket, connectionStatus } = useWebSocket(updateGameState);
 
   const playerColor =
-    chessGame.players?.white.id === chessGame.id ? "white" : "black";
+    gameInfo?.players.white.id === chessGame.playerId ? "white" : "black";
 
   const updatePossibleMoves = useCallback((moves: Array<[number, number]>) => {
     setChessGame((prevGame) => ({ ...prevGame, possibleMoves: moves }));
@@ -266,11 +277,7 @@ export function GameView() {
                       width: "8px",
                       height: "8px",
                       borderRadius: "50%",
-                      backgroundColor: (
-                        playerColor === "white"
-                          ? chessGame.players?.black?.connected
-                          : chessGame.players?.white?.connected
-                      )
+                      backgroundColor: chessGame.opponentConnected
                         ? "#4CAF50"
                         : "#f44336",
                     }}
@@ -283,13 +290,13 @@ export function GameView() {
                     }}
                   >
                     {playerColor === "white"
-                      ? chessGame.players?.black?.name
-                      : chessGame.players?.white?.name}
+                      ? gameInfo?.players.black.name || "Opponent"
+                      : gameInfo?.players.white.name || "Opponent"}
                   </span>
                   <span style={{ color: "#888", fontSize: "14px" }}>
                     {playerColor === "white"
-                      ? chessGame.players?.black?.elo
-                      : chessGame.players?.white?.elo}
+                      ? gameInfo?.players.black.elo || ""
+                      : gameInfo?.players.white.elo || ""}
                   </span>
                 </div>
                 <Timer
@@ -318,6 +325,7 @@ export function GameView() {
                   key="board"
                   socket={socket}
                   onMoveLocal={handleLocalMove}
+                  playerColor={playerColor}
                 />
               )}
 
@@ -344,13 +352,7 @@ export function GameView() {
                       width: "8px",
                       height: "8px",
                       borderRadius: "50%",
-                      backgroundColor: (
-                        playerColor === "white"
-                          ? chessGame.players?.white?.connected
-                          : chessGame.players?.black?.connected
-                      )
-                        ? "#4CAF50"
-                        : "#f44336",
+                      backgroundColor: "#4CAF50", // Player is always connected (it's us)
                     }}
                   />
                   <span
@@ -361,13 +363,13 @@ export function GameView() {
                     }}
                   >
                     {playerColor === "white"
-                      ? chessGame.players?.white?.name
-                      : chessGame.players?.black?.name}
+                      ? gameInfo?.players.white.name || "You"
+                      : gameInfo?.players.black.name || "You"}
                   </span>
                   <span style={{ color: "#888", fontSize: "14px" }}>
                     {playerColor === "white"
-                      ? chessGame.players?.white?.elo
-                      : chessGame.players?.black?.elo}
+                      ? gameInfo?.players.white.elo || ""
+                      : gameInfo?.players.black.elo || ""}
                   </span>
                 </div>
                 <Timer
@@ -476,9 +478,10 @@ export function GameView() {
                   key="board"
                   socket={socket}
                   onMoveLocal={handleLocalMove}
+                  playerColor={playerColor}
                 />
               )}
-              <GamePanel game={chessGame} playerColor={playerColor} />
+              <GamePanel game={chessGame} gameInfo={gameInfo} playerColor={playerColor} />
             </>
           )}
         </>
