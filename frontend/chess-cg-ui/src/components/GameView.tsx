@@ -249,7 +249,7 @@ export function GameView() {
           Status: {getStatusDisplay(connectionStatus)}
         </div>
       )}
-      {chessGame.board?.squares ? (
+      {chessGame.board?.squares && gameInfo ? (
         <>
           {/* Mobile layout - player info above and below board */}
           {isMobile ? (
