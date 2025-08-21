@@ -37,7 +37,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                         await room_manager.emit_game_state_to_room(room.id)
                         # Clean up if game completed
                         if room.game.status == GameStatus.COMPLETE:
-                            await room_manager.room_service.cleanup_room(room.id)
+                            await room_manager.cleanup_room_with_elo_update(room.id)
 
                 elif message_type == "reset_premove":
                     # Handle reset premove message
@@ -55,7 +55,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                         await room_manager.emit_game_state_to_room(room.id)
                         # Clean up the room since game is now complete
                         if room.game.status == GameStatus.COMPLETE:
-                            await room_manager.room_service.cleanup_room(room.id)
+                            await room_manager.cleanup_room_with_elo_update(room.id)
 
                 elif message_type == "request_draw":
                     # Handle draw request
@@ -64,7 +64,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                         await room_manager.emit_game_state_to_room(room.id)
                         # Clean up the room if game ended in a draw
                         if game_ended and room.game.status == GameStatus.COMPLETE:
-                            await room_manager.room_service.cleanup_room(room.id)
+                            await room_manager.cleanup_room_with_elo_update(room.id)
 
                 else:
                     print(f"Unknown message type: {message_type}")

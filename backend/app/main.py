@@ -42,7 +42,7 @@ async def check_game_timers():
                             room.game.completed_at = current_time
                             room.game.winner = "black"
                             await room_manager.emit_game_state_to_room(room_id)
-                            await room_manager.room_service.cleanup_room(room_id)
+                            await room_manager.cleanup_room_with_elo_update(room_id)
                     else:  # black's turn
                         if room.game.black_time_left - elapsed <= 0:
                             print(f"Black player has run out of time in room {room_id}")
@@ -51,7 +51,7 @@ async def check_game_timers():
                             room.game.completed_at = current_time
                             room.game.winner = "white"
                             await room_manager.emit_game_state_to_room(room_id)
-                            await room_manager.room_service.cleanup_room(room_id)
+                            await room_manager.cleanup_room_with_elo_update(room_id)
 
                 elif room.game.status == GameStatus.NOT_STARTED:
                     # Check for game start timeout

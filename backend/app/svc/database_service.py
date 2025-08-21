@@ -61,6 +61,17 @@ class DatabaseService:
         await self.session.refresh(user)
         return user
 
+    async def update_user_elo(self, user_id: str, new_elo: int) -> Optional[User]:
+        """Update a user's ELO rating."""
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return None
+
+        user.elo = new_elo
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user
+
     async def get_guest_users(self) -> list[User]:
         result = await self.session.execute(
             select(User).where(User.user_type == "guest")
