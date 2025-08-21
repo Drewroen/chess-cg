@@ -23,6 +23,7 @@ export class ChessGame {
   turn: string = "";
   status: string = "";
   winner?: string;
+  endReason?: string;
   time: RemainingTime = new RemainingTime();
   moves: ChessMove[] = []; // Simplified - now just one array based on turn
   opponentConnected: boolean = false; // New field for opponent connection status
@@ -74,6 +75,7 @@ export class BoardEvent {
   kings_in_check: KingsInCheck = new KingsInCheck();
   status: string = "";
   winner?: string;
+  end_reason?: string;
   time: RemainingTime = { white: 0, black: 0 };
   moves: ChessMove[] = []; // Simplified - turn-based moves/premoves
   opponent_connected: boolean = false; // New field for opponent connection

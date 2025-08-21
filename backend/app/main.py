@@ -57,26 +57,32 @@ async def check_game_timers():
                     # Check for game start timeout
                     elapsed_since_creation = current_time - room.game.created_at
                     elapsed_since_last_move = current_time - room.game.last_move_time
-                    
+
                     should_abort = False
                     if room.game.turn == "white":
                         # White hasn't moved yet, check time since game creation
                         if elapsed_since_creation >= GAME_START_TIMEOUT_SECONDS:
-                            print(f"White player timed out in room {room_id} (no first move)")
+                            print(
+                                f"White player timed out in room {room_id} (no first move)"
+                            )
                             should_abort = True
                     else:
                         # Black's turn, check time since white's move
                         if elapsed_since_last_move >= GAME_START_TIMEOUT_SECONDS:
-                            print(f"Black player timed out in room {room_id} (no response)")
+                            print(
+                                f"Black player timed out in room {room_id} (no response)"
+                            )
                             should_abort = True
-                    
+
                     if should_abort:
                         room.game.status = GameStatus.ABORTED
+                        room.game.end_reason = "aborted"
                         room.game.completed_at = current_time
+                        room.game.winner = "aborted"
                         await room_manager.emit_game_state_to_room(room_id)
                         await room_manager.room_service.cleanup_room(room_id)
                         continue
-                    
+
                     # Check if both players are disconnected
                     white_connected = (
                         len(
@@ -97,6 +103,9 @@ async def check_game_timers():
 
                     if not white_connected and not black_connected:
                         room.game.status = GameStatus.ABORTED
+                        room.game.end_reason = "aborted"
+                        room.game.completed_at = current_time
+                        room.game.winner = "aborted"
                         await room_manager.emit_game_state_to_room(room_id)
                         await room_manager.room_service.cleanup_room(room_id)
         except Exception as e:
@@ -109,7 +118,9 @@ async def cleanup_expired_tokens():
     """Background task to clean up expired tokens"""
     while True:
         try:
-            expired_refresh = await cleanup_expired_refresh_tokens()  # existing function
+            expired_refresh = (
+                await cleanup_expired_refresh_tokens()
+            )  # existing function
             expired_guest = cleanup_expired_guest_tokens()  # new function
             if expired_refresh > 0 or expired_guest > 0:
                 print(

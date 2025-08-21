@@ -142,7 +142,7 @@ export function GamePanel({ game, gameInfo, playerColor, socket }: GamePanelProp
 
       {/* Game Over message */}
       {(game.status === "complete" || game.status === "aborted") && (
-        <GameOver />
+        <GameOver winner={game.winner} endReason={game.endReason} />
       )}
 
       {/* Current Player Info - Above Timer */}

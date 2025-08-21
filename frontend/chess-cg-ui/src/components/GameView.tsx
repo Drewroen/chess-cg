@@ -165,6 +165,7 @@ export function GameView() {
       kingsInCheck: data.kings_in_check,
       status: data.status,
       winner: data.winner,
+      endReason: data.end_reason,
       time: data.time,
       moves: data.moves, // Now simplified to single array
       opponentConnected: data.opponent_connected,
@@ -177,9 +178,7 @@ export function GameView() {
   // Fetch static game info when we get our first update with room ID
   useEffect(() => {
     if (chessGame.id && !gameInfo) {
-      fetchGameInfo(chessGame.id)
-        .then(setGameInfo)
-        .catch(console.error);
+      fetchGameInfo(chessGame.id).then(setGameInfo).catch(console.error);
     }
   }, [chessGame.id, gameInfo]);
 
@@ -394,16 +393,21 @@ export function GameView() {
               </div>
 
               {/* Game control buttons */}
-              <DrawResignButtons 
-                isMobile={true} 
-                socket={socket} 
+              <DrawResignButtons
+                isMobile={true}
+                socket={socket}
                 drawRequests={chessGame.drawRequests}
                 playerColor={playerColor}
               />
 
               {/* Game Over message */}
-              {(chessGame.status === "complete" || chessGame.status === "aborted") && (
-                <GameOver isMobile={true} />
+              {(chessGame.status === "complete" ||
+                chessGame.status === "aborted") && (
+                <GameOver
+                  isMobile={true}
+                  winner={chessGame.winner}
+                  endReason={chessGame.endReason}
+                />
               )}
             </>
           ) : (
@@ -419,7 +423,12 @@ export function GameView() {
                   playerColor={playerColor}
                 />
               )}
-              <GamePanel game={chessGame} gameInfo={gameInfo} playerColor={playerColor} socket={socket} />
+              <GamePanel
+                game={chessGame}
+                gameInfo={gameInfo}
+                playerColor={playerColor}
+                socket={socket}
+              />
             </>
           )}
         </>
