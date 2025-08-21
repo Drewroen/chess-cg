@@ -3,6 +3,7 @@ import { BoardEvent, ChessGame, ChessPiece } from "../obj/ChessGame";
 import { Board } from "./Board";
 import { Timer } from "./Timer";
 import { GamePanel } from "./GamePanel";
+import { DrawResignButtons } from "./DrawResignButtons";
 import { fetchGameInfo, GameInfo } from "../services/gameService";
 
 type ConnectionStatusType =
@@ -391,82 +392,7 @@ export function GameView() {
               </div>
 
               {/* Game control buttons */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: "16px",
-                  margin: "12px 0",
-                  width: "100%",
-                  maxWidth: "600px",
-                  boxSizing: "border-box",
-                }}
-              >
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    backgroundColor: "transparent",
-                    color: "#888",
-                    border: "1px solid #555",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  ✕
-                </button>
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    backgroundColor: "transparent",
-                    color: "#888",
-                    border: "1px solid #555",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  ½
-                </button>
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    backgroundColor: "transparent",
-                    color: "#888",
-                    border: "1px solid #555",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  ⚐
-                </button>
-                <button
-                  style={{
-                    padding: "8px 16px",
-                    backgroundColor: "transparent",
-                    color: "#888",
-                    border: "1px solid #555",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  ☰
-                </button>
-              </div>
+              <DrawResignButtons isMobile={true} />
             </>
           ) : (
             /* Desktop layout - board on left, panel on right */

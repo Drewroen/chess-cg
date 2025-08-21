@@ -1,6 +1,7 @@
 import { ChessGame } from "../obj/ChessGame";
 import { Timer } from "./Timer";
 import { GameInfo } from "../services/gameService";
+import { DrawResignButtons } from "./DrawResignButtons";
 
 interface GamePanelProps {
   game: ChessGame;
@@ -131,50 +132,7 @@ export function GamePanel({ game, gameInfo, playerColor }: GamePanelProps) {
       </div>
 
       {/* Game Controls - Center */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "8px",
-          padding: "16px 0",
-        }}
-      >
-        <button
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "transparent",
-            color: "#888",
-            border: "1px solid #555",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "14px",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-          title="Offer draw"
-        >
-          ½
-        </button>
-        <button
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "transparent",
-            color: "#888",
-            border: "1px solid #555",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "14px",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-          title="Resign"
-        >
-          ⚐
-        </button>
-      </div>
+      <DrawResignButtons />
 
       {/* Current Player Info - Above Timer */}
       <div
