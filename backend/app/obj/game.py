@@ -29,6 +29,8 @@ class Game:
         self.white_premove = None
         self.black_premove = None
         self.completed_at = None
+        self.white_draw_requested = False
+        self.black_draw_requested = False
 
     def move(self, start, end, player_color, promote_to=None):
         if self.status == GameStatus.COMPLETE:
@@ -68,6 +70,9 @@ class Game:
             return False
 
         if moved:
+            # Reset draw requests when a move is made
+            self.reset_draw_requests()
+
             if self.status == GameStatus.IN_PROGRESS:
                 if self.turn == "white":
                     self.white_time_left += MOVE_INCREMENT_IN_SECONDS
@@ -127,10 +132,51 @@ class Game:
                 current_time = time.time()
                 elapsed = current_time - self.last_move_time
                 if self.turn == "white":
-                    self.white_time_left = max(0, round(self.white_time_left - elapsed, 2))
+                    self.white_time_left = max(
+                        0, round(self.white_time_left - elapsed, 2)
+                    )
                 else:
-                    self.black_time_left = max(0, round(self.black_time_left - elapsed, 2))
-            
+                    self.black_time_left = max(
+                        0, round(self.black_time_left - elapsed, 2)
+                    )
+
             self.status = GameStatus.COMPLETE
             self.completed_at = time.time()
             self.winner = "black" if color == "white" else "white"
+
+    def request_draw(self, color):
+        """Request a draw from the specified player"""
+        if self.status not in [GameStatus.IN_PROGRESS]:
+            return False
+
+        if color == "white":
+            self.white_draw_requested = True
+        else:
+            self.black_draw_requested = True
+
+        # If both players have requested a draw, end the game in a draw
+        if self.white_draw_requested and self.black_draw_requested:
+            # Update the current player's time if game is in progress
+            if self.status == GameStatus.IN_PROGRESS:
+                current_time = time.time()
+                elapsed = current_time - self.last_move_time
+                if self.turn == "white":
+                    self.white_time_left = max(
+                        0, round(self.white_time_left - elapsed, 2)
+                    )
+                else:
+                    self.black_time_left = max(
+                        0, round(self.black_time_left - elapsed, 2)
+                    )
+
+            self.status = GameStatus.COMPLETE
+            self.completed_at = time.time()
+            self.winner = "draw"
+            return True
+
+        return False
+
+    def reset_draw_requests(self):
+        """Reset all draw requests (called when a move is made)"""
+        self.white_draw_requested = False
+        self.black_draw_requested = False

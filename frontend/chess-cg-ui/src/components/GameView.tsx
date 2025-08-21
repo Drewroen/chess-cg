@@ -169,6 +169,7 @@ export function GameView() {
       opponentConnected: data.opponent_connected,
       id: data.id, // Room ID
       playerId: data.player_id, // Player ID
+      drawRequests: data.draw_requests,
     }));
   }, []);
 
@@ -392,7 +393,12 @@ export function GameView() {
               </div>
 
               {/* Game control buttons */}
-              <DrawResignButtons isMobile={true} socket={socket} />
+              <DrawResignButtons 
+                isMobile={true} 
+                socket={socket} 
+                drawRequests={chessGame.drawRequests}
+                playerColor={playerColor}
+              />
             </>
           ) : (
             /* Desktop layout - board on left, panel on right */

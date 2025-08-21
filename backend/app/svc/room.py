@@ -203,6 +203,10 @@ class RoomManager:
                     "white": self._get_current_time_remaining(room.game, "white"),
                     "black": self._get_current_time_remaining(room.game, "black"),
                 },
+                "draw_requests": {
+                    "white": room.game.white_draw_requested,
+                    "black": room.game.black_draw_requested,
+                },
             }
         for player_name in [room.white, room.black]:
             state["id"] = str(room.id)  # Room ID for fetching game info

@@ -56,6 +56,14 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                     if room.game.status == GameStatus.COMPLETE:
                         await room_manager.room_service.cleanup_room(room.id)
                 
+                elif message_type == "request_draw":
+                    # Handle draw request
+                    game_ended = room.game.request_draw(player_color)
+                    await room_manager.emit_game_state_to_room(room.id)
+                    # Clean up the room if game ended in a draw
+                    if game_ended and room.game.status == GameStatus.COMPLETE:
+                        await room_manager.room_service.cleanup_room(room.id)
+                
                 else:
                     print(f"Unknown message type: {message_type}")
 

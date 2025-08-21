@@ -28,6 +28,7 @@ export class ChessGame {
   opponentConnected: boolean = false; // New field for opponent connection status
   id: string = ""; // Room ID for fetching game info
   playerId: string = ""; // Player ID to identify which player this is
+  drawRequests: { white: boolean; black: boolean } = { white: false, black: false };
 }
 export class ChessPlayers {
   white: { id: number; name: string; connected: boolean; elo?: number } = {
@@ -78,6 +79,7 @@ export class BoardEvent {
   opponent_connected: boolean = false; // New field for opponent connection
   id: string = ""; // Room ID for fetching game info
   player_id: string = ""; // Player ID to identify which player this is
+  draw_requests: { white: boolean; black: boolean } = { white: false, black: false };
 }
 
 export interface MoveMessage {

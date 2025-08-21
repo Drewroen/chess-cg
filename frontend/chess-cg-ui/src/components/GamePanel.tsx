@@ -133,7 +133,11 @@ export function GamePanel({ game, gameInfo, playerColor, socket }: GamePanelProp
       </div>
 
       {/* Game Controls - Center */}
-      <DrawResignButtons socket={socket} />
+      <DrawResignButtons 
+        socket={socket} 
+        drawRequests={game.drawRequests}
+        playerColor={playerColor as "white" | "black"}
+      />
 
       {/* Current Player Info - Above Timer */}
       <div
