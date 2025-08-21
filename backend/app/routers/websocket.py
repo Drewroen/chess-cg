@@ -24,17 +24,11 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                 # Determine player color
                 player_color = "white" if room.white == user_id else "black"
                 
-                # Check if this is an empty move to reset premove
-                if data["from"] is None or data["to"] is None:
-                    # Reset the premove for this player
-                    if player_color == "white":
-                        room.game.white_premove = None
-                    else:
-                        room.game.black_premove = None
-                    # Emit updated game state to show premove cleared
-                    await room_manager.emit_game_state_to_room(room.id)
-                else:
-                    # Regular move handling
+                # Route message based on type
+                message_type = data.get("type")
+                
+                if message_type == "move":
+                    # Handle move message
                     start = Position(data["from"][0], data["from"][1])
                     end = Position(data["to"][0], data["to"][1])
                     promote_to = data.get("promotion", None)
@@ -44,6 +38,18 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                         # Clean up if game completed
                         if room.game.status == GameStatus.COMPLETE:
                             await room_manager.room_service.cleanup_room(room.id)
+                
+                elif message_type == "reset_premove":
+                    # Handle reset premove message
+                    if player_color == "white":
+                        room.game.white_premove = None
+                    else:
+                        room.game.black_premove = None
+                    # Emit updated game state to show premove cleared
+                    await room_manager.emit_game_state_to_room(room.id)
+                
+                else:
+                    print(f"Unknown message type: {message_type}")
 
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for player {user_id}")

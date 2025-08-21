@@ -79,3 +79,16 @@ export class BoardEvent {
   id: string = ""; // Room ID for fetching game info
   player_id: string = ""; // Player ID to identify which player this is
 }
+
+export interface MoveMessage {
+  type: "move";
+  from: [number, number];
+  to: [number, number];
+  promotion?: string;
+}
+
+export interface ResetPremoveMessage {
+  type: "reset_premove";
+}
+
+export type WebSocketMessage = MoveMessage | ResetPremoveMessage;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ChessGame, Move } from "../obj/ChessGame";
+import { ChessGame, Move, MoveMessage, ResetPremoveMessage } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { PromotionSelector } from "./PromotionSelector";
 
@@ -73,13 +73,13 @@ export function Board({
       if (game.turn !== playerColor) {
         setPremove({ from: promotionMove.from, to: promotionMove.to });
       }
-      socket?.send(
-        JSON.stringify({
-          from: promotionMove.from,
-          to: promotionMove.to,
-          promotion: pieceType,
-        })
-      );
+      const moveMessage: MoveMessage = {
+        type: "move",
+        from: promotionMove.from,
+        to: promotionMove.to,
+        promotion: pieceType,
+      };
+      socket?.send(JSON.stringify(moveMessage));
       setPromotionMove(null);
       setShowPromotion(false);
       setActiveSquare(null);
@@ -112,12 +112,14 @@ export function Board({
             onMoveLocal(activeSquare, coords);
           }
 
-          socket?.send(
-            JSON.stringify({
+          if (activeSquare) {
+            const moveMessage: MoveMessage = {
+              type: "move",
               from: activeSquare,
               to: coords,
-            })
-          );
+            };
+            socket?.send(JSON.stringify(moveMessage));
+          }
           setActiveSquare(null);
           setPossibleMoves([]);
         }
@@ -155,12 +157,14 @@ export function Board({
           setShowPromotion(true);
         } else {
           // Send the premove to the backend
-          socket?.send(
-            JSON.stringify({
+          if (activeSquare) {
+            const moveMessage: MoveMessage = {
+              type: "move",
               from: activeSquare,
               to: coords,
-            })
-          );
+            };
+            socket?.send(JSON.stringify(moveMessage));
+          }
           // Set the premove for visualization
           setPremove({ from: activeSquare!, to: coords });
           setActiveSquare(null);
@@ -182,12 +186,10 @@ export function Board({
         setActiveSquare(coords);
       } else {
         // Clicked on empty square or opponent piece - reset premove
-        socket?.send(
-          JSON.stringify({
-            from: null,
-            to: null,
-          })
-        );
+        const resetMessage: ResetPremoveMessage = {
+          type: "reset_premove",
+        };
+        socket?.send(JSON.stringify(resetMessage));
         // Reset premove state
         setPremove(null);
         setActiveSquare(null);

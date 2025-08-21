@@ -94,7 +94,7 @@ class DatabaseService:
 
     async def cleanup_expired_refresh_tokens(self) -> int:
         """Remove expired refresh tokens from storage"""
-        current_time = datetime.now(timezone.utc)
+        current_time = datetime.now(timezone.utc).replace(tzinfo=None)
         result = await self.session.execute(
             select(RefreshToken).where(RefreshToken.expires_at < current_time)
         )
