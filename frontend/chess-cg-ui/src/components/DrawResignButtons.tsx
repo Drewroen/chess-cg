@@ -5,11 +5,11 @@ interface DrawResignButtonsProps {
   playerColor?: "white" | "black";
 }
 
-export function DrawResignButtons({ 
-  isMobile = false, 
-  socket, 
+export function DrawResignButtons({
+  isMobile = false,
+  socket,
   drawRequests = { white: false, black: false },
-  playerColor = "white"
+  playerColor = "white",
 }: DrawResignButtonsProps) {
   const handleResign = () => {
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -23,14 +23,15 @@ export function DrawResignButtons({
     }
   };
 
-  const opponentDrawRequested = drawRequests[playerColor === "white" ? "black" : "white"];
+  const opponentDrawRequested =
+    drawRequests[playerColor === "white" ? "black" : "white"];
   const playerDrawRequested = drawRequests[playerColor];
 
   const getDrawButtonStyle = () => {
     let backgroundColor = "transparent";
     let color = "#888";
     let border = "1px solid #555";
-    
+
     if (opponentDrawRequested && !playerDrawRequested) {
       // Opponent has requested a draw - highlight to accept
       backgroundColor = "#4CAF50";
@@ -42,7 +43,7 @@ export function DrawResignButtons({
       color = "#fff";
       border = "1px solid #FFA726";
     }
-    
+
     return {
       padding: "8px 16px",
       backgroundColor,
@@ -70,12 +71,12 @@ export function DrawResignButtons({
     gap: "4px",
   } as const;
 
-  const containerStyle = isMobile 
+  const containerStyle = isMobile
     ? {
         display: "flex",
         justifyContent: "center",
         gap: "16px",
-        margin: "12px 0",
+        margin: "12px 0 4px 0",
         width: "100%",
         maxWidth: "600px",
         boxSizing: "border-box" as const,
@@ -85,7 +86,7 @@ export function DrawResignButtons({
         justifyContent: "center",
         alignItems: "center",
         gap: "8px",
-        padding: "16px 0",
+        padding: "4px 0",
       };
 
   const getDrawButtonTitle = () => {
@@ -100,8 +101,8 @@ export function DrawResignButtons({
 
   return (
     <div style={containerStyle}>
-      <button 
-        style={getDrawButtonStyle()} 
+      <button
+        style={getDrawButtonStyle()}
         title={getDrawButtonTitle()}
         onClick={handleDrawRequest}
       >

@@ -2,6 +2,7 @@ import { ChessGame } from "../obj/ChessGame";
 import { Timer } from "./Timer";
 import { GameInfo } from "../services/gameService";
 import { DrawResignButtons } from "./DrawResignButtons";
+import { GameOver } from "./GameOver";
 
 interface GamePanelProps {
   game: ChessGame;
@@ -138,6 +139,11 @@ export function GamePanel({ game, gameInfo, playerColor, socket }: GamePanelProp
         drawRequests={game.drawRequests}
         playerColor={playerColor as "white" | "black"}
       />
+
+      {/* Game Over message */}
+      {(game.status === "complete" || game.status === "aborted") && (
+        <GameOver />
+      )}
 
       {/* Current Player Info - Above Timer */}
       <div

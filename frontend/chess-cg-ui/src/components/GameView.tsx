@@ -4,6 +4,7 @@ import { Board } from "./Board";
 import { Timer } from "./Timer";
 import { GamePanel } from "./GamePanel";
 import { DrawResignButtons } from "./DrawResignButtons";
+import { GameOver } from "./GameOver";
 import { fetchGameInfo, GameInfo } from "../services/gameService";
 
 type ConnectionStatusType =
@@ -399,6 +400,11 @@ export function GameView() {
                 drawRequests={chessGame.drawRequests}
                 playerColor={playerColor}
               />
+
+              {/* Game Over message */}
+              {(chessGame.status === "complete" || chessGame.status === "aborted") && (
+                <GameOver isMobile={true} />
+              )}
             </>
           ) : (
             /* Desktop layout - board on left, panel on right */
