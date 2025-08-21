@@ -52,12 +52,13 @@ class DatabaseService:
         )
         return result.scalars().all()
 
-    async def create_chess_game(self, white_player_id: str, black_player_id: str, winner: str = None) -> ChessGame:
+    async def create_chess_game(self, white_player_id: str, black_player_id: str, winner: str = None, end_reason: str = None) -> ChessGame:
         game_data = {
             "id": str(uuid4()),
             "white_player_id": white_player_id,
             "black_player_id": black_player_id,
-            "winner": winner
+            "winner": winner,
+            "end_reason": end_reason
         }
         chess_game = ChessGame(**game_data)
         self.session.add(chess_game)

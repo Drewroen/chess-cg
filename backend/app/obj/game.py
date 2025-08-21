@@ -26,6 +26,7 @@ class Game:
         self.last_move_time = time.time()
         self.created_at = time.time()
         self.winner = None
+        self.end_reason = None
         self.white_premove = None
         self.black_premove = None
         self.completed_at = None
@@ -47,6 +48,7 @@ class Game:
                     self.status = GameStatus.COMPLETE
                     self.completed_at = time.time()
                     self.winner = "black"
+                    self.end_reason = "time"
                     return False
             else:
                 self.black_time_left = round(self.black_time_left - elapsed, 2)
@@ -56,6 +58,7 @@ class Game:
                     self.status = GameStatus.COMPLETE
                     self.completed_at = time.time()
                     self.winner = "white"
+                    self.end_reason = "time"
                     return False
 
         if player_color == self.turn:
@@ -93,8 +96,10 @@ class Game:
                 self.completed_at = time.time()
                 if self.board.is_king_in_check(self.turn):
                     self.winner = "black" if self.turn == "white" else "white"
+                    self.end_reason = "checkmate"
                 else:
                     self.winner = "draw"
+                    self.end_reason = "stalemate"
 
             return True  # Move was successfully made
         else:
@@ -143,6 +148,7 @@ class Game:
             self.status = GameStatus.COMPLETE
             self.completed_at = time.time()
             self.winner = "black" if color == "white" else "white"
+            self.end_reason = "resignation"
 
     def request_draw(self, color):
         """Request a draw from the specified player"""
@@ -172,6 +178,7 @@ class Game:
             self.status = GameStatus.COMPLETE
             self.completed_at = time.time()
             self.winner = "draw"
+            self.end_reason = "draw_agreement"
             return True
 
         return False

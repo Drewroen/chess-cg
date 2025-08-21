@@ -108,23 +108,37 @@ class RoomService:
             return
 
         room = self.rooms[room_id]
-        
+
         # Save game to database if it was completed or aborted
         if room.game.status in [GameStatus.COMPLETE, GameStatus.ABORTED]:
             try:
                 async with db_manager.async_session_maker() as session:
                     db_service = DatabaseService(session)
-                    winner = room.game.winner if room.game.status == GameStatus.COMPLETE else "aborted"
+                    winner = (
+                        room.game.winner
+                        if room.game.status == GameStatus.COMPLETE
+                        else "aborted"
+                    )
+                    end_reason = (
+                        room.game.end_reason
+                        if room.game.status == GameStatus.COMPLETE
+                        else "aborted"
+                    )
                     await db_service.create_chess_game(
                         white_player_id=room.white,
                         black_player_id=room.black,
-                        winner=winner
+                        winner=winner,
+                        end_reason=end_reason,
                     )
-                    status_text = "completed" if room.game.status == GameStatus.COMPLETE else "aborted"
+                    status_text = (
+                        "completed"
+                        if room.game.status == GameStatus.COMPLETE
+                        else "aborted"
+                    )
                     print(f"Saved {status_text} game {room_id} to database")
             except Exception as e:
                 print(f"Error saving game {room_id} to database: {e}")
-        
+
         # Clean up player mappings
         if room.white in self.player_to_room_map:
             del self.player_to_room_map[room.white]
@@ -210,11 +224,13 @@ class RoomManager:
             }
         for player_name in [room.white, room.black]:
             state["id"] = str(room.id)  # Room ID for fetching game info
-            state["player_id"] = player_name  # Player ID to identify which player this is
-            
+            state["player_id"] = (
+                player_name  # Player ID to identify which player this is
+            )
+
             # Determine player color
             player_color = "white" if player_name == room.white else "black"
-            
+
             # Add turn-based moves: regular moves if it's their turn, premoves if not
             if room.game.turn == player_color:
                 state["moves"] = [
@@ -224,15 +240,17 @@ class RoomManager:
             else:
                 state["moves"] = [
                     x.to_dict()
-                    for x in room.game.board.get_available_premoves_for_color(player_color)
+                    for x in room.game.board.get_available_premoves_for_color(
+                        player_color
+                    )
                 ]
-            
+
             # Add opponent connection status
             opponent_name = room.black if player_name == room.white else room.white
-            state["opponent_connected"] = len(
-                self.manager.user_id_to_connection_map.get(opponent_name, [])
-            ) > 0
-            
+            state["opponent_connected"] = (
+                len(self.manager.user_id_to_connection_map.get(opponent_name, [])) > 0
+            )
+
             connections = self.manager.user_id_to_connection_map.get(player_name, [])
             for connection in connections:
                 if connection and self.manager.websocket(connection.id) is not None:

@@ -25,6 +25,7 @@ class ChessGame(Base):
     white_player_id = Column(String, ForeignKey("users.id"), nullable=False)
     black_player_id = Column(String, ForeignKey("users.id"), nullable=False)
     winner = Column(String, nullable=True)  # "white", "black", "draw", "aborted"
+    end_reason = Column(String, nullable=True)  # "checkmate", "stalemate", "time", "resignation", "draw_agreement", "aborted"
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

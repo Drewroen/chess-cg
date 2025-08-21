@@ -23,10 +23,10 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
             if room:
                 # Determine player color
                 player_color = "white" if room.white == user_id else "black"
-                
+
                 # Route message based on type
                 message_type = data.get("type")
-                
+
                 if message_type == "move":
                     # Handle move message
                     start = Position(data["from"][0], data["from"][1])
@@ -38,7 +38,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                         # Clean up if game completed
                         if room.game.status == GameStatus.COMPLETE:
                             await room_manager.room_service.cleanup_room(room.id)
-                
+
                 elif message_type == "reset_premove":
                     # Handle reset premove message
                     if player_color == "white":
@@ -47,23 +47,25 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                         room.game.black_premove = None
                     # Emit updated game state to show premove cleared
                     await room_manager.emit_game_state_to_room(room.id)
-                
+
                 elif message_type == "resign":
                     # Handle resignation
-                    room.game.mark_player_forfeit(player_color)
-                    await room_manager.emit_game_state_to_room(room.id)
-                    # Clean up the room since game is now complete
-                    if room.game.status == GameStatus.COMPLETE:
-                        await room_manager.room_service.cleanup_room(room.id)
-                
+                    if room.game.status == GameStatus.IN_PROGRESS:
+                        room.game.mark_player_forfeit(player_color)
+                        await room_manager.emit_game_state_to_room(room.id)
+                        # Clean up the room since game is now complete
+                        if room.game.status == GameStatus.COMPLETE:
+                            await room_manager.room_service.cleanup_room(room.id)
+
                 elif message_type == "request_draw":
                     # Handle draw request
-                    game_ended = room.game.request_draw(player_color)
-                    await room_manager.emit_game_state_to_room(room.id)
-                    # Clean up the room if game ended in a draw
-                    if game_ended and room.game.status == GameStatus.COMPLETE:
-                        await room_manager.room_service.cleanup_room(room.id)
-                
+                    if room.game.status == GameStatus.IN_PROGRESS:
+                        game_ended = room.game.request_draw(player_color)
+                        await room_manager.emit_game_state_to_room(room.id)
+                        # Clean up the room if game ended in a draw
+                        if game_ended and room.game.status == GameStatus.COMPLETE:
+                            await room_manager.room_service.cleanup_room(room.id)
+
                 else:
                     print(f"Unknown message type: {message_type}")
 
