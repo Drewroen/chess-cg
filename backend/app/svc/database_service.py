@@ -16,7 +16,7 @@ class DatabaseService:
             user_data["elo"] = 1200
         elif user_data.get("user_type") == "guest":
             user_data["elo"] = None
-        
+
         user = User(**user_data)
         self.session.add(user)
         await self.session.commit()
@@ -46,19 +46,40 @@ class DatabaseService:
         }
         return await self.create_user(guest_data)
 
+    async def update_user_username(self, user_id: str, username: str) -> Optional[User]:
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return None
+
+        # Check if username is already taken by another user
+        existing_user = await self.get_user_by_username(username)
+        if existing_user and existing_user.id != user_id:
+            return None  # Username already taken
+
+        user.username = username
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user
+
     async def get_guest_users(self) -> list[User]:
         result = await self.session.execute(
             select(User).where(User.user_type == "guest")
         )
         return result.scalars().all()
 
-    async def create_chess_game(self, white_player_id: str, black_player_id: str, winner: str = None, end_reason: str = None) -> ChessGame:
+    async def create_chess_game(
+        self,
+        white_player_id: str,
+        black_player_id: str,
+        winner: str = None,
+        end_reason: str = None,
+    ) -> ChessGame:
         game_data = {
             "id": str(uuid4()),
             "white_player_id": white_player_id,
             "black_player_id": black_player_id,
             "winner": winner,
-            "end_reason": end_reason
+            "end_reason": end_reason,
         }
         chess_game = ChessGame(**game_data)
         self.session.add(chess_game)

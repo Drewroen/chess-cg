@@ -21,6 +21,7 @@ from ..models import (
     UserResponse,
     TokenResponse,
     RefreshTokenRequest,
+    UpdateUsernameRequest,
 )
 from ..database import get_db_session
 from ..svc.database_service import DatabaseService
@@ -453,3 +454,51 @@ async def create_guest_session(
     )
 
     return response
+
+
+@router.patch("/me/username", response_model=UserResponse)
+async def update_usernamename(
+    request: Request,
+    update_request: UpdateUsernameRequest,
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    """Update current user's username (stored in username field)"""
+
+    # Get access token from cookie
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Access token not found")
+
+    payload = verify_jwt_token(access_token)
+    if not payload:
+        response = JSONResponse(
+            content={"detail": "Invalid or expired token"}, status_code=401
+        )
+        response.delete_cookie(
+            key="access_token", path="/", httponly=True, secure=True, samesite="strict"
+        )
+        response.delete_cookie(
+            key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+        )
+        return response
+
+    db_service = DatabaseService(db_session)
+    user = await db_service.update_user_username(
+        payload["sub"], update_request.username
+    )
+
+    if not user:
+        # Check if user exists at all
+        existing_user = await db_service.get_user_by_id(payload["sub"])
+        if not existing_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        else:
+            raise HTTPException(status_code=400, detail="Username already taken")
+
+    return UserResponse(
+        id=user.id,
+        email=user.email if user.email else "",
+        name=user.name,
+        user_type=user.user_type,
+        username=user.username,
+    )

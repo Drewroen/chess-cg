@@ -4,6 +4,7 @@ import { GameView } from "./components/GameView";
 import { AuthCallback } from "./components/AuthCallback";
 import { AuthSuccess } from "./components/AuthSuccess";
 import { AuthError } from "./components/AuthError";
+import { UsernameEditModal } from "./components/UsernameEditModal";
 import { cookieAuthService, User, GuestUser } from "./services/cookieAuth";
 import "./App.css";
 
@@ -11,6 +12,7 @@ export default function App() {
   const [showGame, setShowGame] = useState(false);
   const [user, setUser] = useState<User | GuestUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
 
   // Check authentication status on app load
   useEffect(() => {
@@ -68,6 +70,23 @@ export default function App() {
   async function handleLogout() {
     await cookieAuthService.logout();
     setUser(null);
+  }
+
+  function handleUsernameClick() {
+    setIsUsernameModalOpen(true);
+  }
+
+  function handleUsernameModalClose() {
+    setIsUsernameModalOpen(false);
+  }
+
+  function handleUsernameSave(newUsername: string) {
+    if (user) {
+      setUser({
+        ...user,
+        username: newUsername,
+      });
+    }
   }
 
   // Loading screen while checking authentication
@@ -145,7 +164,23 @@ export default function App() {
                   fontSize: "0.9rem",
                 }}
               >
-                {`Playing as ${user.username}`}
+                Playing as{" "}
+                <span
+                  onClick={handleUsernameClick}
+                  style={{
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    fontWeight: "600",
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.opacity = "0.8";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.opacity = "1";
+                  }}
+                >
+                  {user.username}
+                </span>
               </div>
             )}
           </div>
@@ -310,6 +345,14 @@ export default function App() {
           <Route path="/auth/error" element={<AuthError />} />
           <Route path="/" element={showGame ? <GameView /> : <LandingPage />} />
         </Routes>
+        {user && (
+          <UsernameEditModal
+            isOpen={isUsernameModalOpen}
+            currentUsername={user.username}
+            onClose={handleUsernameModalClose}
+            onSave={handleUsernameSave}
+          />
+        )}
       </div>
     </Router>
   );

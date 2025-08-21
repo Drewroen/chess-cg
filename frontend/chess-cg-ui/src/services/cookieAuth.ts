@@ -108,6 +108,43 @@ export class CookieAuthService {
     }
   }
 
+  // Update current user's username
+  async updateUsername(newUsername: string): Promise<User | null> {
+    try {
+      const response = await fetch(`${BACKEND_URL}/auth/me/username`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username: newUsername }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ detail: "Unknown error" }));
+
+        // Handle validation errors (array format)
+        if (Array.isArray(errorData.detail)) {
+          const errorMessage =
+            errorData.detail[0]?.msg.replace(/^Value error, /, "") ||
+            "Validation error";
+          throw new Error(errorMessage);
+        }
+
+        // Handle simple string errors
+        throw new Error(errorData.detail || "Failed to update username");
+      }
+
+      const updatedUser = await response.json();
+      return updatedUser;
+    } catch (error) {
+      console.error("Error updating username:", error);
+      throw error;
+    }
+  }
+
   // Logout user by calling backend logout endpoint
   async logout(): Promise<void> {
     try {
