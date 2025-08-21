@@ -168,6 +168,20 @@ class RoomManager:
             print(f"Error fetching ELO for user {user_id}: {e}")
             return None
 
+    async def get_user_username(self, user_id: str) -> str:
+        """Get the username for a user."""
+        if not user_id or user_id.startswith("guest_"):
+            return "Guest"
+
+        try:
+            async with db_manager.async_session_maker() as session:
+                db_service = DatabaseService(session)
+                user = await db_service.get_user_by_id(user_id)
+                return user.username if user and user.username else "Guest"
+        except Exception as e:
+            print(f"Error fetching username for user {user_id}: {e}")
+            return "Guest"
+
     async def connect(self, websocket, jwt: str = None) -> str:
         """Connect a player to the WebSocket and return their name."""
         connection_id = await self.manager.connect(websocket, jwt)
