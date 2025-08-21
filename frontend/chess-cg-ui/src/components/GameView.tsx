@@ -392,7 +392,7 @@ export function GameView() {
               </div>
 
               {/* Game control buttons */}
-              <DrawResignButtons isMobile={true} />
+              <DrawResignButtons isMobile={true} socket={socket} />
             </>
           ) : (
             /* Desktop layout - board on left, panel on right */
@@ -407,7 +407,7 @@ export function GameView() {
                   playerColor={playerColor}
                 />
               )}
-              <GamePanel game={chessGame} gameInfo={gameInfo} playerColor={playerColor} />
+              <GamePanel game={chessGame} gameInfo={gameInfo} playerColor={playerColor} socket={socket} />
             </>
           )}
         </>

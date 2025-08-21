@@ -48,6 +48,14 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                     # Emit updated game state to show premove cleared
                     await room_manager.emit_game_state_to_room(room.id)
                 
+                elif message_type == "resign":
+                    # Handle resignation
+                    room.game.mark_player_forfeit(player_color)
+                    await room_manager.emit_game_state_to_room(room.id)
+                    # Clean up the room since game is now complete
+                    if room.game.status == GameStatus.COMPLETE:
+                        await room_manager.room_service.cleanup_room(room.id)
+                
                 else:
                     print(f"Unknown message type: {message_type}")
 

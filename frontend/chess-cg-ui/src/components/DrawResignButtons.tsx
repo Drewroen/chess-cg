@@ -1,8 +1,15 @@
 interface DrawResignButtonsProps {
   isMobile?: boolean;
+  socket?: WebSocket | null;
 }
 
-export function DrawResignButtons({ isMobile = false }: DrawResignButtonsProps) {
+export function DrawResignButtons({ isMobile = false, socket }: DrawResignButtonsProps) {
+  const handleResign = () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "resign" }));
+    }
+  };
+
   const buttonStyle = {
     padding: "8px 16px",
     backgroundColor: "transparent",
@@ -39,7 +46,7 @@ export function DrawResignButtons({ isMobile = false }: DrawResignButtonsProps) 
       <button style={buttonStyle} title="Offer draw">
         ½
       </button>
-      <button style={buttonStyle} title="Resign">
+      <button style={buttonStyle} title="Resign" onClick={handleResign}>
         ⚐
       </button>
     </div>

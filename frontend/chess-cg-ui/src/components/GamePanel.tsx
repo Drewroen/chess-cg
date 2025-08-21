@@ -7,9 +7,10 @@ interface GamePanelProps {
   game: ChessGame;
   gameInfo: GameInfo | null;
   playerColor: string;
+  socket?: WebSocket | null;
 }
 
-export function GamePanel({ game, gameInfo, playerColor }: GamePanelProps) {
+export function GamePanel({ game, gameInfo, playerColor, socket }: GamePanelProps) {
   // Determine opponent and current player info
   const opponentInfo =
     playerColor === "white"
@@ -132,7 +133,7 @@ export function GamePanel({ game, gameInfo, playerColor }: GamePanelProps) {
       </div>
 
       {/* Game Controls - Center */}
-      <DrawResignButtons />
+      <DrawResignButtons socket={socket} />
 
       {/* Current Player Info - Above Timer */}
       <div

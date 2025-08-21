@@ -122,6 +122,15 @@ class Game:
 
     def mark_player_forfeit(self, color):
         if self.status != GameStatus.COMPLETE:
+            # Update the current player's time if game is in progress
+            if self.status == GameStatus.IN_PROGRESS:
+                current_time = time.time()
+                elapsed = current_time - self.last_move_time
+                if self.turn == "white":
+                    self.white_time_left = max(0, round(self.white_time_left - elapsed, 2))
+                else:
+                    self.black_time_left = max(0, round(self.black_time_left - elapsed, 2))
+            
             self.status = GameStatus.COMPLETE
             self.completed_at = time.time()
             self.winner = "black" if color == "white" else "white"
