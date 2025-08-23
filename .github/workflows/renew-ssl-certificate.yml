@@ -1,0 +1,83 @@
+name: Renew SSL Certificate
+
+on:
+  schedule:
+    # Runs every morning at 7:00 AM UTC
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  renew-certificate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Renew SSL Certificate on Linode
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.LINODE_HOST }}
+        username: ${{ secrets.LINODE_USERNAME }}
+        password: ${{ secrets.LINODE_PASSWORD }}
+        script: |
+          set -e
+          
+          echo "Starting SSL certificate renewal process..."
+          
+          # Update package list and install certbot if not already installed
+          echo "Installing/updating certbot..."
+          sudo apt-get update
+          sudo apt-get install -y certbot python3-certbot-nginx
+          
+          # Stop nginx temporarily for standalone mode
+          echo "Stopping nginx temporarily..."
+          sudo systemctl stop nginx || echo "nginx not running or not installed"
+          
+          # Generate/renew SSL certificate
+          echo "Generating/renewing SSL certificate..."
+          sudo certbot certonly \
+            --standalone \
+            --non-interactive \
+            --agree-tos \
+            --email "drewroen@gmail.com" \
+            --domains "${{ secrets.LINODE_HOST }}" \
+            --keep-until-expiring \
+            --preferred-challenges http \
+            --cert-name "${{ secrets.LINODE_HOST }}"
+          
+          # Create SSL directory in home directory for easy access
+          echo "Creating SSL directory for certificate access..."
+          mkdir -p ~/ssl-certs
+          
+          # Copy certificates to accessible location
+          echo "Copying certificates to accessible location..."
+          sudo cp /etc/letsencrypt/live/${{ secrets.LINODE_HOST }}/fullchain.pem ~/ssl-certs/
+          sudo cp /etc/letsencrypt/live/${{ secrets.LINODE_HOST }}/privkey.pem ~/ssl-certs/
+          sudo chown $USER:$USER ~/ssl-certs/*.pem
+          
+          # Set appropriate permissions
+          chmod 644 ~/ssl-certs/fullchain.pem
+          chmod 600 ~/ssl-certs/privkey.pem
+          
+          # Start nginx if it was running
+          echo "Starting nginx..."
+          sudo systemctl start nginx || echo "nginx not configured to start"
+          
+          # Display certificate info
+          echo "Certificate information:"
+          sudo certbot certificates
+          
+          echo "SSL certificate renewal completed successfully"
+    
+    - name: Notify on success
+      if: success()
+      run: |
+        echo "✅ SSL certificate successfully renewed for ${{ secrets.LINODE_HOST }}"
+        # Add notification logic here (Slack, Discord, email, etc.)
+    
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ SSL certificate renewal failed for ${{ secrets.LINODE_HOST }}"
+        # Add error notification logic here
