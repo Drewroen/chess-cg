@@ -13,6 +13,7 @@ from ..auth import (
     revoke_refresh_token,
     get_google_auth_url,
     FRONTEND_URL,
+    COOKIE_DOMAIN,
     verify_jwt_token,
     create_guest_tokens,
     refresh_guest_access_token,
@@ -142,6 +143,7 @@ async def auth_callback(
             samesite="strict",  # CSRF protection
             max_age=3600,  # 1 hour in seconds
             path="/",  # Cookie available for entire domain
+            domain=COOKIE_DOMAIN,  # Set domain for cookie
         )
 
         # Set refresh token as an HTTP-only secure cookie
@@ -153,6 +155,7 @@ async def auth_callback(
             samesite="strict",  # CSRF protection
             max_age=30 * 24 * 60 * 60,  # 30 days in seconds
             path="/",  # Cookie available for entire domain
+            domain=COOKIE_DOMAIN,  # Set domain for cookie
         )
 
         return response
@@ -320,6 +323,7 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
         samesite="strict",  # CSRF protection
         max_age=3600,  # 1 hour in seconds
         path="/",  # Cookie available for entire domain
+        domain=COOKIE_DOMAIN,  # Set domain for cookie
     )
 
     return response
@@ -402,6 +406,7 @@ async def create_guest_session(
                     samesite="strict",
                     max_age=3600,  # 1 hour
                     path="/",
+                    domain=COOKIE_DOMAIN,  # Set domain for cookie
                 )
 
                 return response
@@ -440,6 +445,7 @@ async def create_guest_session(
         samesite="strict",
         max_age=3600,  # 1 hour
         path="/",
+        domain=COOKIE_DOMAIN,  # Set domain for cookie
     )
 
     # Set guest refresh token cookie
@@ -451,6 +457,7 @@ async def create_guest_session(
         samesite="strict",
         max_age=7 * 24 * 60 * 60,  # 7 days
         path="/",
+        domain=COOKIE_DOMAIN,  # Set domain for cookie
     )
 
     return response
