@@ -42,11 +42,21 @@ jobs:
 
             # Stop existing server if running
             echo "Stopping existing server if running..."
-            pkill -f "fastapi run" || echo "No existing server process found"
-            sleep 2
+            PID=$(cat ~/chess-cg-server.pid)
+            if kill -0 "$PID" 2>/dev/null; then
+              echo "Stopping process $PID"
+              kill "$PID"
+              sleep 3
+              if kill -0 "$PID" 2>/dev/null; then
+                echo "Process still running, force killing"
+                kill -9 "$PID"
+              fi
+            fi
+            rm -f ~/chess-cg-server.pid
 
-            # Start the backend server in background
+            # Start the backend server in background with PID tracking
             echo "Starting the backend server..."
             nohup ~/.local/bin/uv run fastapi run app/main.py --host 0.0.0.0 --port 8000 > ~/chess-cg-server.log 2>&1 &
+            echo $! > ~/chess-cg-server.pid
 
             echo "Deployment completed successfully"
