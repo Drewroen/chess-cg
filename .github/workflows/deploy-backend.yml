@@ -42,17 +42,21 @@ jobs:
 
             # Stop existing server if running
             echo "Stopping existing server if running..."
-            PID=$(cat ~/chess-cg-server.pid)
-            if kill -0 "$PID" 2>/dev/null; then
-              echo "Stopping process $PID"
-              kill "$PID"
-              sleep 3
+            if [ -f ~/chess-cg-server.pid ]; then
+              PID=$(cat ~/chess-cg-server.pid)
               if kill -0 "$PID" 2>/dev/null; then
-                echo "Process still running, force killing"
-                kill -9 "$PID"
+                echo "Stopping process $PID"
+                kill "$PID"
+                sleep 3
+                if kill -0 "$PID" 2>/dev/null; then
+                  echo "Process still running, force killing"
+                  kill -9 "$PID"
+                fi
               fi
+              rm -f ~/chess-cg-server.pid
+            else
+              echo "No PID file found."
             fi
-            rm -f ~/chess-cg-server.pid
 
             # Start the backend server in background with PID tracking
             echo "Starting the backend server..."
