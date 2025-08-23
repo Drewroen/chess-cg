@@ -13,7 +13,8 @@ type ConnectionStatusType =
   | "disconnected"
   | "error";
 
-const WEBSOCKET_URL = "ws://127.0.0.1:8000/ws";
+const WEBSOCKET_URL =
+  process.env.REACT_APP_WEBSOCKET_URL || "ws://127.0.0.1:8000/ws";
 const BACKEND_URL =
   process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
