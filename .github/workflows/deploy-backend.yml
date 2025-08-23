@@ -32,12 +32,12 @@ jobs:
             cd backend
 
             # Install/update dependencies
-            uv sync
+            ~/.local/bin/uv sync
 
             # Stop existing server if running
             pkill -f "fastapi run" || true
 
             # Start the backend server in background
-            uv run fastapi run app/main.py --host 0.0.0.0 --port 8000
+            ~/.local/bin/uv run fastapi run app/main.py --host 0.0.0.0 --port 8000
 
             echo "Deployment completed successfully"
