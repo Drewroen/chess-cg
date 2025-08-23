@@ -16,7 +16,7 @@ jobs:
       - name: Deploy to Linode
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: TEST
+          host: ${{ secrets.LINODE_HOST }}
           username: ${{ secrets.LINODE_USERNAME }}
           password: ${{ secrets.LINODE_PASSWORD }}
           script: |
