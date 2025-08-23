@@ -25,7 +25,7 @@ JWT_EXPIRATION_HOURS = int(
 )  # Shorter access token expiry
 REFRESH_TOKEN_EXPIRATION_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRATION_DAYS", "30"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
-COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", "localhost")
+COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", "http://localhost:3000")
 
 # Google OAuth URLs
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
