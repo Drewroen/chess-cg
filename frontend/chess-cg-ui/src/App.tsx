@@ -134,7 +134,7 @@ export default function App() {
                 letterSpacing: "2px",
               }}
             >
-              Chess Reloaded
+              ReChess
             </h1>
             <p
               style={{
@@ -144,7 +144,7 @@ export default function App() {
                 fontWeight: "300",
               }}
             >
-              Chess, but if your pieces were cooler
+              Chess, but redefined.
             </p>
             {user && (
               <div
