@@ -42,7 +42,8 @@ jobs:
 
             # Stop existing server if running
             echo "Stopping existing server if running..."
-            pkill -f "fastapi run" || true
+            pkill -f "fastapi run" || echo "No existing server process found"
+            sleep 2
 
             # Start the backend server in background
             echo "Starting the backend server..."
