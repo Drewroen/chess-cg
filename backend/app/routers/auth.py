@@ -140,10 +140,9 @@ async def auth_callback(
             value=access_token,
             httponly=True,  # Prevents JavaScript access (XSS protection)
             secure=True,  # Only send over HTTPS in production
-            samesite="strict",  # CSRF protection
+            samesite="none",  # CSRF protection
             max_age=3600,  # 1 hour in seconds
             path="/",  # Cookie available for entire domain
-            domain=COOKIE_DOMAIN,  # Set domain for cookie
         )
 
         # Set refresh token as an HTTP-only secure cookie
@@ -152,10 +151,9 @@ async def auth_callback(
             value=refresh_token,
             httponly=True,  # Prevents JavaScript access (XSS protection)
             secure=True,  # Only send over HTTPS in production
-            samesite="strict",  # CSRF protection
+            samesite="none",  # CSRF protection
             max_age=30 * 24 * 60 * 60,  # 30 days in seconds
             path="/",  # Cookie available for entire domain
-            domain=COOKIE_DOMAIN,  # Set domain for cookie
         )
 
         return response
@@ -320,10 +318,9 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
         value=new_access_token,
         httponly=True,  # Prevents JavaScript access (XSS protection)
         secure=True,  # Only send over HTTPS in production
-        samesite="strict",  # CSRF protection
+        samesite="none",  # CSRF protection
         max_age=3600,  # 1 hour in seconds
         path="/",  # Cookie available for entire domain
-        domain=COOKIE_DOMAIN,  # Set domain for cookie
     )
 
     return response
@@ -403,10 +400,9 @@ async def create_guest_session(
                     value=new_access_token,
                     httponly=True,
                     secure=True,
-                    samesite="strict",
+                    samesite="none",
                     max_age=3600,  # 1 hour
                     path="/",
-                    domain=COOKIE_DOMAIN,  # Set domain for cookie
                 )
 
                 return response
@@ -442,10 +438,9 @@ async def create_guest_session(
         value=guest_access_token,
         httponly=True,
         secure=True,
-        samesite="strict",
+        samesite="none",
         max_age=3600,  # 1 hour
         path="/",
-        domain=COOKIE_DOMAIN,  # Set domain for cookie
     )
 
     # Set guest refresh token cookie
@@ -454,10 +449,9 @@ async def create_guest_session(
         value=guest_refresh_token,
         httponly=True,
         secure=True,
-        samesite="strict",
+        samesite="none",
         max_age=7 * 24 * 60 * 60,  # 7 days
         path="/",
-        domain=COOKIE_DOMAIN,  # Set domain for cookie
     )
 
     return response
