@@ -1,0 +1,41 @@
+name: Deploy to Linode
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Linode
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LINODE_HOST }}
+          username: ${{ secrets.LINODE_USERNAME }}
+          password: ${{ secrets.LINODE_PASSWORD }}
+          script: |
+            # Navigate to app directory (adjust path as needed)
+            cd /home/${{ secrets.LINODE_USERNAME }}/chess-cg || cd ~/chess-cg
+
+            # Pull latest changes
+            git pull origin main
+
+            # Navigate to backend directory
+            cd backend
+
+            # Install/update dependencies
+            uv sync
+
+            # Stop existing server if running
+            pkill -f "fastapi run" || true
+
+            # Start the backend server in background
+            nohup uv run fastapi run app/main.py --host 0.0.0.0 --port 8000 > server.log 2>&1 &
+
+            echo "Deployment completed successfully"
