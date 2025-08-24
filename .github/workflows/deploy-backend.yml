@@ -60,7 +60,7 @@ jobs:
 
             # Update nginx configuration
             echo "Updating nginx configuration..."
-            sudo cp nginx.conf /etc/nginx/sites-available/chess-cg
+            sudo cp ../nginx.conf /etc/nginx/sites-available/chess-cg
             sudo ln -sf /etc/nginx/sites-available/chess-cg /etc/nginx/sites-enabled/chess-cg
 
             # Test nginx configuration
