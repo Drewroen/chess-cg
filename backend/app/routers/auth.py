@@ -71,6 +71,7 @@ async def get_or_create_user(user_info: dict, db_service: DatabaseService) -> di
         "email": user_info["email"],
         "name": user_info["name"],
         "username": username,
+        "user_type": "authenticated",
     }
 
     new_user = await db_service.create_user(user_data)
@@ -485,7 +486,9 @@ async def update_usernamename(
 
     # Check if user is a guest - guests cannot change their username
     if payload.get("user_type") == "guest":
-        raise HTTPException(status_code=403, detail="Guest users cannot change their username")
+        raise HTTPException(
+            status_code=403, detail="Guest users cannot change their username"
+        )
 
     db_service = DatabaseService(db_session)
     user = await db_service.update_user_username(
