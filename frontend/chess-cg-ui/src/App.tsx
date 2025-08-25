@@ -8,11 +8,28 @@ import { UsernameEditModal } from "./components/UsernameEditModal";
 import { cookieAuthService, User, GuestUser } from "./services/cookieAuth";
 import "./App.css";
 
+// Custom hook for responsive design
+function useResponsive() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return isMobile;
+}
+
 export default function App() {
   const [showGame, setShowGame] = useState(false);
   const [user, setUser] = useState<User | GuestUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
+  const isMobile = useResponsive();
 
   // Check authentication status on app load
   useEffect(() => {
@@ -343,7 +360,7 @@ export default function App() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/success" element={<AuthSuccess />} />
           <Route path="/auth/error" element={<AuthError />} />
-          <Route path="/" element={showGame ? <GameView /> : <LandingPage />} />
+          <Route path="/" element={showGame ? <GameView isMobile={isMobile} /> : <LandingPage />} />
         </Routes>
         {user && (
           <UsernameEditModal

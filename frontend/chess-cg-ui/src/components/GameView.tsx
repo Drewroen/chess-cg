@@ -18,21 +18,6 @@ const WEBSOCKET_URL =
 const BACKEND_URL =
   process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
-// Custom hook for responsive design
-function useResponsive() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  return isMobile;
-}
 
 // Custom hook for auth token management
 function useAuthToken() {
@@ -153,10 +138,9 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
   return { socket: socketRef.current, connectionStatus };
 }
 
-export function GameView() {
+export function GameView({ isMobile }: { isMobile: boolean }) {
   const [chessGame, setChessGame] = useState<ChessGame>(new ChessGame());
   const [gameInfo, setGameInfo] = useState<GameInfo | null>(null);
-  const isMobile = useResponsive();
 
   const updateGameState = useCallback((data: BoardEvent) => {
     setChessGame((prevGame) => ({
