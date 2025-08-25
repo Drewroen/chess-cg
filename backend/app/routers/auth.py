@@ -483,6 +483,10 @@ async def update_usernamename(
         )
         return response
 
+    # Check if user is a guest - guests cannot change their username
+    if payload.get("user_type") == "guest":
+        raise HTTPException(status_code=403, detail="Guest users cannot change their username")
+
     db_service = DatabaseService(db_session)
     user = await db_service.update_user_username(
         payload["sub"], update_request.username
