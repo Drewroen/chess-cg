@@ -52,7 +52,7 @@ export class CookieAuthService {
   // Get current user information from backend
   async getCurrentUser(): Promise<User | null> {
     try {
-      const response = await fetch(`${BACKEND_URL}/auth/me`, {
+      let response = await fetch(`${BACKEND_URL}/auth/me`, {
         method: "GET",
         credentials: "include", // Include cookies in request
         headers: {
@@ -61,14 +61,7 @@ export class CookieAuthService {
       });
 
       if (!response.ok) {
-        // Check if the error is due to missing token vs expired token
-        const errorData = await response.json().catch(() => ({ detail: "" }));
-
-        if (errorData.detail !== "Access token not found") {
-          return await this.createGuestSession();
-        }
-
-        // Try to refresh tokens if the access token is expired
+        // Try to refresh tokens
         const refreshResponse = await fetch(`${BACKEND_URL}/auth/refresh`, {
           method: "POST",
           credentials: "include",
@@ -83,28 +76,19 @@ export class CookieAuthService {
         }
 
         // Retry fetching the current user after refresh
-        const retryResponse = await fetch(`${BACKEND_URL}/auth/me`, {
+        response = await fetch(`${BACKEND_URL}/auth/me`, {
           method: "GET",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
         });
-
-        if (!retryResponse.ok) {
-          return await this.createGuestSession();
-        }
-
-        const user = await retryResponse.json();
-        return user;
       }
 
-      const user = await response.json();
-      return user;
+      return await response.json();
     } catch (error) {
       console.error("Error fetching current user:", error);
-      // Fallback to guest session on any error
-      return await this.createGuestSession();
+      return null;
     }
   }
 
