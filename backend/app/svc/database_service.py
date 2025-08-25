@@ -72,12 +72,6 @@ class DatabaseService:
         await self.session.refresh(user)
         return user
 
-    async def get_guest_users(self) -> list[User]:
-        result = await self.session.execute(
-            select(User).where(User.user_type == "guest")
-        )
-        return result.scalars().all()
-
     async def create_chess_game(
         self,
         white_player_id: str,

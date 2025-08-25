@@ -35,6 +35,6 @@ class RefreshToken(Base):
 
     token = Column(String, primary_key=True)
     user_id = Column(String, nullable=False)
-    expires_at = Column(DateTime, nullable=False)
+    expires_at = Column(DateTime, nullable=False, index=True)
     google_refresh_token = Column(Text, nullable=True)
     google_token_expires_at = Column(DateTime, nullable=True)
