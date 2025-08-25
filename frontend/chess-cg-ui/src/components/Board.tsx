@@ -263,6 +263,7 @@ export function Board({
                     (premove.to[0] === i && premove.to[1] === j))
                 }
                 boardDimensions={boardDimensions}
+                gameStatus={game.status}
                 key={`tile-${i}-${j}`}
               />
             </div>

@@ -15,6 +15,7 @@ export function Tile({
   onPieceDrop,
   isPremove,
   boardDimensions,
+  gameStatus,
 }: {
   type?: string;
   color?: string;
@@ -28,6 +29,7 @@ export function Tile({
   onPieceDrop?: (x: number, y: number) => void;
   isPremove?: boolean;
   boardDimensions: { width: number; height: number };
+  gameStatus?: string;
 }) {
   const pieceStyle: CSSProperties = {
     position: "absolute",
@@ -68,6 +70,7 @@ export function Tile({
           playerColor={playerColor}
           onPieceDrop={onPieceDrop}
           boardDimensions={boardDimensions}
+          gameStatus={gameStatus}
           key={`piece-${x}-${y}`}
         />
       </div>

@@ -20,6 +20,7 @@ export function Piece({
   playerColor,
   onPieceDrop,
   boardDimensions,
+  gameStatus,
 }: {
   type?: string;
   color?: string;
@@ -27,6 +28,7 @@ export function Piece({
   playerColor: string;
   onPieceDrop?: (x: number, y: number) => void;
   boardDimensions: { width: number; height: number };
+  gameStatus?: string;
 }) {
   const nodeRef = useRef(null);
   function getSvg(type: string, color: string) {
@@ -63,7 +65,8 @@ export function Piece({
     />
   );
 
-  return color === playerColor ? (
+  return color === playerColor &&
+    (gameStatus === "in progress" || gameStatus === "not started") ? (
     <Draggable
       nodeRef={nodeRef}
       position={{ x: 0, y: 0 }}
