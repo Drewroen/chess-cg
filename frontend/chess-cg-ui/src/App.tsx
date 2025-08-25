@@ -120,42 +120,42 @@ export default function App() {
         alignItems: "center",
         justifyContent: "center",
         height: "100vh",
-        padding: "2rem",
+        padding: isMobile ? "1rem" : "2rem",
       }}
     >
       <>
         <div
           style={{
             background: "linear-gradient(145deg, #2a2a2a, #1e1e1e)",
-            borderRadius: "20px",
-            padding: "3rem",
+            borderRadius: isMobile ? "12px" : "20px",
+            padding: isMobile ? "1.5rem" : "3rem",
             boxShadow:
               "0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
             border: "1px solid #444",
-            minWidth: "400px",
-            maxWidth: "500px",
+            minWidth: isMobile ? "280px" : "400px",
+            maxWidth: isMobile ? "90vw" : "500px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "2.5rem",
+            gap: isMobile ? "1.5rem" : "2.5rem",
           }}
         >
           <div style={{ textAlign: "center" }}>
             <h1
               style={{
-                fontSize: "3.5rem",
+                fontSize: isMobile ? "2.5rem" : "3.5rem",
                 fontWeight: "700",
                 margin: "0",
                 textShadow: "2px 2px 8px rgba(0,0,0,0.7)",
                 color: "#ffffff",
-                letterSpacing: "2px",
+                letterSpacing: isMobile ? "1px" : "2px",
               }}
             >
               ReChess
             </h1>
             <p
               style={{
-                fontSize: "1.1rem",
+                fontSize: isMobile ? "1rem" : "1.1rem",
                 margin: "1rem 0 0 0",
                 color: "#b0b0b0",
                 fontWeight: "300",
@@ -221,8 +221,8 @@ export default function App() {
               <button
                 onClick={startGame}
                 style={{
-                  padding: "1rem 2rem",
-                  fontSize: "1.1rem",
+                  padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
+                  fontSize: isMobile ? "1rem" : "1.1rem",
                   fontWeight: "600",
                   border: "none",
                   borderRadius: "8px",
@@ -252,8 +252,8 @@ export default function App() {
                 <button
                   onClick={handleLogin}
                   style={{
-                    padding: "1rem 2rem",
-                    fontSize: "1rem",
+                    padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
+                    fontSize: isMobile ? "0.9rem" : "1rem",
                     fontWeight: "500",
                     border: "2px solid #4CAF50",
                     borderRadius: "8px",
@@ -280,8 +280,8 @@ export default function App() {
                 <button
                   onClick={handleLogout}
                   style={{
-                    padding: "1rem 2rem",
-                    fontSize: "1rem",
+                    padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
+                    fontSize: isMobile ? "0.9rem" : "1rem",
                     fontWeight: "500",
                     border: "2px solid #f44336",
                     borderRadius: "8px",
@@ -307,8 +307,8 @@ export default function App() {
               ) : (
                 <div
                   style={{
-                    padding: "1rem 2rem",
-                    fontSize: "1rem",
+                    padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
+                    fontSize: isMobile ? "0.9rem" : "1rem",
                     color: "#888",
                     textAlign: "center",
                   }}
@@ -320,8 +320,8 @@ export default function App() {
               <button
                 onClick={handleLoadout}
                 style={{
-                  padding: "1rem 2rem",
-                  fontSize: "1rem",
+                  padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
+                  fontSize: isMobile ? "0.9rem" : "1rem",
                   fontWeight: "500",
                   border: "2px solid #505050",
                   borderRadius: "8px",
