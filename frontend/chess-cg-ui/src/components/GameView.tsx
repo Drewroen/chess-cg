@@ -174,9 +174,6 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
   const playerColor =
     gameInfo?.players.white.id === chessGame.playerId ? "white" : "black";
 
-  const updatePossibleMoves = useCallback((moves: Array<[number, number]>) => {
-    setChessGame((prevGame) => ({ ...prevGame, possibleMoves: moves }));
-  }, []);
 
   const handleLocalMove = useCallback(
     (from: [number, number], to: [number, number]) => {
@@ -263,7 +260,6 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
               {socket && (
                 <Board
                   game={chessGame}
-                  updatePossibleMoves={updatePossibleMoves}
                   key="board"
                   socket={socket}
                   onMoveLocal={handleLocalMove}
@@ -328,7 +324,6 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
               {socket && (
                 <Board
                   game={chessGame}
-                  updatePossibleMoves={updatePossibleMoves}
                   key="board"
                   socket={socket}
                   onMoveLocal={handleLocalMove}

@@ -1,18 +1,21 @@
 import { useState, useEffect, useRef } from "react";
-import { ChessGame, Move, MoveMessage, ResetPremoveMessage } from "../obj/ChessGame";
+import {
+  ChessGame,
+  Move,
+  MoveMessage,
+  ResetPremoveMessage,
+} from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { PromotionSelector } from "./PromotionSelector";
 import styles from "./Board.module.css";
 
 export function Board({
   game,
-  updatePossibleMoves,
   socket,
   onMoveLocal,
   playerColor,
 }: {
   game: ChessGame;
-  updatePossibleMoves: (moves: Array<[number, number]>) => void;
   socket: WebSocket | null;
   onMoveLocal?: (from: [number, number], to: [number, number]) => void;
   playerColor: string;
