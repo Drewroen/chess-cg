@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ChessGame,
   Move,
@@ -91,7 +91,15 @@ export function Board({
     }
   }
 
-  function onSquareClicked(coords: [number, number]) {
+  const isPossibleMove = useCallback((coords: [number, number]) => {
+    return (
+      possibleMoves?.find(
+        (move) => move[0] === coords[0] && move[1] === coords[1]
+      ) !== undefined
+    );
+  }, [possibleMoves]);
+
+  const onSquareClicked = useCallback((coords: [number, number]) => {
     if (game.status === "complete") {
       setActiveSquare(null);
       setPossibleMoves([]);
@@ -200,15 +208,7 @@ export function Board({
         setPossibleMoves([]);
       }
     }
-  }
-
-  function isPossibleMove(coords: [number, number]) {
-    return (
-      possibleMoves?.find(
-        (move) => move[0] === coords[0] && move[1] === coords[1]
-      ) !== undefined
-    );
-  }
+  }, [game, playerColor, activeSquare, onMoveLocal, socket, isPossibleMove]);
 
   return (
     <div ref={boardRef} className={styles.boardContainer}>

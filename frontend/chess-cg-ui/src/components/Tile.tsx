@@ -2,6 +2,8 @@ import { CSSProperties } from "react";
 import { Piece } from "./Piece";
 import { Square } from "./Square";
 
+const BOARD_SQUARE_PERCENT = 12.5;
+
 export function Tile({
   type,
   color,
@@ -33,10 +35,10 @@ export function Tile({
 }) {
   const pieceStyle: CSSProperties = {
     position: "absolute",
-    top: 12.5 * x + "%",
-    left: 12.5 * y + "%",
-    width: "12.5%",
-    height: "12.5%",
+    top: BOARD_SQUARE_PERCENT * x + "%",
+    left: BOARD_SQUARE_PERCENT * y + "%",
+    width: BOARD_SQUARE_PERCENT + "%",
+    height: BOARD_SQUARE_PERCENT + "%",
   };
 
   return (

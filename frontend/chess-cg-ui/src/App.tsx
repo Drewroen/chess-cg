@@ -80,9 +80,6 @@ export default function App() {
     }
   }
 
-  function handleLoadout() {
-    console.log("Loadout clicked - coming soon!");
-  }
 
   async function handleLogout() {
     await cookieAuthService.logout();
@@ -317,35 +314,6 @@ export default function App() {
                 </div>
               )}
 
-              <button
-                onClick={handleLoadout}
-                style={{
-                  padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
-                  fontSize: isMobile ? "0.9rem" : "1rem",
-                  fontWeight: "500",
-                  border: "2px solid #505050",
-                  borderRadius: "8px",
-                  background: "transparent",
-                  color: "#a0a0a0",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  fontFamily: "inherit",
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = "#505050";
-                  e.currentTarget.style.color = "#f0f0f0";
-                  e.currentTarget.style.borderColor = "#606060";
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "#a0a0a0";
-                  e.currentTarget.style.borderColor = "#505050";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                Loadout
-              </button>
             </div>
           </div>
         </div>

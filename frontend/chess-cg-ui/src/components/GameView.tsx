@@ -169,7 +169,7 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
     }
   }, [chessGame.id, gameInfo]);
 
-  const { socket, connectionStatus } = useWebSocket(updateGameState);
+  const { socket } = useWebSocket(updateGameState);
 
   const playerColor =
     gameInfo?.players.white.id === chessGame.playerId ? "white" : "black";
@@ -197,23 +197,9 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
     []
   );
 
-  const getStatusDisplay = (status: ConnectionStatusType) => {
-    const statusMap = {
-      connecting: "Connecting...",
-      connected: "Connected",
-      disconnected: "Disconnected",
-      error: "Error",
-    };
-    return statusMap[status];
-  };
 
   return (
     <div className={`${utilities.flexCenter} ${utilities.minHeight100vh} ${utilities.bgDark} ${utilities.margin0} ${isMobile ? styles.gameContainerMobile : styles.gameContainer}`}>
-      {process.env.NODE_ENV === "development" && (
-        <div className={styles.statusIndicator}>
-          Status: {getStatusDisplay(connectionStatus)}
-        </div>
-      )}
       {chessGame.board?.squares && gameInfo ? (
         <>
           {/* Mobile layout - player info above and below board */}
