@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import styles from "./Timer.module.css";
 
 interface TimerProps {
   initialTime: number;
@@ -82,32 +83,11 @@ export const Timer: React.FC<TimerProps> = ({
 
   return (
     <div
-      style={{
-        width: "auto",
-        height: 48,
-        border: "none",
-        borderRadius: 4,
-        fontSize: isMobile ? 18 : 36,
-        fontWeight: 200,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
-        boxShadow: isMobile ? "none" : "0 1px 3px rgba(0, 0, 0, 0.1)",
-        color: "#374151",
-        padding: isMobile ? "0 8px" : "0",
-      }}
+      className={`${styles.timerContainer} ${
+        isMobile ? styles.timerContainerMobile : styles.timerContainerDesktop
+      }`}
     >
-      <div
-        style={{
-          lineHeight: 1,
-          margin: 0,
-          padding: 0,
-          color: "white",
-          fontWeight: 100,
-          fontFamily: "sans-serif",
-        }}
-      >
+      <div className={styles.timerText}>
         {formatTime(timeRemaining)}
       </div>
     </div>

@@ -1,0 +1,80 @@
+/* Main container styles */
+.gameContainer {
+  gap: 20px;
+  padding: 20px;
+}
+
+.gameContainerMobile {
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+/* Development status indicator */
+.statusIndicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 10px;
+  background: lightgray;
+  border-radius: 5px;
+}
+
+/* Player info containers */
+.playerInfoContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  padding: 12px 16px;
+  background-color: #2b2927;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.opponentInfo {
+  margin-bottom: 0;
+}
+
+.currentPlayerInfo {
+  margin-top: 0;
+}
+
+/* Player info elements */
+.playerDetails {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connectionDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.connected {
+  background-color: #4CAF50;
+}
+
+.disconnected {
+  background-color: #f44336;
+}
+
+.playerName {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.playerElo {
+  color: #888;
+  font-size: 14px;
+}
+
+/* Loading state */
+.loading {
+  color: #fff;
+  font-size: 18px;
+}

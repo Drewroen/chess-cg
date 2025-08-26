@@ -1,0 +1,36 @@
+/* Timer container */
+.timerContainer {
+  width: auto;
+  height: 48px;
+  border: none;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #374151;
+  padding: 0;
+}
+
+.timerContainerDesktop {
+  font-size: 36px;
+  font-weight: 200;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.timerContainerMobile {
+  font-size: 18px;
+  font-weight: 200;
+  box-shadow: none;
+  padding: 0 8px;
+}
+
+/* Timer display text */
+.timerText {
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  color: white;
+  font-weight: 100;
+  font-family: sans-serif;
+}

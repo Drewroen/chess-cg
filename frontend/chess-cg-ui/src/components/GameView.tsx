@@ -6,6 +6,8 @@ import { GamePanel } from "./GamePanel";
 import { DrawResignButtons } from "./DrawResignButtons";
 import { GameOver } from "./GameOver";
 import { fetchGameInfo, GameInfo } from "../services/gameService";
+import styles from "./GameView.module.css";
+import utilities from "../styles/utilities.module.css";
 
 type ConnectionStatusType =
   | "connecting"
@@ -209,30 +211,9 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        gap: isMobile ? "0" : "20px",
-        padding: isMobile ? "0" : "20px",
-        margin: 0,
-        minHeight: "100vh",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#1d1a17",
-      }}
-    >
+    <div className={`${utilities.flexCenter} ${utilities.minHeight100vh} ${utilities.bgDark} ${utilities.margin0} ${isMobile ? styles.gameContainerMobile : styles.gameContainer}`}>
       {process.env.NODE_ENV === "development" && (
-        <div
-          style={{
-            position: "absolute",
-            top: "10px",
-            right: "10px",
-            padding: "10px",
-            background: "lightgray",
-            borderRadius: "5px",
-          }}
-        >
+        <div className={styles.statusIndicator}>
           Status: {getStatusDisplay(connectionStatus)}
         </div>
       )}
@@ -242,45 +223,19 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
           {isMobile ? (
             <>
               {/* Opponent info at top */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  width: "100%",
-                  maxWidth: "600px",
-                  padding: "12px 16px",
-                  backgroundColor: "#2b2927",
-                  borderRadius: "8px",
-                  marginBottom: "0",
-                  boxSizing: "border-box",
-                }}
-              >
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
+              <div className={`${styles.playerInfoContainer} ${styles.opponentInfo}`}>
+                <div className={styles.playerDetails}>
                   <div
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      backgroundColor: chessGame.opponentConnected
-                        ? "#4CAF50"
-                        : "#f44336",
-                    }}
+                    className={`${styles.connectionDot} ${
+                      chessGame.opponentConnected ? styles.connected : styles.disconnected
+                    }`}
                   />
-                  <span
-                    style={{
-                      color: "#fff",
-                      fontSize: "16px",
-                      fontWeight: "500",
-                    }}
-                  >
+                  <span className={styles.playerName}>
                     {playerColor === "white"
                       ? gameInfo?.players.black.name || "Opponent"
                       : gameInfo?.players.white.name || "Opponent"}
                   </span>
-                  <span style={{ color: "#888", fontSize: "14px" }}>
+                  <span className={styles.playerElo}>
                     {playerColor === "white"
                       ? gameInfo?.players.black.elo || ""
                       : gameInfo?.players.white.elo || ""}
@@ -317,43 +272,15 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
               )}
 
               {/* Current player timer right under the board */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  width: "100%",
-                  maxWidth: "600px",
-                  padding: "12px 16px",
-                  backgroundColor: "#2b2927",
-                  borderRadius: "8px",
-                  marginTop: "0",
-                  boxSizing: "border-box",
-                }}
-              >
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  <div
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      backgroundColor: "#4CAF50", // Player is always connected (it's us)
-                    }}
-                  />
-                  <span
-                    style={{
-                      color: "#fff",
-                      fontSize: "16px",
-                      fontWeight: "500",
-                    }}
-                  >
+              <div className={`${styles.playerInfoContainer} ${styles.currentPlayerInfo}`}>
+                <div className={styles.playerDetails}>
+                  <div className={`${styles.connectionDot} ${styles.connected}`} />
+                  <span className={styles.playerName}>
                     {playerColor === "white"
                       ? gameInfo?.players.white.name || "You"
                       : gameInfo?.players.black.name || "You"}
                   </span>
-                  <span style={{ color: "#888", fontSize: "14px" }}>
+                  <span className={styles.playerElo}>
                     {playerColor === "white"
                       ? gameInfo?.players.white.elo || ""
                       : gameInfo?.players.black.elo || ""}
@@ -418,7 +345,7 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
           )}
         </>
       ) : (
-        <div>Loading...</div>
+        <div className={styles.loading}>Loading...</div>
       )}
     </div>
   );

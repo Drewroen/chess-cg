@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ChessGame, Move, MoveMessage, ResetPremoveMessage } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { PromotionSelector } from "./PromotionSelector";
+import styles from "./Board.module.css";
 
 export function Board({
   game,
@@ -207,23 +208,12 @@ export function Board({
   }
 
   return (
-    <div
-      ref={boardRef}
-      style={{
-        position: "relative",
-        width: "100%",
-        aspectRatio: "1 / 1",
-        maxWidth: "600px",
-        maxHeight: "600px",
-        padding: 0,
-        margin: 0,
-      }}
-    >
+    <div ref={boardRef} className={styles.boardContainer}>
       {game.board?.squares &&
         game.board.squares.map((row, i) =>
           row.map((square, j) => (
             <div
-              style={{ cursor: "pointer" }}
+              className={styles.squareWrapper}
               onMouseDown={() => {
                 if (touchUsedRef.current) {
                   touchUsedRef.current = false;
