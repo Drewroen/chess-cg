@@ -1,10 +1,10 @@
-import { CSSProperties } from "react";
+import React, { CSSProperties } from "react";
 import { Piece } from "./Piece";
 import { Square } from "./Square";
 
 const BOARD_SQUARE_PERCENT = 12.5;
 
-export function Tile({
+export const Tile = React.memo(function Tile({
   type,
   color,
   x,
@@ -98,4 +98,4 @@ export function Tile({
         ))}
     </>
   );
-}
+});

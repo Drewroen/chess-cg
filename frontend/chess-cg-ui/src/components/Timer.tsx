@@ -8,7 +8,7 @@ interface TimerProps {
   isMobile?: boolean;
 }
 
-export const Timer: React.FC<TimerProps> = ({
+export const Timer: React.FC<TimerProps> = React.memo(({
   initialTime,
   isActive,
   isMobile = false,
@@ -82,4 +82,4 @@ export const Timer: React.FC<TimerProps> = ({
       </div>
     </div>
   );
-};
+});

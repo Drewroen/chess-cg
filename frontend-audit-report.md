@@ -6,16 +6,6 @@ This document contains the remaining findings from a comprehensive frontend code
 
 ## Remaining Tasks
 
-## 1. Convert Inline Styles to CSS Modules (Medium-term - < 1 day)
-
-**Priority files to convert:**
-
-- `src/App.tsx` - Landing page styles (lines 116-354)
-- `src/components/UsernameEditModal.tsx` - Modal styles (lines 52-219)
-- `src/components/AuthCallback.tsx` - Auth callback styles (lines 74-168)
-
-Create corresponding CSS module files and replace inline styles.
-
 ## 2. Create Reusable Modal Component (Medium-term - < 1 day)
 
 **Files:** `src/components/Modal.tsx` (new file)
@@ -30,13 +20,6 @@ Create corresponding CSS module files and replace inline styles.
 
 - Extract mobile and desktop layouts into separate components (lines 220-341)
 - Create `MobileGameLayout.tsx` and `DesktopGameLayout.tsx`
-
-## 4. Extract Utility Functions (Medium-term - < 1 day)
-
-**Files:** `src/utils/` (new directory)
-
-- Move timer formatting logic from `Timer.tsx` (lines 72-82) to `src/utils/timeUtils.ts`
-- Create other utility functions as needed
 
 ## 5. Add React.memo Where Appropriate (Performance)
 
@@ -75,7 +58,7 @@ Create corresponding CSS module files and replace inline styles.
 To implement the remaining changes with Claude:
 
 1. **For CSS/UI improvements:** "Implement items 1-2 from the frontend audit report"
-2. **For component refactoring:** "Implement items 3-4 from the frontend audit report" 
+2. **For component refactoring:** "Implement items 3-4 from the frontend audit report"
 3. **For performance:** "Implement items 5-6 from the frontend audit report"
 4. **For code quality:** "Implement items 7-8 from the frontend audit report"
 5. **For cleanup:** "Implement item 9 from the frontend audit report"

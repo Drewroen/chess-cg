@@ -10,10 +10,10 @@ import WhiteRook from "../assets/white_rook.svg";
 import WhiteBishop from "../assets/white_bishop.svg";
 import WhiteKnight from "../assets/white_knight.svg";
 import WhitePawn from "../assets/white_pawn.svg";
-import { CSSProperties, useRef } from "react";
+import React, { CSSProperties, useRef } from "react";
 import Draggable from "react-draggable";
 
-export function Piece({
+export const Piece = React.memo(function Piece({
   type,
   color,
   style,
@@ -86,4 +86,4 @@ export function Piece({
   ) : (
     pieceImage
   );
-}
+});
