@@ -4,6 +4,8 @@ import {
   Move,
   MoveMessage,
   ResetPremoveMessage,
+  PieceType,
+  PieceColor,
 } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { PromotionSelector } from "./PromotionSelector";
@@ -19,7 +21,7 @@ export function Board({
   game: ChessGame;
   socket: WebSocket | null;
   onMoveLocal?: (from: [number, number], to: [number, number]) => void;
-  playerColor: string;
+  playerColor: PieceColor;
 }) {
   const [activeSquare, setActiveSquare] = useState<[number, number] | null>(
     null
@@ -73,7 +75,7 @@ export function Board({
     if (newX !== boardX || newY !== boardY) onSquareClicked([newX, newY]);
   }
 
-  function handlePromotion(pieceType: string) {
+  function handlePromotion(pieceType: PieceType) {
     if (promotionMove) {
       if (game.turn !== playerColor) {
         setPremove({ from: promotionMove.from, to: promotionMove.to });

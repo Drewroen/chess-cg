@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { GameInfo } from "./services/gameService";
-import { ChessGame } from "./obj/ChessGame";
+import { ChessGame, PieceColor } from "./obj/ChessGame";
 
 // ============================================================================
 // TIME UTILITIES
@@ -31,7 +31,7 @@ export const formatTime = (seconds: number): string => {
 /**
  * Gets the opponent's display information based on player color
  */
-export const getOpponentInfo = (gameInfo: GameInfo | null, playerColor: string) => {
+export const getOpponentInfo = (gameInfo: GameInfo | null, playerColor: PieceColor) => {
   if (!gameInfo) return { name: "Opponent", elo: "" };
   
   const opponent = playerColor === "white" ? gameInfo.players.black : gameInfo.players.white;
@@ -44,7 +44,7 @@ export const getOpponentInfo = (gameInfo: GameInfo | null, playerColor: string) 
 /**
  * Gets the current player's display information based on player color
  */
-export const getCurrentPlayerInfo = (gameInfo: GameInfo | null, playerColor: string) => {
+export const getCurrentPlayerInfo = (gameInfo: GameInfo | null, playerColor: PieceColor) => {
   if (!gameInfo) return { name: "You", elo: "" };
   
   const currentPlayer = playerColor === "white" ? gameInfo.players.white : gameInfo.players.black;
@@ -63,7 +63,7 @@ export const getCurrentPlayerInfo = (gameInfo: GameInfo | null, playerColor: str
  */
 export const getTimerInitialTime = (
   chessGame: ChessGame,
-  playerColor: string,
+  playerColor: PieceColor,
   isOpponent: boolean = false
 ): number => {
   if (chessGame.status === "not started") {
@@ -82,7 +82,7 @@ export const getTimerInitialTime = (
  */
 export const isTimerActive = (
   chessGame: ChessGame,
-  playerColor: string,
+  playerColor: PieceColor,
   isOpponent: boolean = false
 ): boolean => {
   if (chessGame.status === "not started") {
@@ -106,7 +106,7 @@ export const isTimerActive = (
  */
 export const transformCoordinate = (
   coordinate: number,
-  playerColor: string
+  playerColor: PieceColor
 ): number => {
   return playerColor === "white" ? coordinate : 7 - coordinate;
 };
@@ -117,7 +117,7 @@ export const transformCoordinate = (
 export const transformCoordinates = (
   x: number,
   y: number,
-  playerColor: string
+  playerColor: PieceColor
 ): [number, number] => {
   return [
     transformCoordinate(x, playerColor),

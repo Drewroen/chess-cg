@@ -13,6 +13,12 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+    // Additional strict type checking
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": false,
+    // Unused code detection (warnings, not errors in development)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,

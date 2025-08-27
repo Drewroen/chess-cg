@@ -14,6 +14,10 @@ export interface GuestUser extends User {
   user_type: "guest";
 }
 
+interface ErrorResponse {
+  detail: string | Array<{ msg: string }>;
+}
+
 export class CookieAuthService {
   private static instance: CookieAuthService;
 
@@ -104,7 +108,7 @@ export class CookieAuthService {
       });
 
       if (!response.ok) {
-        const errorData = await response
+        const errorData: ErrorResponse = await response
           .json()
           .catch(() => ({ detail: "Unknown error" }));
 

@@ -21,14 +21,6 @@ This document contains the remaining findings from a comprehensive frontend code
 - Extract mobile and desktop layouts into separate components (lines 220-341)
 - Create `MobileGameLayout.tsx` and `DesktopGameLayout.tsx`
 
-## 5. Add React.memo Where Appropriate (Performance)
-
-**Files:** Consider memoizing these components:
-
-- `Timer.tsx` - re-renders frequently
-- `Tile.tsx` - many instances on board
-- `Piece.tsx` - many instances on board
-
 ## 6. Optimize Board Rendering (Performance)
 
 **Files:** `src/components/Board.tsx`

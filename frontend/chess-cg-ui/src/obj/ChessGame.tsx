@@ -5,11 +5,15 @@ export class ChessBoard {
   }
 }
 
-export class ChessPiece {
-  type: string;
-  color: string;
+export type PieceType = "pawn" | "rook" | "knight" | "bishop" | "queen" | "king";
+export type PieceColor = "white" | "black";
+export type GameStatus = "waiting" | "active" | "complete" | "not started" | "in progress" | "aborted";
 
-  constructor(type: string, color: string) {
+export class ChessPiece {
+  type: PieceType;
+  color: PieceColor;
+
+  constructor(type: PieceType, color: PieceColor) {
     this.type = type;
     this.color = color;
   }
@@ -20,9 +24,9 @@ export class ChessGame {
   possibleMoves?: Array<[number, number]> = [];
   players?: ChessPlayers = new ChessPlayers();
   kingsInCheck?: KingsInCheck = new KingsInCheck();
-  turn: string = "";
-  status: string = "";
-  winner?: string;
+  turn: PieceColor = "white";
+  status: GameStatus = "not started";
+  winner?: PieceColor;
   endReason?: string;
   time: RemainingTime = new RemainingTime();
   moves: ChessMove[] = []; // Simplified - now just one array based on turn
@@ -71,10 +75,10 @@ export class RemainingTime {
 
 export class BoardEvent {
   squares: ChessPiece[][] = [];
-  turn: string = "white";
+  turn: PieceColor = "white";
   kings_in_check: KingsInCheck = new KingsInCheck();
-  status: string = "";
-  winner?: string;
+  status: GameStatus = "not started";
+  winner?: PieceColor;
   end_reason?: string;
   time: RemainingTime = { white: 0, black: 0 };
   moves: ChessMove[] = []; // Simplified - turn-based moves/premoves
@@ -88,7 +92,7 @@ export interface MoveMessage {
   type: "move";
   from: [number, number];
   to: [number, number];
-  promotion?: string;
+  promotion?: PieceType;
 }
 
 export interface ResetPremoveMessage {

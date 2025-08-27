@@ -1,4 +1,5 @@
 import { CSSProperties } from "react";
+import { PieceType, PieceColor } from "../obj/ChessGame";
 import BlackQueen from "../assets/black_queen.svg";
 import BlackRook from "../assets/black_rook.svg";
 import BlackBishop from "../assets/black_bishop.svg";
@@ -10,8 +11,8 @@ import WhiteKnight from "../assets/white_knight.svg";
 
 interface PromotionSelectorProps {
   isVisible: boolean;
-  playerColor: string;
-  onSelect: (pieceType: string) => void;
+  playerColor: PieceColor;
+  onSelect: (pieceType: PieceType) => void;
 }
 
 export function PromotionSelector({
@@ -21,9 +22,9 @@ export function PromotionSelector({
 }: PromotionSelectorProps) {
   if (!isVisible) return null;
 
-  const pieceTypes = ["queen", "rook", "bishop", "knight"];
+  const pieceTypes: PieceType[] = ["queen", "rook", "bishop", "knight"];
 
-  function getPieceSvg(type: string, color: string) {
+  function getPieceSvg(type: PieceType, color: PieceColor) {
     if (type === "queen" && color === "white") return WhiteQueen;
     if (type === "rook" && color === "white") return WhiteRook;
     if (type === "bishop" && color === "white") return WhiteBishop;

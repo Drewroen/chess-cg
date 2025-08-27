@@ -44,6 +44,8 @@ export const Piece = React.memo(function Piece({
     if (type === "rook" && color === "black") return BlackRook;
     if (type === "queen" && color === "black") return BlackQueen;
     if (type === "king" && color === "black") return BlackKing;
+    // Fallback for unknown piece types
+    return WhitePawn;
   }
 
   if (!type || !color) {
