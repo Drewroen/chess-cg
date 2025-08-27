@@ -13,7 +13,6 @@ from ..auth import (
     revoke_refresh_token,
     get_google_auth_url,
     FRONTEND_URL,
-    COOKIE_DOMAIN,
     verify_jwt_token,
     create_guest_tokens,
     refresh_guest_access_token,
