@@ -2,7 +2,7 @@ from uuid import UUID, uuid4
 from app.obj.game import Game, GameStatus
 from fastapi import WebSocket
 from ..auth import verify_jwt_token
-from ..database import db_manager
+from ..database import db_manager, get_db_session
 from ..svc.database_service import DatabaseService
 import time
 
@@ -274,7 +274,7 @@ class RoomManager:
         # Update ELO ratings for completed games before cleanup
         if room.game.status == GameStatus.COMPLETE:
             try:
-                async with db_manager.async_session_maker() as session:
+                async for session in get_db_session():
                     db_service = DatabaseService(session)
                     await self._update_elo_ratings(room, db_service)
             except Exception as e:
