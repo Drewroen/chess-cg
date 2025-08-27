@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "./Button";
 import { backendUrl } from "../config/environment";
+import styles from "./AuthCallback.module.css";
 
 export function AuthCallback() {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -70,45 +71,14 @@ export function AuthCallback() {
   }, []);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-        padding: "2rem",
-        fontFamily: "inherit",
-      }}
-    >
-      <div
-        style={{
-          background: "linear-gradient(145deg, #2a2a2a, #1e1e1e)",
-          borderRadius: "20px",
-          padding: "3rem",
-          boxShadow:
-            "0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
-          border: "1px solid #444",
-          minWidth: "400px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "2rem",
-          textAlign: "center",
-        }}
-      >
+    <div className={styles.container}>
+      <div className={styles.statusCard}>
         {status === "loading" && (
           <>
-            <div
-              style={{
-                color: "#ffffff",
-                fontSize: "1.5rem",
-                fontWeight: "600",
-              }}
-            >
+            <div className={`${styles.statusTitle} ${styles.loading}`}>
               Authenticating with Google...
             </div>
-            <div style={{ color: "#b0b0b0" }}>
+            <div className={styles.statusMessage}>
               Please wait while we verify your credentials.
             </div>
           </>
@@ -116,16 +86,10 @@ export function AuthCallback() {
 
         {status === "success" && (
           <>
-            <div
-              style={{
-                color: "#4CAF50",
-                fontSize: "1.5rem",
-                fontWeight: "600",
-              }}
-            >
+            <div className={`${styles.statusTitle} ${styles.success}`}>
               Login Successful!
             </div>
-            <div style={{ color: "#b0b0b0" }}>
+            <div className={styles.statusMessage}>
               {message || "Redirecting you back to the game..."}
             </div>
           </>
@@ -133,16 +97,10 @@ export function AuthCallback() {
 
         {status === "error" && (
           <>
-            <div
-              style={{
-                color: "#f44336",
-                fontSize: "1.5rem",
-                fontWeight: "600",
-              }}
-            >
+            <div className={`${styles.statusTitle} ${styles.error}`}>
               Authentication Error
             </div>
-            <div style={{ color: "#b0b0b0" }}>
+            <div className={styles.statusMessage}>
               {message || "There was a problem with the login process."}
             </div>
             <Button

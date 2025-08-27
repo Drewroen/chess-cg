@@ -1,0 +1,47 @@
+/* Main Container */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 2rem;
+  font-family: inherit;
+}
+
+/* Status Card */
+.statusCard {
+  background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+  border: 1px solid #444;
+  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  text-align: center;
+}
+
+/* Status Messages */
+.statusTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.statusTitle.loading {
+  color: #ffffff;
+}
+
+.statusTitle.success {
+  color: #4CAF50;
+}
+
+.statusTitle.error {
+  color: #f44336;
+}
+
+.statusMessage {
+  color: #b0b0b0;
+}

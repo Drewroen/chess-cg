@@ -8,6 +8,7 @@ import { UsernameEditModal } from "./components/UsernameEditModal";
 import { Button } from "./components/Button";
 import { useAuth } from "./hooks/useAuth";
 import "./App.css";
+import styles from "./App.module.css";
 
 // Custom hook for responsive design
 function useResponsive() {
@@ -52,14 +53,6 @@ export default function App() {
     }
   }
 
-  // Hover event handlers
-  function handleUsernameMouseOver(e: React.MouseEvent<HTMLSpanElement>) {
-    e.currentTarget.style.opacity = "0.8";
-  }
-
-  function handleUsernameMouseOut(e: React.MouseEvent<HTMLSpanElement>) {
-    e.currentTarget.style.opacity = "1";
-  }
 
 
   // Loading screen while checking authentication
@@ -69,84 +62,22 @@ export default function App() {
 
   // Landing page component
   const LandingPage = () => (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-        padding: isMobile ? "1rem" : "2rem",
-      }}
-    >
+    <div className={`${styles.landingContainer} ${isMobile ? styles.mobile : ''}`}>
       <>
-        <div
-          style={{
-            background: "linear-gradient(145deg, #2a2a2a, #1e1e1e)",
-            borderRadius: isMobile ? "12px" : "20px",
-            padding: isMobile ? "1.5rem" : "3rem",
-            boxShadow:
-              "0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
-            border: "1px solid #444",
-            minWidth: isMobile ? "280px" : "400px",
-            maxWidth: isMobile ? "90vw" : "500px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: isMobile ? "1.5rem" : "2.5rem",
-          }}
-        >
-          <div style={{ textAlign: "center" }}>
-            <h1
-              style={{
-                fontSize: isMobile ? "2.5rem" : "3.5rem",
-                fontWeight: "700",
-                margin: "0",
-                textShadow: "2px 2px 8px rgba(0,0,0,0.7)",
-                color: "#ffffff",
-                letterSpacing: isMobile ? "1px" : "2px",
-              }}
-            >
+        <div className={`${styles.mainCard} ${isMobile ? styles.mobile : ''}`}>
+          <div className={styles.headerSection}>
+            <h1 className={`${styles.title} ${isMobile ? styles.mobile : ''}`}>
               ReChess
             </h1>
-            <p
-              style={{
-                fontSize: isMobile ? "1rem" : "1.1rem",
-                margin: "1rem 0 0 0",
-                color: "#b0b0b0",
-                fontWeight: "300",
-              }}
-            >
+            <p className={`${styles.subtitle} ${isMobile ? styles.mobile : ''}`}>
               Chess, but redefined.
             </p>
             {user && (
-              <div
-                style={{
-                  marginTop: "1rem",
-                  padding: "0.75rem 1rem",
-                  background:
-                    user.user_type === "guest"
-                      ? "rgba(255, 193, 7, 0.1)"
-                      : "rgba(76, 175, 80, 0.1)",
-                  border:
-                    user.user_type === "guest"
-                      ? "1px solid rgba(255, 193, 7, 0.3)"
-                      : "1px solid rgba(76, 175, 80, 0.3)",
-                  borderRadius: "8px",
-                  color: user.user_type === "guest" ? "#FFC107" : "#4CAF50",
-                  fontSize: "0.9rem",
-                }}
-              >
+              <div className={`${styles.userInfo} ${user.user_type === "guest" ? styles.guest : styles.authenticated}`}>
                 Playing as{" "}
                 <span
                   onClick={handleUsernameClick}
-                  style={{
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                    fontWeight: "600",
-                  }}
-                  onMouseOver={handleUsernameMouseOver}
-                  onMouseOut={handleUsernameMouseOut}
+                  className={styles.usernameLink}
                 >
                   {user.username}
                 </span>
@@ -154,22 +85,8 @@ export default function App() {
             )}
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr",
-              gap: "1rem",
-              width: "100%",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr",
-                gap: "1rem",
-                width: "100%",
-              }}
-            >
+          <div className={styles.actionsGrid}>
+            <div className={styles.buttonContainer}>
               <Button
                 onClick={startGame}
                 variant="primary"
@@ -196,14 +113,7 @@ export default function App() {
                   Logout
                 </Button>
               ) : (
-                <div
-                  style={{
-                    padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
-                    fontSize: isMobile ? "0.9rem" : "1rem",
-                    color: "#888",
-                    textAlign: "center",
-                  }}
-                >
+                <div className={`${styles.loadingText} ${isMobile ? styles.mobile : ''}`}>
                   Loading user session...
                 </div>
               )}
