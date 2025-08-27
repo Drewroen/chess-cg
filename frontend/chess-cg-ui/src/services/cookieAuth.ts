@@ -1,7 +1,6 @@
 // Cookie-based authentication service for secure token handling
 
-const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
+import { backendUrl } from "../config/environment";
 
 export interface User {
   id: string;
@@ -28,7 +27,7 @@ export class CookieAuthService {
   // New method to create guest session
   async createGuestSession(): Promise<GuestUser | null> {
     try {
-      const response = await fetch(`${BACKEND_URL}/auth/guest-session`, {
+      const response = await fetch(`${backendUrl}/auth/guest-session`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -52,7 +51,7 @@ export class CookieAuthService {
   // Get current user information from backend
   async getCurrentUser(): Promise<User | null> {
     try {
-      let response = await fetch(`${BACKEND_URL}/auth/me`, {
+      let response = await fetch(`${backendUrl}/auth/me`, {
         method: "GET",
         credentials: "include", // Include cookies in request
         headers: {
@@ -62,7 +61,7 @@ export class CookieAuthService {
 
       if (!response.ok) {
         // Try to refresh tokens
-        const refreshResponse = await fetch(`${BACKEND_URL}/auth/refresh`, {
+        const refreshResponse = await fetch(`${backendUrl}/auth/refresh`, {
           method: "POST",
           credentials: "include",
           headers: {
@@ -76,7 +75,7 @@ export class CookieAuthService {
         }
 
         // Retry fetching the current user after refresh
-        response = await fetch(`${BACKEND_URL}/auth/me`, {
+        response = await fetch(`${backendUrl}/auth/me`, {
           method: "GET",
           credentials: "include",
           headers: {
@@ -95,7 +94,7 @@ export class CookieAuthService {
   // Update current user's username
   async updateUsername(newUsername: string): Promise<User | null> {
     try {
-      const response = await fetch(`${BACKEND_URL}/auth/me/username`, {
+      const response = await fetch(`${backendUrl}/auth/me/username`, {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -132,7 +131,7 @@ export class CookieAuthService {
   // Logout user by calling backend logout endpoint
   async logout(): Promise<void> {
     try {
-      await fetch(`${BACKEND_URL}/auth/logout`, {
+      await fetch(`${backendUrl}/auth/logout`, {
         method: "POST",
         credentials: "include", // Include cookies to clear them
         headers: {

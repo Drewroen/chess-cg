@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Button } from "./Button";
+import { backendUrl } from "../config/environment";
 
 export function AuthCallback() {
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -31,8 +33,6 @@ export function AuthCallback() {
         console.debug("Authorization code received, exchanging for token...");
 
         // Send the authorization code to the backend
-        const backendUrl =
-          process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
         const response = await fetch(
           `${backendUrl}/auth/callback?code=${encodeURIComponent(code)}`,
           {
@@ -145,23 +145,13 @@ export function AuthCallback() {
             <div style={{ color: "#b0b0b0" }}>
               {message || "There was a problem with the login process."}
             </div>
-            <button
+            <Button
               onClick={() => (window.location.href = "/")}
-              style={{
-                padding: "1rem 2rem",
-                fontSize: "1rem",
-                fontWeight: "500",
-                border: "2px solid #707070",
-                borderRadius: "8px",
-                background: "transparent",
-                color: "#d0d0d0",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                fontFamily: "inherit",
-              }}
+              variant="neutral"
+              style={{ color: "#d0d0d0", borderColor: "#707070" }}
             >
               Return to Home
-            </button>
+            </Button>
           </>
         )}
       </div>

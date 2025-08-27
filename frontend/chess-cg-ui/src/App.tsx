@@ -5,7 +5,8 @@ import { AuthCallback } from "./components/AuthCallback";
 import { AuthSuccess } from "./components/AuthSuccess";
 import { AuthError } from "./components/AuthError";
 import { UsernameEditModal } from "./components/UsernameEditModal";
-import { cookieAuthService, User, GuestUser } from "./services/cookieAuth";
+import { Button } from "./components/Button";
+import { useAuth } from "./hooks/useAuth";
 import "./App.css";
 
 // Custom hook for responsive design
@@ -26,64 +27,12 @@ function useResponsive() {
 
 export default function App() {
   const [showGame, setShowGame] = useState(false);
-  const [user, setUser] = useState<User | GuestUser | null>(null);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
   const isMobile = useResponsive();
-
-  // Check authentication status on app load
-  useEffect(() => {
-    const checkAuth = async () => {
-      const currentUser = await cookieAuthService.getCurrentUser();
-      setUser(currentUser);
-      setIsCheckingAuth(false);
-    };
-
-    checkAuth();
-
-    // Listen for auth state changes
-    const handleAuthStateChange = () => {
-      checkAuth();
-    };
-
-    window.addEventListener("authStateChanged", handleAuthStateChange);
-
-    return () => {
-      window.removeEventListener("authStateChanged", handleAuthStateChange);
-    };
-  }, []);
+  const { user, setUser, isCheckingAuth, login, logout } = useAuth();
 
   function startGame() {
     setShowGame(true);
-  }
-
-  // Function to handle Google OAuth login
-  async function handleLogin() {
-    try {
-      const backendUrl =
-        process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
-
-      // Get the Google auth URL from the backend
-      const response = await fetch(`${backendUrl}/auth/google`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to get auth URL: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      // Redirect to Google OAuth page
-      window.location.href = data.auth_url;
-    } catch (error) {
-      console.error("Error initiating Google login:", error);
-      alert("Failed to initiate Google login. Please try again.");
-    }
-  }
-
-
-  async function handleLogout() {
-    await cookieAuthService.logout();
-    setUser(null);
   }
 
   function handleUsernameClick() {
@@ -102,6 +51,16 @@ export default function App() {
       });
     }
   }
+
+  // Hover event handlers
+  function handleUsernameMouseOver(e: React.MouseEvent<HTMLSpanElement>) {
+    e.currentTarget.style.opacity = "0.8";
+  }
+
+  function handleUsernameMouseOut(e: React.MouseEvent<HTMLSpanElement>) {
+    e.currentTarget.style.opacity = "1";
+  }
+
 
   // Loading screen while checking authentication
   if (isCheckingAuth) {
@@ -186,12 +145,8 @@ export default function App() {
                     textDecoration: "underline",
                     fontWeight: "600",
                   }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.opacity = "0.8";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.opacity = "1";
-                  }}
+                  onMouseOver={handleUsernameMouseOver}
+                  onMouseOut={handleUsernameMouseOut}
                 >
                   {user.username}
                 </span>
@@ -215,92 +170,31 @@ export default function App() {
                 width: "100%",
               }}
             >
-              <button
+              <Button
                 onClick={startGame}
-                style={{
-                  padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
-                  fontSize: isMobile ? "1rem" : "1.1rem",
-                  fontWeight: "600",
-                  border: "none",
-                  borderRadius: "8px",
-                  background: "linear-gradient(145deg, #ffffff, #e0e0e0)",
-                  color: "#1a1a1a",
-                  cursor: "pointer",
-                  boxShadow:
-                    "0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)",
-                  transition: "all 0.2s ease",
-                  fontFamily: "inherit",
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                  e.currentTarget.style.boxShadow =
-                    "0 6px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.8)";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)";
-                }}
+                variant="primary"
+                isMobile={isMobile}
+                style={{ fontSize: isMobile ? "1rem" : "1.1rem" }}
               >
                 Play Now
-              </button>
+              </Button>
 
               {user?.user_type === "guest" ? (
-                <button
-                  onClick={handleLogin}
-                  style={{
-                    padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
-                    fontSize: isMobile ? "0.9rem" : "1rem",
-                    fontWeight: "500",
-                    border: "2px solid #4CAF50",
-                    borderRadius: "8px",
-                    background: "transparent",
-                    color: "#4CAF50",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    fontFamily: "inherit",
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "#4CAF50";
-                    e.currentTarget.style.color = "#ffffff";
-                    e.currentTarget.style.transform = "translateY(-1px)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#4CAF50";
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
+                <Button
+                  onClick={login}
+                  variant="secondary"
+                  isMobile={isMobile}
                 >
                   Login with Google
-                </button>
+                </Button>
               ) : user?.user_type === "authenticated" ? (
-                <button
-                  onClick={handleLogout}
-                  style={{
-                    padding: isMobile ? "0.875rem 1.5rem" : "1rem 2rem",
-                    fontSize: isMobile ? "0.9rem" : "1rem",
-                    fontWeight: "500",
-                    border: "2px solid #f44336",
-                    borderRadius: "8px",
-                    background: "transparent",
-                    color: "#f44336",
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    fontFamily: "inherit",
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "#f44336";
-                    e.currentTarget.style.color = "#ffffff";
-                    e.currentTarget.style.transform = "translateY(-1px)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#f44336";
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
+                <Button
+                  onClick={logout}
+                  variant="danger"
+                  isMobile={isMobile}
                 >
                   Logout
-                </button>
+                </Button>
               ) : (
                 <div
                   style={{

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cookieAuthService } from "../services/cookieAuth";
+import { Button } from "./Button";
 
 interface UsernameEditModalProps {
   isOpen: boolean;
@@ -147,72 +148,17 @@ export const UsernameEditModal: React.FC<UsernameEditModalProps> = ({
             width: "100%",
           }}
         >
-          <button
-            onClick={onClose}
-            style={{
-              padding: "1rem 2rem",
-              fontSize: "1rem",
-              fontWeight: "500",
-              border: "2px solid #505050",
-              borderRadius: "8px",
-              background: "transparent",
-              color: "#a0a0a0",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              fontFamily: "inherit",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "#505050";
-              e.currentTarget.style.color = "#f0f0f0";
-              e.currentTarget.style.borderColor = "#606060";
-              e.currentTarget.style.transform = "translateY(-1px)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#a0a0a0";
-              e.currentTarget.style.borderColor = "#505050";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-          >
+          <Button onClick={onClose} variant="neutral">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSave}
+            variant="primary"
+            isLoading={isLoading}
             disabled={isLoading}
-            style={{
-              padding: "1rem 2rem",
-              fontSize: "1rem",
-              fontWeight: "600",
-              border: "none",
-              borderRadius: "8px",
-              background: isLoading
-                ? "linear-gradient(145deg, #cccccc, #aaaaaa)"
-                : "linear-gradient(145deg, #ffffff, #e0e0e0)",
-              color: "#1a1a1a",
-              cursor: isLoading ? "not-allowed" : "pointer",
-              boxShadow:
-                "0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)",
-              transition: "all 0.2s ease",
-              fontFamily: "inherit",
-              opacity: isLoading ? 0.7 : 1,
-            }}
-            onMouseOver={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.transform = "translateY(-1px)";
-                e.currentTarget.style.boxShadow =
-                  "0 6px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.8)";
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow =
-                  "0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8)";
-              }
-            }}
           >
-            {isLoading ? "Saving..." : "Save"}
-          </button>
+            Save
+          </Button>
         </div>
       </div>
     </div>

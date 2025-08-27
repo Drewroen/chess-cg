@@ -1,4 +1,4 @@
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
+import { backendUrl } from "../config/environment";
 
 export interface GameInfo {
   room_id: string;
@@ -17,7 +17,7 @@ export interface GameInfo {
 }
 
 export async function fetchGameInfo(roomId: string): Promise<GameInfo> {
-  const response = await fetch(`${BACKEND_URL}/api/game/${roomId}/info`, {
+  const response = await fetch(`${backendUrl}/api/game/${roomId}/info`, {
     method: "GET",
     credentials: "include",
     headers: {

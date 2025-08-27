@@ -6,6 +6,7 @@ import { GamePanel } from "./GamePanel";
 import { DrawResignButtons } from "./DrawResignButtons";
 import { GameOver } from "./GameOver";
 import { fetchGameInfo, GameInfo } from "../services/gameService";
+import { websocketUrl, backendUrl } from "../config/environment";
 import styles from "./GameView.module.css";
 import utilities from "../styles/utilities.module.css";
 
@@ -14,11 +15,6 @@ type ConnectionStatusType =
   | "connected"
   | "disconnected"
   | "error";
-
-const WEBSOCKET_URL =
-  process.env.REACT_APP_WEBSOCKET_URL || "ws://127.0.0.1:8000/ws";
-const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
 
 // Custom hook for auth token management
@@ -33,7 +29,7 @@ function useAuthToken() {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(`${BACKEND_URL}/auth/ws-token`, {
+        const response = await fetch(`${backendUrl}/auth/ws-token`, {
           method: "GET",
           credentials: "include",
           headers: {
@@ -87,11 +83,11 @@ function useWebSocket(onMessage: (data: BoardEvent) => void) {
     }
 
     const connect = async () => {
-      let wsUrl = WEBSOCKET_URL;
+      let wsUrl = websocketUrl;
 
       // Add token to URL if available
       if (authToken) {
-        wsUrl = `${WEBSOCKET_URL}?token=${encodeURIComponent(authToken)}`;
+        wsUrl = `${websocketUrl}?token=${encodeURIComponent(authToken)}`;
       }
 
       const socket = new WebSocket(wsUrl);
