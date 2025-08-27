@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import styles from "./Timer.module.css";
+import { formatTime } from "../utils";
 
 interface TimerProps {
   initialTime: number;
@@ -69,17 +70,6 @@ export const Timer: React.FC<TimerProps> = ({
     };
   }, [isActive, timeRemaining]);
 
-  const formatTime = (seconds: number): string => {
-    const total = Math.max(0, seconds);
-    const hours = Math.floor(total / 3600);
-    const minutes = Math.floor((total % 3600) / 60);
-    const secs = total % 60;
-
-    const mm = minutes.toString().padStart(2, "0");
-    const ss = secs.toFixed(1).padStart(4, "0");
-
-    return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
-  };
 
   return (
     <div

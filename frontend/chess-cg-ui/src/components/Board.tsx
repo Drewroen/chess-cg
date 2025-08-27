@@ -7,6 +7,7 @@ import {
 } from "../obj/ChessGame";
 import { Tile } from "./Tile";
 import { PromotionSelector } from "./PromotionSelector";
+import { transformCoordinate } from "../utils";
 import styles from "./Board.module.css";
 
 export function Board({
@@ -233,8 +234,8 @@ export function Board({
               <Tile
                 type={square?.type}
                 color={square?.color}
-                x={playerColor === "white" ? i : 7 - i}
-                y={playerColor === "white" ? j : 7 - j}
+                x={transformCoordinate(i, playerColor)}
+                y={transformCoordinate(j, playerColor)}
                 isActive={activeSquare?.[0] === i && activeSquare?.[1] === j}
                 isPossibleMove={possibleMoves.some(
                   (move) => move[0] === i && move[1] === j

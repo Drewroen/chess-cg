@@ -7,6 +7,7 @@ import { DrawResignButtons } from "./DrawResignButtons";
 import { GameOver } from "./GameOver";
 import { fetchGameInfo, GameInfo } from "../services/gameService";
 import { websocketUrl, backendUrl } from "../config/environment";
+import { getOpponentInfo, getCurrentPlayerInfo, getTimerInitialTime, isTimerActive } from "../utils";
 import styles from "./GameView.module.css";
 import utilities from "../styles/utilities.module.css";
 
@@ -210,30 +211,15 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
                     }`}
                   />
                   <span className={styles.playerName}>
-                    {playerColor === "white"
-                      ? gameInfo?.players.black.name || "Opponent"
-                      : gameInfo?.players.white.name || "Opponent"}
+                    {getOpponentInfo(gameInfo, playerColor).name}
                   </span>
                   <span className={styles.playerElo}>
-                    {playerColor === "white"
-                      ? gameInfo?.players.black.elo || ""
-                      : gameInfo?.players.white.elo || ""}
+                    {getOpponentInfo(gameInfo, playerColor).elo}
                   </span>
                 </div>
                 <Timer
-                  initialTime={
-                    chessGame.status === "not started"
-                      ? 10
-                      : playerColor === "white"
-                      ? chessGame.time?.black || 0
-                      : chessGame.time?.white || 0
-                  }
-                  isActive={
-                    chessGame.status === "not started"
-                      ? chessGame.turn !== playerColor
-                      : chessGame.turn !== playerColor &&
-                        chessGame.status === "in progress"
-                  }
+                  initialTime={getTimerInitialTime(chessGame, playerColor, true)}
+                  isActive={isTimerActive(chessGame, playerColor, true)}
                   isMobile={true}
                 />
               </div>
@@ -254,30 +240,15 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
                 <div className={styles.playerDetails}>
                   <div className={`${styles.connectionDot} ${styles.connected}`} />
                   <span className={styles.playerName}>
-                    {playerColor === "white"
-                      ? gameInfo?.players.white.name || "You"
-                      : gameInfo?.players.black.name || "You"}
+                    {getCurrentPlayerInfo(gameInfo, playerColor).name}
                   </span>
                   <span className={styles.playerElo}>
-                    {playerColor === "white"
-                      ? gameInfo?.players.white.elo || ""
-                      : gameInfo?.players.black.elo || ""}
+                    {getCurrentPlayerInfo(gameInfo, playerColor).elo}
                   </span>
                 </div>
                 <Timer
-                  initialTime={
-                    chessGame.status === "not started"
-                      ? 10
-                      : playerColor === "white"
-                      ? chessGame.time?.white || 0
-                      : chessGame.time?.black || 0
-                  }
-                  isActive={
-                    chessGame.status === "not started"
-                      ? chessGame.turn === playerColor
-                      : chessGame.turn === playerColor &&
-                        chessGame.status === "in progress"
-                  }
+                  initialTime={getTimerInitialTime(chessGame, playerColor, false)}
+                  isActive={isTimerActive(chessGame, playerColor, false)}
                   isMobile={true}
                 />
               </div>

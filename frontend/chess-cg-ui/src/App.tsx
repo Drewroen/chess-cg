@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { GameView } from "./components/GameView";
 import { AuthCallback } from "./components/AuthCallback";
@@ -7,24 +7,10 @@ import { AuthError } from "./components/AuthError";
 import { UsernameEditModal } from "./components/UsernameEditModal";
 import { Button } from "./components/Button";
 import { useAuth } from "./hooks/useAuth";
+import { useResponsive } from "./utils";
 import "./App.css";
 import styles from "./App.module.css";
 
-// Custom hook for responsive design
-function useResponsive() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  return isMobile;
-}
 
 export default function App() {
   const [showGame, setShowGame] = useState(false);
