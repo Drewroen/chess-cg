@@ -1,5 +1,6 @@
 from enum import Enum
 from app.obj.chess import Board
+from app.svc.time_manager import TimeManager
 import time
 
 
@@ -30,6 +31,7 @@ class Game:
         self.white_premove = None
         self.black_premove = None
         self.completed_at = None
+        self.time_manager = TimeManager()
         self.white_draw_requested = False
         self.black_draw_requested = False
 
@@ -39,27 +41,9 @@ class Game:
 
         if self.status == GameStatus.IN_PROGRESS:
             current_time = time.time()
-            elapsed = current_time - self.last_move_time
-            if self.turn == "white":
-                self.white_time_left = round(self.white_time_left - elapsed, 2)
-                if self.white_time_left <= 0:
-                    print("The player has run out of time")
-                    self.white_time_left = 0
-                    self.status = GameStatus.COMPLETE
-                    self.completed_at = time.time()
-                    self.winner = "black"
-                    self.end_reason = "time"
-                    return False
-            else:
-                self.black_time_left = round(self.black_time_left - elapsed, 2)
-                if self.black_time_left <= 0:
-                    print("The player has run out of time")
-                    self.black_time_left = 0
-                    self.status = GameStatus.COMPLETE
-                    self.completed_at = time.time()
-                    self.winner = "white"
-                    self.end_reason = "time"
-                    return False
+            if not self.time_manager.update_player_time(self, current_time):
+                print("The player has run out of time")
+                return False
 
         if player_color == self.turn:
             # Regular move - it's the player's turn
@@ -135,15 +119,7 @@ class Game:
             # Update the current player's time if game is in progress
             if self.status == GameStatus.IN_PROGRESS:
                 current_time = time.time()
-                elapsed = current_time - self.last_move_time
-                if self.turn == "white":
-                    self.white_time_left = max(
-                        0, round(self.white_time_left - elapsed, 2)
-                    )
-                else:
-                    self.black_time_left = max(
-                        0, round(self.black_time_left - elapsed, 2)
-                    )
+                self.time_manager.update_player_time(self, current_time)
 
             self.status = GameStatus.COMPLETE
             self.completed_at = time.time()
@@ -165,15 +141,7 @@ class Game:
             # Update the current player's time if game is in progress
             if self.status == GameStatus.IN_PROGRESS:
                 current_time = time.time()
-                elapsed = current_time - self.last_move_time
-                if self.turn == "white":
-                    self.white_time_left = max(
-                        0, round(self.white_time_left - elapsed, 2)
-                    )
-                else:
-                    self.black_time_left = max(
-                        0, round(self.black_time_left - elapsed, 2)
-                    )
+                self.time_manager.update_player_time(self, current_time)
 
             self.status = GameStatus.COMPLETE
             self.completed_at = time.time()

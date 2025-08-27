@@ -241,6 +241,87 @@ class Board:
                 return piece.position
         return None
 
+    def _backup_board_state(self, position: Position, move: ChessMove):
+        """Backup the current board state before applying a move."""
+        from dataclasses import dataclass
+        from typing import Optional, Tuple
+        
+        @dataclass
+        class BoardState:
+            original_piece: object
+            initial_pos: Tuple[int, int]
+            target_pos: Tuple[int, int]
+            capture_pos: Tuple[int, int]
+            captured_piece: object
+            temp_piece: object
+            additional_state: Optional[Tuple] = None
+            
+        original_piece = self.piece_from_position(position)
+        initial_pos = position.coordinates()
+        target_pos = move.position_to.coordinates()
+        capture_pos = move.position_to_capture.coordinates()
+        
+        captured_piece = self.squares[capture_pos[0]][capture_pos[1]]
+        temp_piece = self.squares[target_pos[0]][target_pos[1]]
+        
+        return BoardState(
+            original_piece=original_piece,
+            initial_pos=initial_pos,
+            target_pos=target_pos,
+            capture_pos=capture_pos,
+            captured_piece=captured_piece,
+            temp_piece=temp_piece
+        )
+
+    def _apply_move_temporarily(self, move: ChessMove, board_state):
+        """Apply a move temporarily to the board."""
+        # Apply the move temporarily
+        self.squares[board_state.initial_pos[0]][board_state.initial_pos[1]] = None
+        self.squares[board_state.capture_pos[0]][board_state.capture_pos[1]] = None
+
+        # Handle transformation (promotion)
+        if move.transform_to:
+            self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = move.transform_to
+        else:
+            self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = board_state.original_piece
+            board_state.original_piece.position = Position(board_state.target_pos[0], board_state.target_pos[1])
+
+        # Handle additional moves (e.g., castling)
+        if move.additional_move:
+            board_state.additional_state = self._apply_additional_move(move.additional_move)
+
+    def _apply_additional_move(self, additional_move):
+        """Apply additional move (like castling rook movement) and return state for restoration."""
+        additional_from = additional_move[0].coordinates()
+        additional_to = additional_move[1].coordinates()
+        additional_piece = self.squares[additional_from[0]][additional_from[1]]
+        additional_temp = self.squares[additional_to[0]][additional_to[1]]
+
+        self.squares[additional_to[0]][additional_to[1]] = additional_piece
+        self.squares[additional_from[0]][additional_from[1]] = None
+        
+        return (additional_from, additional_to, additional_piece, additional_temp)
+
+    def _check_king_safety(self, color: str) -> bool:
+        """Check if the king is in check after the temporary move."""
+        king_position = self._find_king_position(color)
+        return king_position and self._is_square_attacked(king_position, color)
+
+    def _restore_board_state(self, board_state):
+        """Restore the board to its original state."""
+        # Restore original board state
+        self.squares[board_state.initial_pos[0]][board_state.initial_pos[1]] = board_state.original_piece
+        self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = board_state.temp_piece
+        self.squares[board_state.capture_pos[0]][board_state.capture_pos[1]] = board_state.captured_piece
+
+        board_state.original_piece.position = Position(board_state.initial_pos[0], board_state.initial_pos[1])
+
+        # Restore additional move if it was made
+        if board_state.additional_state:
+            additional_from, additional_to, additional_piece, additional_temp = board_state.additional_state
+            self.squares[additional_from[0]][additional_from[1]] = additional_piece
+            self.squares[additional_to[0]][additional_to[1]] = additional_temp
+
     def _is_king_in_check_after_move(self, position: Position, move: ChessMove) -> bool:
         """
         Check if the king would be in check after making the given move
@@ -249,71 +330,11 @@ class Board:
         if not original_piece:
             return False
 
-        # Store coordinates for readability
-        initial_pos = position.coordinates()
-        target_pos = move.position_to.coordinates()
-        capture_pos = move.position_to_capture.coordinates()
-
-        # Store original board state
-        captured_piece = self.squares[capture_pos[0]][capture_pos[1]]
-        temp_piece = self.squares[target_pos[0]][target_pos[1]]
-
-        # Track pieces list changes
-        transform_piece = None
-
-        # Apply the move temporarily
-        self.squares[initial_pos[0]][initial_pos[1]] = None
-        self.squares[capture_pos[0]][capture_pos[1]] = None
-
-        # Handle transformation (promotion)
-        if move.transform_to:
-            transform_piece = move.transform_to
-            self.squares[target_pos[0]][target_pos[1]] = transform_piece
-        else:
-            self.squares[target_pos[0]][target_pos[1]] = original_piece
-            original_piece.position = Position(target_pos[0], target_pos[1])
-
-        # Handle additional moves (e.g., castling)
-        additional_state = None
-        if move.additional_move:
-            additional_from = move.additional_move[0].coordinates()
-            additional_to = move.additional_move[1].coordinates()
-            additional_piece = self.squares[additional_from[0]][additional_from[1]]
-            additional_temp = self.squares[additional_to[0]][additional_to[1]]
-
-            self.squares[additional_to[0]][additional_to[1]] = additional_piece
-            self.squares[additional_from[0]][additional_from[1]] = None
-            additional_state = (
-                additional_from,
-                additional_to,
-                additional_piece,
-                additional_temp,
-            )
-
-        # Find king position after the move
-        king_position = self._find_king_position(original_piece.color)
-
-        # Check if king is in check
-        in_check = king_position and self._is_square_attacked(
-            king_position, original_piece.color
-        )
-
-        # Restore original board state
-        self.squares[initial_pos[0]][initial_pos[1]] = original_piece
-        self.squares[target_pos[0]][target_pos[1]] = temp_piece
-        self.squares[capture_pos[0]][capture_pos[1]] = captured_piece
-
-        original_piece.position = Position(initial_pos[0], initial_pos[1])
-
-        # Restore additional move if it was made
-        if additional_state:
-            additional_from, additional_to, additional_piece, additional_temp = (
-                additional_state
-            )
-            self.squares[additional_from[0]][additional_from[1]] = additional_piece
-            self.squares[additional_to[0]][additional_to[1]] = additional_temp
-
-        return bool(in_check)
+        board_state = self._backup_board_state(position, move)
+        self._apply_move_temporarily(move, board_state)
+        in_check = self._check_king_safety(board_state.original_piece.color)
+        self._restore_board_state(board_state)
+        return in_check
 
     def _is_square_attacked(self, position: Position, color: str) -> bool:
         """

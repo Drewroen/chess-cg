@@ -116,56 +116,16 @@ async def auth_callback(
         return RedirectResponse(url=redirect_url, status_code=302)
 
     try:
-        # Exchange authorization code for access token
-        token_data = await exchange_code_for_token(code)
-
-        # Get user information from Google
-        user_info = await get_user_info(token_data["access_token"])
-
-        # Get or create user in database
-        db_service = DatabaseService(db_session)
-        await get_or_create_user(user_info, db_service)
-
-        # Create both access and refresh tokens for our application
-        access_token, refresh_token = await create_tokens(user_info, token_data)
-
-        # Redirect to frontend without access token in URL
+        auth_result = await _process_oauth_callback(code, db_session)
         redirect_url = f"{FRONTEND_URL}/auth/success"
-
-        response = RedirectResponse(url=redirect_url, status_code=302)
-
-        # Set access token as an HTTP-only secure cookie
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,  # Prevents JavaScript access (XSS protection)
-            secure=True,  # Only send over HTTPS in production
-            samesite="none",  # CSRF protection
-            max_age=3600,  # 1 hour in seconds
-            path="/",  # Cookie available for entire domain
-        )
-
-        # Set refresh token as an HTTP-only secure cookie
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,  # Prevents JavaScript access (XSS protection)
-            secure=True,  # Only send over HTTPS in production
-            samesite="none",  # CSRF protection
-            max_age=30 * 24 * 60 * 60,  # 30 days in seconds
-            path="/",  # Cookie available for entire domain
-        )
-
-        return response
+        return _create_auth_response(redirect_url, auth_result["access_token"], auth_result["refresh_token"])
 
     except GoogleOAuthError as e:
         error_msg = f"OAuth authentication failed: {str(e)}"
-        redirect_url = f"{FRONTEND_URL}/auth/error?message={error_msg}"
-        return RedirectResponse(url=redirect_url, status_code=302)
+        return _create_error_response(error_msg)
     except Exception as e:
         error_msg = f"Unexpected error during authentication: {str(e)}"
-        redirect_url = f"{FRONTEND_URL}/auth/error?message={error_msg}"
-        return RedirectResponse(url=redirect_url, status_code=302)
+        return _create_error_response(error_msg)
 
 
 @router.post("/token", response_model=TokenResponse)
@@ -176,30 +136,19 @@ async def get_token_from_code(
     """Exchange authorization code for tokens (JSON response)"""
 
     try:
-        # Exchange authorization code for access token
-        token_data = await exchange_code_for_token(authorization_code)
-
-        # Get user information from Google
-        user_info = await get_user_info(token_data["access_token"])
-
-        # Get or create user in database
-        db_service = DatabaseService(db_session)
-        user_data = await get_or_create_user(user_info, db_service)
-
-        # Create both access and refresh tokens for our application
-        access_token, refresh_token = await create_tokens(user_info, token_data)
+        auth_result = await _process_oauth_callback(authorization_code, db_session)
 
         return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
+            access_token=auth_result["access_token"],
+            refresh_token=auth_result["refresh_token"],
             token_type="bearer",
             expires_in=3600,  # 1 hour in seconds
             user=UserResponse(
-                id=user_data["id"],
-                email=user_data["email"],
-                name=user_data["name"],
+                id=auth_result["user_data"]["id"],
+                email=auth_result["user_data"]["email"],
+                name=auth_result["user_data"]["name"],
                 user_type="authenticated",
-                username=user_data["username"],
+                username=auth_result["user_data"]["username"],
             ),
         )
 
@@ -509,3 +458,62 @@ async def update_usernamename(
         user_type=user.user_type,
         username=user.username,
     )
+
+
+# Helper methods for authentication flows
+async def _process_oauth_callback(code: str, db_session: AsyncSession):
+    """Process OAuth callback by exchanging code for token and getting user info."""
+    # Exchange authorization code for access token
+    token_data = await exchange_code_for_token(code)
+    
+    # Get user information from Google
+    user_info = await get_user_info(token_data["access_token"])
+    
+    # Get or create user in database
+    db_service = DatabaseService(db_session)
+    user_data = await get_or_create_user(user_info, db_service)
+    
+    # Create both access and refresh tokens for our application
+    access_token, refresh_token = await create_tokens(user_info, token_data)
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user_data": user_data,
+        "user_info": user_info
+    }
+
+
+def _create_auth_response(redirect_url: str, access_token: str, refresh_token: str):
+    """Create authentication response with proper cookie settings."""
+    response = RedirectResponse(url=redirect_url, status_code=302)
+    
+    # Set access token as an HTTP-only secure cookie
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,  # Prevents JavaScript access (XSS protection)
+        secure=True,  # Only send over HTTPS in production
+        samesite="none",  # CSRF protection
+        max_age=3600,  # 1 hour in seconds
+        path="/",  # Cookie available for entire domain
+    )
+    
+    # Set refresh token as an HTTP-only secure cookie
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,  # Prevents JavaScript access (XSS protection)
+        secure=True,  # Only send over HTTPS in production
+        samesite="none",  # CSRF protection
+        max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+        path="/",  # Cookie available for entire domain
+    )
+    
+    return response
+
+
+def _create_error_response(error_message: str):
+    """Create error response with redirect to frontend error page."""
+    redirect_url = f"{FRONTEND_URL}/auth/error?message={error_message}"
+    return RedirectResponse(url=redirect_url, status_code=302)
