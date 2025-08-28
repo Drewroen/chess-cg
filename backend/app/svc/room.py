@@ -157,33 +157,32 @@ class RoomManager:
         self.room_service = room_service
         self.manager = manager
 
-    async def get_user_elo(self, user_id: str) -> int:
-        """Get the ELO rating for a user."""
+    async def get_user_info(self, user_id: str) -> dict:
+        """Get user info (ELO and username) in a single query."""
         if not user_id or user_id.startswith("guest_"):
-            return None
+            return {"elo": None, "username": "Guest"}
 
         try:
             async for session in get_db_session():
                 db_service = DatabaseService(session)
                 user = await db_service.get_user_by_id(user_id)
-                return user.elo if user else None
+                return {
+                    "elo": user.elo if user else None,
+                    "username": user.username if user and user.username else "Guest"
+                }
         except Exception as e:
-            logging.error(f"Error fetching ELO for user {user_id}: {e}")
-            return None
+            logging.error(f"Error fetching user info for user {user_id}: {e}")
+            return {"elo": None, "username": "Guest"}
+
+    async def get_user_elo(self, user_id: str) -> int:
+        """Get the ELO rating for a user."""
+        user_info = await self.get_user_info(user_id)
+        return user_info["elo"]
 
     async def get_user_username(self, user_id: str) -> str:
         """Get the username for a user."""
-        if not user_id or user_id.startswith("guest_"):
-            return "Guest"
-
-        try:
-            async for session in get_db_session():
-                db_service = DatabaseService(session)
-                user = await db_service.get_user_by_id(user_id)
-                return user.username if user and user.username else "Guest"
-        except Exception as e:
-            logging.error(f"Error fetching username for user {user_id}: {e}")
-            return "Guest"
+        user_info = await self.get_user_info(user_id)
+        return user_info["username"]
 
     def calculate_elo_change(
         self, player_rating: int, opponent_rating: int, result: str
@@ -229,8 +228,10 @@ class RoomManager:
 
         try:
             # Get current ratings
-            white_elo = await self.get_user_elo(room.white) or 1200  # Default rating
-            black_elo = await self.get_user_elo(room.black) or 1200  # Default rating
+            white_info = await self.get_user_info(room.white)
+            black_info = await self.get_user_info(room.black)
+            white_elo = white_info["elo"] or 1200  # Default rating
+            black_elo = black_info["elo"] or 1200  # Default rating
 
             # Determine results for each player
             if room.game.winner == "white":

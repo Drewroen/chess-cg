@@ -16,11 +16,13 @@ async def get_game_info(room_id: UUID):
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     
-    # Get ELO ratings and usernames for both players
-    white_elo = await room_manager.get_user_elo(room.white)
-    black_elo = await room_manager.get_user_elo(room.black)
-    white_username = await room_manager.get_user_username(room.white)
-    black_username = await room_manager.get_user_username(room.black)
+    # Get user info for both players in optimized queries
+    white_info = await room_manager.get_user_info(room.white)
+    black_info = await room_manager.get_user_info(room.black)
+    white_elo = white_info["elo"]
+    black_elo = black_info["elo"]
+    white_username = white_info["username"]
+    black_username = black_info["username"]
     
     return {
         "room_id": str(room.id),
