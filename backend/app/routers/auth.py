@@ -3,6 +3,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 import random
+import logging
 
 from ..auth import (
     GoogleOAuthError,
@@ -356,7 +357,7 @@ async def create_guest_session(
 
                 return response
         except Exception as e:
-            print(f"Failed to refresh existing guest session: {e}")
+            logging.error(f"Failed to refresh existing guest session: {e}")
             # Continue to create new session below
 
     # Create new guest session only if no existing valid session found
@@ -375,7 +376,7 @@ async def create_guest_session(
             if not existing_user:
                 await db_service.create_guest_user(guest_id, guest_name)
         except Exception as e:
-            print(f"Failed to store guest user {guest_id}: {e}")
+            logging.error(f"Failed to store guest user {guest_id}: {e}")
 
     response = JSONResponse(
         content={"message": "Guest session created", "user_type": "guest"}

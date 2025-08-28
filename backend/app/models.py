@@ -23,17 +23,6 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
-class RefreshTokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int = 3600
-
-
-class AuthCallbackResponse(BaseModel):
-    success: bool
-    redirect_url: str
-    message: Optional[str] = None
-
 
 class ErrorResponse(BaseModel):
     error: str

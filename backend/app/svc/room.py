@@ -2,9 +2,10 @@ from uuid import UUID, uuid4
 from app.obj.game import Game, GameStatus
 from fastapi import WebSocket
 from ..auth import verify_jwt_token
-from ..database import db_manager, get_db_session
+from ..database import get_db_session
 from ..svc.database_service import DatabaseService
 import time
+import logging
 
 
 class WebSocketConnection:
@@ -47,9 +48,9 @@ class ConnectionManager:
 
         return connection.id
 
-    def websocket(self, connection_id) -> bool:
-        """Return websocket for a given connection ID"""
-        return self.connection_id_to_user_id[connection_id]
+    def get_user_id_for_connection(self, connection_id) -> str:
+        """Return user_id for a given connection ID"""
+        return self.connection_id_to_user_id.get(connection_id)
 
 
 class Room:
@@ -112,7 +113,7 @@ class RoomService:
         # Save game to database if it was completed or aborted
         if room.game.status in [GameStatus.COMPLETE, GameStatus.ABORTED]:
             try:
-                async with db_manager.async_session_maker() as session:
+                async for session in get_db_session():
                     db_service = DatabaseService(session)
                     winner = (
                         room.game.winner
@@ -137,9 +138,9 @@ class RoomService:
                         if room.game.status == GameStatus.COMPLETE
                         else "aborted"
                     )
-                    print(f"Saved {status_text} game {room_id} to database")
+                    logging.info(f"Saved {status_text} game {room_id} to database")
             except Exception as e:
-                print(f"Error saving game {room_id} to database: {e}")
+                logging.error(f"Error saving game {room_id} to database: {e}")
 
         # Clean up player mappings
         if room.white in self.player_to_room_map:
@@ -148,7 +149,7 @@ class RoomService:
             del self.player_to_room_map[room.black]
         # Remove the room
         del self.rooms[room_id]
-        print(f"Cleaned up completed game {room_id}")
+        logging.info(f"Cleaned up completed game {room_id}")
 
 
 class RoomManager:
@@ -162,12 +163,12 @@ class RoomManager:
             return None
 
         try:
-            async with db_manager.async_session_maker() as session:
+            async for session in get_db_session():
                 db_service = DatabaseService(session)
                 user = await db_service.get_user_by_id(user_id)
                 return user.elo if user else None
         except Exception as e:
-            print(f"Error fetching ELO for user {user_id}: {e}")
+            logging.error(f"Error fetching ELO for user {user_id}: {e}")
             return None
 
     async def get_user_username(self, user_id: str) -> str:
@@ -176,12 +177,12 @@ class RoomManager:
             return "Guest"
 
         try:
-            async with db_manager.async_session_maker() as session:
+            async for session in get_db_session():
                 db_service = DatabaseService(session)
                 user = await db_service.get_user_by_id(user_id)
                 return user.username if user and user.username else "Guest"
         except Exception as e:
-            print(f"Error fetching username for user {user_id}: {e}")
+            logging.error(f"Error fetching username for user {user_id}: {e}")
             return "Guest"
 
     def calculate_elo_change(
@@ -223,7 +224,7 @@ class RoomManager:
         """Update ELO ratings for both players after a completed game."""
         # Skip rating updates for guest players
         if room.white.startswith("guest_") or room.black.startswith("guest_"):
-            print(f"Skipping ELO updates for guest players in room {room.id}")
+            logging.info(f"Skipping ELO updates for guest players in room {room.id}")
             return
 
         try:
@@ -242,7 +243,7 @@ class RoomManager:
                 white_result = "draw"
                 black_result = "draw"
             else:
-                print(f"Unknown game winner: {room.game.winner}, skipping ELO updates")
+                logging.warning(f"Unknown game winner: {room.game.winner}, skipping ELO updates")
                 return
 
             # Calculate rating changes
@@ -256,13 +257,13 @@ class RoomManager:
             await db_service.update_user_elo(room.white, new_white_elo)
             await db_service.update_user_elo(room.black, new_black_elo)
 
-            print(
+            logging.info(
                 f"ELO updated - White: {white_elo} → {new_white_elo} ({white_change:+d}), "
                 f"Black: {black_elo} → {new_black_elo} ({black_change:+d})"
             )
 
         except Exception as e:
-            print(f"Error updating ELO ratings for room {room.id}: {e}")
+            logging.error(f"Error updating ELO ratings for room {room.id}: {e}")
 
     async def cleanup_room_with_elo_update(self, room_id: UUID):
         """Clean up a room and update ELO ratings if the game was completed."""
@@ -278,7 +279,7 @@ class RoomManager:
                     db_service = DatabaseService(session)
                     await self._update_elo_ratings(room, db_service)
             except Exception as e:
-                print(f"Error updating ELO ratings for room {room_id}: {e}")
+                logging.error(f"Error updating ELO ratings for room {room_id}: {e}")
         
         # Now clean up the room
         await self.room_service.cleanup_room(room_id)
@@ -369,11 +370,11 @@ class RoomManager:
 
             connections = self.manager.user_id_to_connection_map.get(player_name, [])
             for connection in connections:
-                if connection and self.manager.websocket(connection.id) is not None:
+                if connection and self.manager.get_user_id_for_connection(connection.id) is not None:
                     try:
                         await connection.websocket.send_json(state)
                     except Exception as e:
-                        print(f"Failed to send to {player_name}: {e}")
+                        logging.error(f"Failed to send to {player_name}: {e}")
 
     def _get_current_time_remaining(self, game, player_color):
         """Calculate the current time remaining for a player, accounting for elapsed time since last move."""

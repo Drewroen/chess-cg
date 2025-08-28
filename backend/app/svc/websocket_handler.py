@@ -1,6 +1,7 @@
 """WebSocket message handler for chess game messages."""
 
 from typing import Dict, Callable, Any
+import logging
 
 from app.svc.room import RoomManager
 from ..obj.game import GameStatus
@@ -36,7 +37,7 @@ class WebSocketMessageHandler:
         if handler:
             await handler(data, room, player_color)
         else:
-            print(f"Unknown message type: {message_type}")
+            logging.warning(f"Unknown message type: {message_type}")
 
     async def _handle_move(self, data: Dict[str, Any], room, player_color: str) -> None:
         """Handle move message."""

@@ -8,6 +8,7 @@ import uvicorn
 import asyncio
 import time
 import os
+import logging
 from dotenv import load_dotenv
 
 from .routers import health, auth, websocket, debug, game
@@ -40,7 +41,7 @@ async def check_game_timers():
                     if time_manager.check_timeout(room.game, current_time):
                         # Update game state to mark timeout
                         time_manager.update_player_time(room.game, current_time)
-                        print(f"{room.game.turn.capitalize()} player has run out of time in room {room_id}")
+                        logging.info(f"{room.game.turn.capitalize()} player has run out of time in room {room_id}")
                         room.game.end_reason = "time"
                         await room_manager.emit_game_state_to_room(room_id)
                         await room_manager.cleanup_room_with_elo_update(room_id)
@@ -54,14 +55,14 @@ async def check_game_timers():
                     if room.game.turn == "white":
                         # White hasn't moved yet, check time since game creation
                         if elapsed_since_creation >= GAME_START_TIMEOUT_SECONDS:
-                            print(
+                            logging.info(
                                 f"White player timed out in room {room_id} (no first move)"
                             )
                             should_abort = True
                     else:
                         # Black's turn, check time since white's move
                         if elapsed_since_last_move >= GAME_START_TIMEOUT_SECONDS:
-                            print(
+                            logging.info(
                                 f"Black player timed out in room {room_id} (no response)"
                             )
                             should_abort = True
@@ -101,7 +102,7 @@ async def check_game_timers():
                         await room_manager.emit_game_state_to_room(room_id)
                         await room_manager.room_service.cleanup_room(room_id)
         except Exception as e:
-            print(f"Error in timer check task: {e}")
+            logging.error(f"Error in timer check task: {e}")
 
         await asyncio.sleep(1)  # Check every 1 second
 
@@ -115,11 +116,11 @@ async def cleanup_expired_tokens():
             )  # existing function
             expired_guest = cleanup_expired_guest_tokens()  # new function
             if expired_refresh > 0 or expired_guest > 0:
-                print(
+                logging.info(
                     f"Cleaned up {expired_refresh} expired refresh tokens and {expired_guest} expired guest tokens"
                 )
         except Exception as e:
-            print(f"Error in token cleanup task: {e}")
+            logging.error(f"Error in token cleanup task: {e}")
 
         await asyncio.sleep(3600)  # Run every hour
 

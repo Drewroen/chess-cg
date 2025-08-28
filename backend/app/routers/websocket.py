@@ -1,6 +1,7 @@
 from app.svc.room import RoomManager
 from app.svc.websocket_handler import WebSocketMessageHandler
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import logging
 
 router = APIRouter()
 
@@ -27,7 +28,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                 await message_handler.handle_message(data, room, player_color)
 
     except WebSocketDisconnect:
-        print(f"WebSocket disconnected for player {user_id}")
+        logging.info(f"WebSocket disconnected for player {user_id}")
         await room_manager.disconnect(connection_id)
         room = room_manager.room_service.find_player_room(user_id)
         if room:

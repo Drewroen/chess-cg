@@ -2,6 +2,7 @@ from enum import Enum
 from app.obj.chess import Board
 from app.svc.time_manager import TimeManager
 import time
+import logging
 
 
 class GameStatus(Enum):
@@ -42,7 +43,7 @@ class Game:
         if self.status == GameStatus.IN_PROGRESS:
             current_time = time.time()
             if not self.time_manager.update_player_time(self, current_time):
-                print("The player has run out of time")
+                logging.warning("The player has run out of time")
                 return False
 
         if player_color == self.turn:
@@ -114,17 +115,21 @@ class Game:
             # Recursively call move with the premove as a regular move
             self.move(start, end, self.turn, promote_to)
 
+    def _finalize_game_end(self, winner: str, end_reason: str):
+        """Helper method to update time and complete the game"""
+        if self.status == GameStatus.IN_PROGRESS:
+            current_time = time.time()
+            self.time_manager.update_player_time(self, current_time)
+        
+        self.status = GameStatus.COMPLETE
+        self.completed_at = time.time()
+        self.winner = winner
+        self.end_reason = end_reason
+
     def mark_player_forfeit(self, color):
         if self.status != GameStatus.COMPLETE:
-            # Update the current player's time if game is in progress
-            if self.status == GameStatus.IN_PROGRESS:
-                current_time = time.time()
-                self.time_manager.update_player_time(self, current_time)
-
-            self.status = GameStatus.COMPLETE
-            self.completed_at = time.time()
-            self.winner = "black" if color == "white" else "white"
-            self.end_reason = "resignation"
+            winner = "black" if color == "white" else "white"
+            self._finalize_game_end(winner, "resignation")
 
     def request_draw(self, color):
         """Request a draw from the specified player"""
@@ -138,15 +143,7 @@ class Game:
 
         # If both players have requested a draw, end the game in a draw
         if self.white_draw_requested and self.black_draw_requested:
-            # Update the current player's time if game is in progress
-            if self.status == GameStatus.IN_PROGRESS:
-                current_time = time.time()
-                self.time_manager.update_player_time(self, current_time)
-
-            self.status = GameStatus.COMPLETE
-            self.completed_at = time.time()
-            self.winner = "draw"
-            self.end_reason = "draw_agreement"
+            self._finalize_game_end("draw", "draw_agreement")
             return True
 
         return False
