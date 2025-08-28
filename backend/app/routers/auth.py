@@ -29,6 +29,20 @@ from ..svc.database_service import DatabaseService
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
+# Rate limiter will be set from main.py
+limiter = None
+
+
+def get_limiter():
+    """Get the limiter instance, creating a default one if needed"""
+    global limiter
+    if limiter is None:
+        from slowapi import Limiter
+        from slowapi.util import get_remote_address
+
+        limiter = Limiter(key_func=get_remote_address)
+    return limiter
+
 
 async def generate_unique_username(db_service: DatabaseService) -> str:
     """Generate a unique username in format user_12345678"""
@@ -84,7 +98,8 @@ async def get_or_create_user(user_info: dict, db_service: DatabaseService) -> di
 
 
 @router.get("/google")
-async def google_auth():
+@get_limiter().limit("10/minute")
+async def google_auth(request: Request):
     """Initiate Google OAuth flow"""
     try:
         auth_url = get_google_auth_url()
@@ -96,7 +111,9 @@ async def google_auth():
 
 
 @router.get("/callback")
+@get_limiter().limit("5/minute")
 async def auth_callback(
+    request: Request,
     code: Optional[str] = Query(None, description="Authorization code from Google"),
     error: Optional[str] = Query(None, description="Error from Google OAuth"),
     state: Optional[str] = Query(None, description="State parameter"),
@@ -119,7 +136,9 @@ async def auth_callback(
     try:
         auth_result = await _process_oauth_callback(code, db_session)
         redirect_url = f"{FRONTEND_URL}/auth/success"
-        return _create_auth_response(redirect_url, auth_result["access_token"], auth_result["refresh_token"])
+        return _create_auth_response(
+            redirect_url, auth_result["access_token"], auth_result["refresh_token"]
+        )
 
     except GoogleOAuthError as e:
         error_msg = f"OAuth authentication failed: {str(e)}"
@@ -130,7 +149,9 @@ async def auth_callback(
 
 
 @router.post("/token", response_model=TokenResponse)
+@get_limiter().limit("5/minute")
 async def get_token_from_code(
+    request: Request,
     authorization_code: str,
     db_session: AsyncSession = Depends(get_db_session),
 ):
@@ -164,6 +185,7 @@ async def get_token_from_code(
 
 
 @router.get("/me", response_model=UserResponse)
+@get_limiter().limit("60/minute")
 async def get_current_user(
     request: Request, db_session: AsyncSession = Depends(get_db_session)
 ):
@@ -213,6 +235,7 @@ async def get_current_user(
 
 
 @router.post("/refresh")
+@get_limiter().limit("10/minute")
 async def refresh_token(request: Request, refresh_request: RefreshTokenRequest = None):
     """Refresh access token using refresh token"""
 
@@ -277,6 +300,7 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
 
 
 @router.get("/ws-token")
+@get_limiter().limit("10/minute")
 async def get_websocket_token(request: Request):
     """Get access token for WebSocket connections"""
 
@@ -294,6 +318,7 @@ async def get_websocket_token(request: Request):
 
 
 @router.post("/logout")
+@get_limiter().limit("10/minute")
 async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
     """Logout user by revoking refresh token"""
 
@@ -326,6 +351,7 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
 
 
 @router.post("/guest-session")
+@get_limiter().limit("3/minute")
 async def create_guest_session(
     request: Request, db_session: AsyncSession = Depends(get_db_session)
 ):
@@ -408,6 +434,7 @@ async def create_guest_session(
 
 
 @router.patch("/me/username", response_model=UserResponse)
+@get_limiter().limit("3/minute")
 async def update_usernamename(
     request: Request,
     update_request: UpdateUsernameRequest,
@@ -466,29 +493,29 @@ async def _process_oauth_callback(code: str, db_session: AsyncSession):
     """Process OAuth callback by exchanging code for token and getting user info."""
     # Exchange authorization code for access token
     token_data = await exchange_code_for_token(code)
-    
+
     # Get user information from Google
     user_info = await get_user_info(token_data["access_token"])
-    
+
     # Get or create user in database
     db_service = DatabaseService(db_session)
     user_data = await get_or_create_user(user_info, db_service)
-    
+
     # Create both access and refresh tokens for our application
     access_token, refresh_token = await create_tokens(user_info, token_data)
-    
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "user_data": user_data,
-        "user_info": user_info
+        "user_info": user_info,
     }
 
 
 def _create_auth_response(redirect_url: str, access_token: str, refresh_token: str):
     """Create authentication response with proper cookie settings."""
     response = RedirectResponse(url=redirect_url, status_code=302)
-    
+
     # Set access token as an HTTP-only secure cookie
     response.set_cookie(
         key="access_token",
@@ -499,7 +526,7 @@ def _create_auth_response(redirect_url: str, access_token: str, refresh_token: s
         max_age=3600,  # 1 hour in seconds
         path="/",  # Cookie available for entire domain
     )
-    
+
     # Set refresh token as an HTTP-only secure cookie
     response.set_cookie(
         key="refresh_token",
@@ -510,7 +537,7 @@ def _create_auth_response(redirect_url: str, access_token: str, refresh_token: s
         max_age=30 * 24 * 60 * 60,  # 30 days in seconds
         path="/",  # Cookie available for entire domain
     )
-    
+
     return response
 
 

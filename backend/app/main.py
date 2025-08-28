@@ -4,6 +4,9 @@ from app.svc.websocket_handler import WebSocketMessageHandler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import uvicorn
 import asyncio
 import time
@@ -23,11 +26,15 @@ room_manager = RoomManager(ConnectionManager(), RoomService())
 time_manager = TimeManager()
 message_handler = WebSocketMessageHandler(room_manager)
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Set up shared services in routers
 websocket.room_manager = room_manager
 websocket.message_handler = message_handler
 debug.room_manager = room_manager
 game.room_manager = room_manager
+auth.limiter = limiter
 
 
 async def check_game_timers():
@@ -160,6 +167,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Add rate limiter to app state for global access
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS middleware configuration
 app.add_middleware(
