@@ -148,6 +148,10 @@ class Game:
 
         return False
 
+    def mark_timeout(self, winner: str):
+        """Mark the game as complete due to timeout"""
+        self._finalize_game_end(winner, "time")
+
     def reset_draw_requests(self):
         """Reset all draw requests (called when a move is made)"""
         self.white_draw_requested = False
