@@ -34,6 +34,7 @@ export class ChessGame {
   id: string = ""; // Room ID for fetching game info
   playerId: string = ""; // Player ID to identify which player this is
   drawRequests: { white: boolean; black: boolean } = { white: false, black: false };
+  lastMove: ChessMove | null = null; // Last move made in the game
 }
 export class ChessPlayers {
   white: { id: number; name: string; connected: boolean; elo?: number } = {
@@ -86,6 +87,7 @@ export class BoardEvent {
   id: string = ""; // Room ID for fetching game info
   player_id: string = ""; // Player ID to identify which player this is
   draw_requests: { white: boolean; black: boolean } = { white: false, black: false };
+  last_move: ChessMove | null = null; // Last move made in the game
 }
 
 export interface MoveMessage {

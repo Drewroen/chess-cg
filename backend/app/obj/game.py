@@ -35,6 +35,7 @@ class Game:
         self.time_manager = TimeManager()
         self.white_draw_requested = False
         self.black_draw_requested = False
+        self.last_move = None
 
     def move(self, start, end, player_color, promote_to=None):
         if self.status == GameStatus.COMPLETE:
@@ -58,6 +59,9 @@ class Game:
             return False
 
         if moved:
+            # Store the last move from the board
+            self.last_move = self.board.last_move
+            
             # Reset draw requests when a move is made
             self.reset_draw_requests()
 
@@ -113,7 +117,10 @@ class Game:
                         0, self.black_time_left - PREMOVE_PENALTY_IN_SECONDS
                     )
             # Recursively call move with the premove as a regular move
-            self.move(start, end, self.turn, promote_to)
+            moved = self.move(start, end, self.turn, promote_to)
+            # Update last_move after premove execution
+            if moved:
+                self.last_move = self.board.last_move
 
     def _finalize_game_end(self, winner: str, end_reason: str):
         """Helper method to update time and complete the game"""

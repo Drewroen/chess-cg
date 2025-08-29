@@ -339,6 +339,7 @@ class RoomManager:
                     "white": room.game.white_draw_requested,
                     "black": room.game.black_draw_requested,
                 },
+                "last_move": room.game.last_move.to_dict() if room.game.last_move else None,
             }
         for player_name in [room.white, room.black]:
             state["id"] = str(room.id)  # Room ID for fetching game info

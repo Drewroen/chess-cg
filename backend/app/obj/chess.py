@@ -111,14 +111,12 @@ class Board:
         if piece is None or piece.color != turn:
             return False  # Invalid move if no piece or wrong color's turn
 
-        first_position = position_from.notation()
-        second_position = position_to.notation()
         available_moves: list[ChessMove] = self.get_available_moves(
             position_from, ignore_check=False, ignore_illegal_moves=False
         )
         move: ChessMove = next(
             filter(
-                lambda move: move.position_to.notation() == second_position
+                lambda move: move.position_to.notation() == position_to.notation()
                 and (
                     (move.transform_to is None and promote_to is None)
                     or move.transform_to.type == promote_to
@@ -147,7 +145,7 @@ class Board:
                 piece.position = Position(position_to[0], position_to[1])
             self.squares[initial_position[0]][initial_position[1]] = None
             piece.mark_moved()
-            self.last_move = (first_position, second_position)
+            self.last_move = move
 
             if move.additional_move:
                 additional_piece = self.piece_from_position(move.additional_move[0])
@@ -524,7 +522,8 @@ class Board:
         expected_start = self.chess_notation_from_index(start_row, pawn_col)
         expected_end = self.chess_notation_from_index(end_row, pawn_col)
 
-        return self.last_move == (expected_start, expected_end)
+        return (self.last_move.position_from.notation() == expected_start and 
+                self.last_move.position_to.notation() == expected_end)
 
     def _create_promotion_moves(
         self, position: Position, target_row: int, target_col: int, color: str

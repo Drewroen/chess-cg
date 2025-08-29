@@ -258,6 +258,11 @@ export function Board({
                   ((premove.from[0] === i && premove.from[1] === j) ||
                     (premove.to[0] === i && premove.to[1] === j))
                 }
+                isLastMove={
+                  !!game.lastMove &&
+                  ((game.lastMove.from.row === i && game.lastMove.from.col === j) ||
+                    (game.lastMove.to.row === i && game.lastMove.to.col === j))
+                }
                 boardDimensions={boardDimensions}
                 gameStatus={game.status}
                 key={`tile-${i}-${j}`}

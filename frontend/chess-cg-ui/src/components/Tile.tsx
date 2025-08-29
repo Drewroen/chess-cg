@@ -18,6 +18,7 @@ export const Tile = React.memo(function Tile({
   isPremove,
   boardDimensions,
   gameStatus,
+  isLastMove,
 }: {
   type?: string;
   color?: string;
@@ -32,6 +33,7 @@ export const Tile = React.memo(function Tile({
   isPremove?: boolean;
   boardDimensions: { width: number; height: number };
   gameStatus?: string;
+  isLastMove?: boolean;
 }) {
   const pieceStyle: CSSProperties = {
     position: "absolute",
@@ -63,6 +65,11 @@ export const Tile = React.memo(function Tile({
         {isActive && (
           <div
             style={{ ...pieceStyle, backgroundColor: "rgba(20, 85, 30, .5)" }}
+          ></div>
+        )}
+        {isLastMove && (
+          <div
+            style={{ ...pieceStyle, backgroundColor: "rgba(155, 199, 0, .41)" }}
           ></div>
         )}
         <Piece
