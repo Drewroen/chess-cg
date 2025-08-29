@@ -189,6 +189,7 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
           ...prevGame,
           board: { squares: newSquares },
           turn: prevGame.turn === "white" ? "black" : "white",
+          lastMove: { from: { row: from[0], col: from[1] }, to: { row: to[0], col: to[1] } },
         };
       });
     },

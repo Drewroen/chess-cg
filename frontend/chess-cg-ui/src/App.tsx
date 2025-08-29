@@ -41,10 +41,6 @@ export default function App() {
 
 
 
-  // Loading screen while checking authentication
-  if (isCheckingAuth) {
-    return <></>;
-  }
 
   // Landing page component
   const LandingPage = () => (
@@ -73,37 +69,44 @@ export default function App() {
 
           <div className={styles.actionsGrid}>
             <div className={styles.buttonContainer}>
-              <Button
-                onClick={startGame}
-                variant="primary"
-                isMobile={isMobile}
-                style={{ fontSize: isMobile ? "1rem" : "1.1rem" }}
-              >
-                Play Now
-              </Button>
-
-              {user?.user_type === "guest" ? (
-                <Button
-                  onClick={login}
-                  variant="secondary"
-                  isMobile={isMobile}
-                >
-                  Login with Google
-                </Button>
-              ) : user?.user_type === "authenticated" ? (
-                <Button
-                  onClick={logout}
-                  variant="danger"
-                  isMobile={isMobile}
-                >
-                  Logout
-                </Button>
-              ) : (
-                <div className={`${styles.loadingText} ${isMobile ? styles.mobile : ''}`}>
-                  Loading user session...
+              {isCheckingAuth ? (
+                <div className={styles.loadingSpinner}>
+                  <div className={styles.spinner}></div>
                 </div>
-              )}
+              ) : (
+                <>
+                  <Button
+                    onClick={startGame}
+                    variant="primary"
+                    isMobile={isMobile}
+                    style={{ fontSize: isMobile ? "1rem" : "1.1rem" }}
+                  >
+                    Play Now
+                  </Button>
 
+                  {user?.user_type === "guest" ? (
+                    <Button
+                      onClick={login}
+                      variant="secondary"
+                      isMobile={isMobile}
+                    >
+                      Login with Google
+                    </Button>
+                  ) : user?.user_type === "authenticated" ? (
+                    <Button
+                      onClick={logout}
+                      variant="danger"
+                      isMobile={isMobile}
+                    >
+                      Logout
+                    </Button>
+                  ) : (
+                    <div className={`${styles.loadingText} ${isMobile ? styles.mobile : ''}`}>
+                      Loading user session...
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
