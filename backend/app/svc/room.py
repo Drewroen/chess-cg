@@ -4,6 +4,7 @@ from fastapi import WebSocket
 from ..auth import verify_jwt_token
 from ..database import get_db_session
 from ..svc.database_service import DatabaseService
+from ..svc.elo_service import EloService
 import time
 import logging
 
@@ -156,6 +157,7 @@ class RoomManager:
     def __init__(self, manager: ConnectionManager, room_service: RoomService):
         self.room_service = room_service
         self.manager = manager
+        self.elo_service = EloService()
 
     async def get_user_info(self, user_id: str) -> dict:
         """Get user info (ELO and username) in a single query."""
@@ -184,87 +186,6 @@ class RoomManager:
         user_info = await self.get_user_info(user_id)
         return user_info["username"]
 
-    def calculate_elo_change(
-        self, player_rating: int, opponent_rating: int, result: str
-    ) -> int:
-        """
-        Calculate ELO rating change for a player using standard ELO formula.
-
-        Args:
-            player_rating: Current rating of the player
-            opponent_rating: Current rating of the opponent
-            result: 'win', 'loss', or 'draw'
-
-        Returns:
-            Rating change (positive or negative)
-        """
-        K_FACTOR = 24
-
-        # Convert result to score
-        if result == "win":
-            actual_score = 1.0
-        elif result == "draw":
-            actual_score = 0.5
-        elif result == "loss":
-            actual_score = 0.0
-        else:
-            raise ValueError("Result must be 'win', 'loss', or 'draw'")
-
-        # Calculate expected score
-        rating_diff = opponent_rating - player_rating
-        expected_score = 1 / (1 + 10 ** (rating_diff / 400))
-
-        # Calculate rating change
-        rating_change = K_FACTOR * (actual_score - expected_score)
-
-        return round(rating_change)
-
-    async def _update_elo_ratings(self, room: Room, db_service: DatabaseService):
-        """Update ELO ratings for both players after a completed game."""
-        # Skip rating updates for guest players
-        if room.white.startswith("guest_") or room.black.startswith("guest_"):
-            logging.info(f"Skipping ELO updates for guest players in room {room.id}")
-            return
-
-        try:
-            # Get current ratings
-            white_info = await self.get_user_info(room.white)
-            black_info = await self.get_user_info(room.black)
-            white_elo = white_info["elo"] or 1200  # Default rating
-            black_elo = black_info["elo"] or 1200  # Default rating
-
-            # Determine results for each player
-            if room.game.winner == "white":
-                white_result = "win"
-                black_result = "loss"
-            elif room.game.winner == "black":
-                white_result = "loss"
-                black_result = "win"
-            elif room.game.winner == "draw":
-                white_result = "draw"
-                black_result = "draw"
-            else:
-                logging.warning(f"Unknown game winner: {room.game.winner}, skipping ELO updates")
-                return
-
-            # Calculate rating changes
-            white_change = self.calculate_elo_change(white_elo, black_elo, white_result)
-            black_change = self.calculate_elo_change(black_elo, white_elo, black_result)
-
-            # Update ratings in database
-            new_white_elo = white_elo + white_change
-            new_black_elo = black_elo + black_change
-
-            await db_service.update_user_elo(room.white, new_white_elo)
-            await db_service.update_user_elo(room.black, new_black_elo)
-
-            logging.info(
-                f"ELO updated - White: {white_elo} → {new_white_elo} ({white_change:+d}), "
-                f"Black: {black_elo} → {new_black_elo} ({black_change:+d})"
-            )
-
-        except Exception as e:
-            logging.error(f"Error updating ELO ratings for room {room.id}: {e}")
 
     async def cleanup_room_with_elo_update(self, room_id: UUID):
         """Clean up a room and update ELO ratings if the game was completed."""
@@ -278,7 +199,13 @@ class RoomManager:
             try:
                 async for session in get_db_session():
                     db_service = DatabaseService(session)
-                    await self._update_elo_ratings(room, db_service)
+                    await self.elo_service.update_ratings(
+                        room.white,
+                        room.black,
+                        room.game.winner,
+                        self.get_user_info,
+                        db_service
+                    )
             except Exception as e:
                 logging.error(f"Error updating ELO ratings for room {room_id}: {e}")
         
