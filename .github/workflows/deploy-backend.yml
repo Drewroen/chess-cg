@@ -71,11 +71,11 @@ jobs:
             echo "Reloading nginx..."
             sudo systemctl reload nginx
 
-            # Set up environment variables
-            echo "Setting up environment variables..."
-            cat > .env << EOF
-            COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN }}
-            EOF
+            # # Set up environment variables
+            # echo "Setting up environment variables..."
+            # cat > .env << EOF
+            # COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN }}
+            # EOF
 
             # Start the backend server in background with PID tracking
             echo "Starting the backend server..."
