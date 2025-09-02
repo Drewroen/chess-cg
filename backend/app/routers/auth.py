@@ -192,65 +192,171 @@ async def get_token_from_code(
 async def get_current_user(
     request: Request, db_session: AsyncSession = Depends(get_db_session)
 ):
-    """Get current user information from database"""
+    """Get current user information from database, with automatic token refresh and guest session fallback"""
 
     # Get access token from cookie
     access_token = request.cookies.get("access_token")
-    if not access_token:
-        raise HTTPException(status_code=401, detail="Access token not found")
+    refresh_token_value = request.cookies.get("refresh_token")
 
-    payload = verify_jwt_token(access_token)
+    # Try to validate access token first
+    payload = None
+    if access_token:
+        payload = verify_jwt_token(access_token)
+
+    # If access token is invalid or missing, try to refresh
+    if not payload and refresh_token_value:
+        # Try to refresh the token
+        new_access_token = None
+
+        if refresh_token_value.startswith("guest_refresh_"):
+            # Handle guest refresh tokens
+            new_access_token = await refresh_guest_access_token(refresh_token_value)
+        else:
+            # Handle authenticated user refresh tokens
+            new_access_token = await refresh_access_token(refresh_token_value)
+
+        if new_access_token:
+            # Successfully refreshed, verify new token
+            payload = verify_jwt_token(new_access_token)
+            if payload:
+                # Create response with refreshed user data
+                db_service = DatabaseService(db_session)
+                user = await db_service.get_user_by_id(payload["sub"])
+
+                if user:
+                    response = JSONResponse(
+                        content={
+                            "id": user.id,
+                            "email": user.email if user.email else "",
+                            "name": user.name,
+                            "user_type": user.user_type,
+                            "username": user.username,
+                        }
+                    )
+                    # Set new access token cookie
+                    response.set_cookie(
+                        key="access_token",
+                        value=new_access_token,
+                        httponly=True,
+                        secure=ENVIRONMENT == "production",
+                        samesite="lax",
+                        domain=COOKIE_DOMAIN,
+                        max_age=3600,  # 1 hour
+                        path="/",
+                    )
+                    return response
+
+    # If we still don't have a valid token, create guest session as fallback
     if not payload:
-        # Clear cookies when access token is invalid
-        response = JSONResponse(
-            content={"detail": "Invalid or expired token"}, status_code=401
-        )
-        response.delete_cookie(
-            key="access_token",
-            path="/",
-            httponly=True,
-            secure=ENVIRONMENT == "production",
-            samesite="lax",
-        )
-        response.delete_cookie(
-            key="refresh_token",
-            path="/",
-            httponly=True,
-            secure=ENVIRONMENT == "production",
-            samesite="lax",
-        )
-        return response
+        # Create new guest session
+        guest_access_token, guest_refresh_token = create_guest_tokens()
 
-    db_service = DatabaseService(db_session)
-    user = await db_service.get_user_by_id(payload["sub"])
+        token_payload = verify_jwt_token(guest_access_token)
+        if token_payload and token_payload.get("user_type") == "guest":
+            guest_id = token_payload["sub"]
+            guest_name = token_payload.get("name", "Guest")
 
-    if not user:
-        response = JSONResponse(
-            content={"detail": "User not found in database"}, status_code=404
-        )
-        response.delete_cookie(
-            key="access_token",
-            path="/",
-            httponly=True,
-            secure=ENVIRONMENT == "production",
-            samesite="lax",
-        )
-        response.delete_cookie(
-            key="refresh_token",
-            path="/",
-            httponly=True,
-            secure=ENVIRONMENT == "production",
-            samesite="lax",
-        )
-        return response
+            # Store guest user in database
+            try:
+                db_service = DatabaseService(db_session)
+                existing_user = await db_service.get_user_by_id(guest_id)
+                if not existing_user:
+                    await db_service.create_guest_user(guest_id, guest_name)
 
-    return UserResponse(
-        id=user.id,
-        email=user.email if user.email else "",
-        name=user.name,
-        user_type=user.user_type,
-        username=user.username,
+                # Get the created/existing guest user
+                user = await db_service.get_user_by_id(guest_id)
+                if user:
+                    response = JSONResponse(
+                        content={
+                            "id": user.id,
+                            "email": user.email if user.email else "",
+                            "name": user.name,
+                            "user_type": user.user_type,
+                            "username": user.username,
+                        }
+                    )
+
+                    # Set guest access token cookie
+                    response.set_cookie(
+                        key="access_token",
+                        value=guest_access_token,
+                        httponly=True,
+                        secure=ENVIRONMENT == "production",
+                        samesite="lax",
+                        domain=COOKIE_DOMAIN,
+                        max_age=3600,  # 1 hour
+                        path="/",
+                    )
+
+                    # Set guest refresh token cookie
+                    response.set_cookie(
+                        key="refresh_token",
+                        value=guest_refresh_token,
+                        httponly=True,
+                        secure=ENVIRONMENT == "production",
+                        samesite="lax",
+                        domain=COOKIE_DOMAIN,
+                        max_age=7 * 24 * 60 * 60,  # 7 days
+                        path="/",
+                    )
+
+                    return response
+            except Exception as e:
+                logging.error(f"Failed to create guest session in /me endpoint: {e}")
+
+    # If we have a valid payload, get user from database
+    if payload:
+        db_service = DatabaseService(db_session)
+        user = await db_service.get_user_by_id(payload["sub"])
+
+        if not user:
+            # Clear cookies when user not found
+            response = JSONResponse(
+                content={"detail": "User not found in database"}, status_code=404
+            )
+            response.delete_cookie(
+                key="access_token",
+                path="/",
+                httponly=True,
+                secure=ENVIRONMENT == "production",
+                samesite="lax",
+            )
+            response.delete_cookie(
+                key="refresh_token",
+                path="/",
+                httponly=True,
+                secure=ENVIRONMENT == "production",
+                samesite="lax",
+            )
+            return response
+
+        return UserResponse(
+            id=user.id,
+            email=user.email if user.email else "",
+            name=user.name,
+            user_type=user.user_type,
+            username=user.username,
+        )
+
+    # Final fallback - clear cookies and return unauthorized
+    response = JSONResponse(
+        content={"detail": "Unable to authenticate user"}, status_code=401
     )
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        httponly=True,
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
+    )
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+        httponly=True,
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
+    )
+    return response
 
 
 @router.post("/refresh")

@@ -28,34 +28,11 @@ export class CookieAuthService {
     return CookieAuthService.instance;
   }
 
-  // New method to create guest session
-  async createGuestSession(): Promise<GuestUser | null> {
-    try {
-      const response = await fetch(`${backendUrl}/auth/guest-session`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
 
-      if (!response.ok) {
-        console.error("Failed to create guest session");
-        return null;
-      }
-
-      // Get the guest user info from the new access token
-      return this.getCurrentUser() as Promise<GuestUser | null>;
-    } catch (error) {
-      console.error("Error creating guest session:", error);
-      return null;
-    }
-  }
-
-  // Get current user information from backend
+  // Get current user information from backend (now handles refresh and guest session internally)
   async getCurrentUser(): Promise<User | null> {
     try {
-      let response = await fetch(`${backendUrl}/auth/me`, {
+      const response = await fetch(`${backendUrl}/auth/me`, {
         method: "GET",
         credentials: "include", // Include cookies in request
         headers: {
@@ -64,28 +41,8 @@ export class CookieAuthService {
       });
 
       if (!response.ok) {
-        // Try to refresh tokens
-        const refreshResponse = await fetch(`${backendUrl}/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!refreshResponse.ok) {
-          // If refresh fails and no tokens exist, create guest session
-          return await this.createGuestSession();
-        }
-
-        // Retry fetching the current user after refresh
-        response = await fetch(`${backendUrl}/auth/me`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        console.error("Failed to get current user:", response.status, response.statusText);
+        return null;
       }
 
       return await response.json();
