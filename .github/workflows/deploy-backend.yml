@@ -71,6 +71,12 @@ jobs:
             echo "Reloading nginx..."
             sudo systemctl reload nginx
 
+            # Set up environment variables
+            echo "Setting up environment variables..."
+            cat > .env << EOF
+            COOKIE_DOMAIN=${{ secrets.COOKIE_DOMAIN }}
+            EOF
+
             # Start the backend server in background with PID tracking
             echo "Starting the backend server..."
             nohup ~/.local/bin/uv run fastapi run app/main.py --host 0.0.0.0 --port 8000 > ~/chess-cg-server.log 2>&1 &
