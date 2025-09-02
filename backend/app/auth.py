@@ -18,7 +18,9 @@ load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fallback_secret_key_change_this")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    raise ValueError("JWT_SECRET_KEY environment variable must be set")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_HOURS = int(
     os.getenv("JWT_EXPIRATION_HOURS", "1")
@@ -26,6 +28,7 @@ JWT_EXPIRATION_HOURS = int(
 REFRESH_TOKEN_EXPIRATION_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRATION_DAYS", "30"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", "http://localhost:3000")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 # Google OAuth URLs
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"

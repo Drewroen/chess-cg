@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 import random
 import logging
+import os
 
 from ..auth import (
     GoogleOAuthError,
@@ -14,6 +15,8 @@ from ..auth import (
     revoke_refresh_token,
     get_google_auth_url,
     FRONTEND_URL,
+    ENVIRONMENT,
+    COOKIE_DOMAIN,
     verify_jwt_token,
     create_guest_tokens,
     refresh_guest_access_token,
@@ -111,7 +114,7 @@ async def google_auth(request: Request):
 
 
 @router.get("/callback")
-@get_limiter().limit("5/minute")
+@get_limiter().limit("10/minute")
 async def auth_callback(
     request: Request,
     code: Optional[str] = Query(None, description="Authorization code from Google"),
@@ -149,7 +152,7 @@ async def auth_callback(
 
 
 @router.post("/token", response_model=TokenResponse)
-@get_limiter().limit("5/minute")
+@get_limiter().limit("10/minute")
 async def get_token_from_code(
     request: Request,
     authorization_code: str,
@@ -203,10 +206,18 @@ async def get_current_user(
             content={"detail": "Invalid or expired token"}, status_code=401
         )
         response.delete_cookie(
-            key="access_token", path="/", httponly=True, secure=True, samesite="strict"
+            key="access_token",
+            path="/",
+            httponly=True,
+            secure=ENVIRONMENT == "production",
+            samesite="lax",
         )
         response.delete_cookie(
-            key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+            key="refresh_token",
+            path="/",
+            httponly=True,
+            secure=ENVIRONMENT == "production",
+            samesite="lax",
         )
         return response
 
@@ -218,10 +229,18 @@ async def get_current_user(
             content={"detail": "User not found in database"}, status_code=404
         )
         response.delete_cookie(
-            key="access_token", path="/", httponly=True, secure=True, samesite="strict"
+            key="access_token",
+            path="/",
+            httponly=True,
+            secure=ENVIRONMENT == "production",
+            samesite="lax",
         )
         response.delete_cookie(
-            key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+            key="refresh_token",
+            path="/",
+            httponly=True,
+            secure=ENVIRONMENT == "production",
+            samesite="lax",
         )
         return response
 
@@ -263,8 +282,8 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
                 key="refresh_token",
                 path="/",
                 httponly=True,
-                secure=True,
-                samesite="strict",
+                secure=ENVIRONMENT == "production",
+                samesite="lax",
             )
             return response
     else:
@@ -279,8 +298,8 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
                 key="refresh_token",
                 path="/",
                 httponly=True,
-                secure=True,
-                samesite="strict",
+                secure=ENVIRONMENT == "production",
+                samesite="lax",
             )
             return response
 
@@ -290,8 +309,10 @@ async def refresh_token(request: Request, refresh_request: RefreshTokenRequest =
         key="access_token",
         value=new_access_token,
         httponly=True,  # Prevents JavaScript access (XSS protection)
-        secure=True,  # Only send over HTTPS in production
-        samesite="none",  # CSRF protection
+        secure=os.getenv("ENVIRONMENT")
+        == "production",  # Only send over HTTPS in production
+        samesite="lax",  # Better CSRF protection
+        domain=COOKIE_DOMAIN,
         max_age=3600,  # 1 hour in seconds
         path="/",  # Cookie available for entire domain
     )
@@ -339,19 +360,27 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
 
     # Clear the access token cookie
     response.delete_cookie(
-        key="access_token", path="/", httponly=True, secure=True, samesite="strict"
+        key="access_token",
+        path="/",
+        httponly=True,
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
     )
 
     # Clear the refresh token cookie
     response.delete_cookie(
-        key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+        key="refresh_token",
+        path="/",
+        httponly=True,
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
     )
 
     return response
 
 
 @router.post("/guest-session")
-@get_limiter().limit("3/minute")
+@get_limiter().limit("10/minute")
 async def create_guest_session(
     request: Request, db_session: AsyncSession = Depends(get_db_session)
 ):
@@ -375,8 +404,9 @@ async def create_guest_session(
                     key="access_token",
                     value=new_access_token,
                     httponly=True,
-                    secure=True,
-                    samesite="none",
+                    secure=ENVIRONMENT == "production",
+                    samesite="lax",
+                    domain=COOKIE_DOMAIN,
                     max_age=3600,  # 1 hour
                     path="/",
                 )
@@ -413,8 +443,9 @@ async def create_guest_session(
         key="access_token",
         value=guest_access_token,
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
+        domain=COOKIE_DOMAIN,
         max_age=3600,  # 1 hour
         path="/",
     )
@@ -424,8 +455,9 @@ async def create_guest_session(
         key="refresh_token",
         value=guest_refresh_token,
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
+        domain=COOKIE_DOMAIN,
         max_age=7 * 24 * 60 * 60,  # 7 days
         path="/",
     )
@@ -434,7 +466,7 @@ async def create_guest_session(
 
 
 @router.patch("/me/username", response_model=UserResponse)
-@get_limiter().limit("3/minute")
+@get_limiter().limit("10/minute")
 async def update_usernamename(
     request: Request,
     update_request: UpdateUsernameRequest,
@@ -453,10 +485,18 @@ async def update_usernamename(
             content={"detail": "Invalid or expired token"}, status_code=401
         )
         response.delete_cookie(
-            key="access_token", path="/", httponly=True, secure=True, samesite="strict"
+            key="access_token",
+            path="/",
+            httponly=True,
+            secure=ENVIRONMENT == "production",
+            samesite="lax",
         )
         response.delete_cookie(
-            key="refresh_token", path="/", httponly=True, secure=True, samesite="strict"
+            key="refresh_token",
+            path="/",
+            httponly=True,
+            secure=ENVIRONMENT == "production",
+            samesite="lax",
         )
         return response
 
@@ -521,8 +561,10 @@ def _create_auth_response(redirect_url: str, access_token: str, refresh_token: s
         key="access_token",
         value=access_token,
         httponly=True,  # Prevents JavaScript access (XSS protection)
-        secure=True,  # Only send over HTTPS in production
-        samesite="none",  # CSRF protection
+        secure=os.getenv("ENVIRONMENT")
+        == "production",  # Only send over HTTPS in production
+        samesite="lax",  # Better CSRF protection
+        domain=COOKIE_DOMAIN,
         max_age=3600,  # 1 hour in seconds
         path="/",  # Cookie available for entire domain
     )
@@ -532,8 +574,10 @@ def _create_auth_response(redirect_url: str, access_token: str, refresh_token: s
         key="refresh_token",
         value=refresh_token,
         httponly=True,  # Prevents JavaScript access (XSS protection)
-        secure=True,  # Only send over HTTPS in production
-        samesite="none",  # CSRF protection
+        secure=os.getenv("ENVIRONMENT")
+        == "production",  # Only send over HTTPS in production
+        samesite="lax",  # Better CSRF protection
+        domain=COOKIE_DOMAIN,
         max_age=30 * 24 * 60 * 60,  # 30 days in seconds
         path="/",  # Cookie available for entire domain
     )
