@@ -46,9 +46,9 @@ class UpdateUsernameRequest(BaseModel):
         if len(v) < 1:
             raise ValueError("Username must be at least 1 character")
 
-        if not re.match(r"^[a-zA-Z0-9_\-\s]+$", v):
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError(
-                "Username can only contain letters, numbers, spaces, hyphens, and underscores"
+                "Username can only contain letters, numbers, underscores, and hyphens"
             )
 
         return v
