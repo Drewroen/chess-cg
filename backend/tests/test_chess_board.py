@@ -402,15 +402,6 @@ def find_position_that_can_move_to_position(
             f"Multiple candidates found, need more disambiguation. Entire extracted_pgn: {extracted_pgn}"
         )
     else:
-        for row in range(8):
-            for col in range(8):
-                print(
-                    game.board.squares[row][col].type
-                    if game.board.squares[row][col]
-                    else "None",
-                    end=" ",
-                )
-            print()
         raise Exception(
             f"No valid piece found that can move to {extracted_pgn['to_square']}. Entire extracted_pgn: {extracted_pgn}"
         )

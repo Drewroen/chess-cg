@@ -85,8 +85,8 @@ class DatabaseService:
 
     async def create_chess_game(
         self,
-        white_player_id: str,
-        black_player_id: str,
+        white_player_id: Optional[str],
+        black_player_id: Optional[str],
         winner: str = None,
         end_reason: str = None,
     ) -> ChessGame:
@@ -160,8 +160,6 @@ class DatabaseService:
         inactive_guests = result.scalars().all()
 
         count = len(inactive_guests)
-
-        print(count)
 
         # Delete refresh tokens first (to maintain referential integrity)
         for user in inactive_guests:

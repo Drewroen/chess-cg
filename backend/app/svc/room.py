@@ -126,13 +126,20 @@ class RoomService:
                         if room.game.status == GameStatus.COMPLETE
                         else "aborted"
                     )
+                    # Convert guest player IDs to None for database storage
+                    white_db_id = (
+                        None if room.white.startswith("guest_") else room.white
+                    )
+                    black_db_id = (
+                        None if room.black.startswith("guest_") else room.black
+                    )
+
                     await db_service.create_chess_game(
-                        white_player_id=room.white,
-                        black_player_id=room.black,
+                        white_player_id=white_db_id,
+                        black_player_id=black_db_id,
                         winner=winner,
                         end_reason=end_reason,
                     )
-
 
                     status_text = (
                         "completed"
@@ -170,7 +177,7 @@ class RoomManager:
                 user = await db_service.get_user_by_id(user_id)
                 return {
                     "elo": user.elo if user else None,
-                    "username": user.username if user and user.username else "Guest"
+                    "username": user.username if user and user.username else "Guest",
                 }
         except Exception as e:
             logging.error(f"Error fetching user info for user {user_id}: {e}")
@@ -186,14 +193,13 @@ class RoomManager:
         user_info = await self.get_user_info(user_id)
         return user_info["username"]
 
-
     async def cleanup_room_with_elo_update(self, room_id: UUID):
         """Clean up a room and update ELO ratings if the game was completed."""
         if room_id not in self.room_service.rooms:
             return
-            
+
         room = self.room_service.rooms[room_id]
-        
+
         # Update ELO ratings for completed games before cleanup
         if room.game.status == GameStatus.COMPLETE:
             try:
@@ -204,11 +210,11 @@ class RoomManager:
                         room.black,
                         room.game.winner,
                         self.get_user_info,
-                        db_service
+                        db_service,
                     )
             except Exception as e:
                 logging.error(f"Error updating ELO ratings for room {room_id}: {e}")
-        
+
         # Now clean up the room
         await self.room_service.cleanup_room(room_id)
 
@@ -266,7 +272,9 @@ class RoomManager:
                     "white": room.game.white_draw_requested,
                     "black": room.game.black_draw_requested,
                 },
-                "last_move": room.game.last_move.to_dict() if room.game.last_move else None,
+                "last_move": room.game.last_move.to_dict()
+                if room.game.last_move
+                else None,
             }
         for player_name in [room.white, room.black]:
             state["id"] = str(room.id)  # Room ID for fetching game info
@@ -299,7 +307,11 @@ class RoomManager:
 
             connections = self.manager.user_id_to_connection_map.get(player_name, [])
             for connection in connections:
-                if connection and self.manager.get_user_id_for_connection(connection.id) is not None:
+                if (
+                    connection
+                    and self.manager.get_user_id_for_connection(connection.id)
+                    is not None
+                ):
                     try:
                         await connection.websocket.send_json(state)
                     except Exception as e:

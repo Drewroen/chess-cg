@@ -23,8 +23,8 @@ class ChessGame(Base):
     __tablename__ = "chess_games"
 
     id = Column(String, primary_key=True)
-    white_player_id = Column(String, ForeignKey("users.id"), nullable=False)
-    black_player_id = Column(String, ForeignKey("users.id"), nullable=False)
+    white_player_id = Column(String, ForeignKey("users.id"), nullable=True)
+    black_player_id = Column(String, ForeignKey("users.id"), nullable=True)
     winner = Column(String, nullable=True)  # "white", "black", "draw", "aborted"
     end_reason = Column(String, nullable=True)  # "checkmate", "stalemate", "time", "resignation", "draw_agreement", "aborted"
     created_at = Column(DateTime, server_default=func.now())
