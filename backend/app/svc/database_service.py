@@ -151,25 +151,31 @@ class DatabaseService:
             hours=hours
         )
 
-        # Find inactive guest users
-        result = await self.session.execute(
-            select(User).where(
+        # Get count of inactive guest users for return value
+        count_result = await self.session.execute(
+            select(User.id).where(
                 User.user_type == "guest", User.last_activity_at < cutoff_time
             )
         )
-        inactive_guests = result.scalars().all()
+        count = len(count_result.scalars().all())
 
-        count = len(inactive_guests)
-
-        # Delete refresh tokens first (to maintain referential integrity)
-        for user in inactive_guests:
-            await self.session.execute(
-                delete(RefreshToken).where(RefreshToken.user_id == user.id)
+        # Delete refresh tokens for inactive guest users (bulk delete with subquery)
+        await self.session.execute(
+            delete(RefreshToken).where(
+                RefreshToken.user_id.in_(
+                    select(User.id).where(
+                        User.user_type == "guest", User.last_activity_at < cutoff_time
+                    )
+                )
             )
+        )
 
-        # Delete the guest users
-        for user in inactive_guests:
-            await self.session.delete(user)
+        # Delete inactive guest users (bulk delete)
+        await self.session.execute(
+            delete(User).where(
+                User.user_type == "guest", User.last_activity_at < cutoff_time
+            )
+        )
 
         await self.session.commit()
         return count
