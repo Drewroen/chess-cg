@@ -152,14 +152,14 @@ async def lifespan(app: FastAPI):
 
     timer_task = asyncio.create_task(check_game_timers())
     cleanup_task = asyncio.create_task(cleanup_expired_tokens())
-    # guest_account_cleanup_task = asyncio.create_task(
-    #     execute_cleanup_inactive_guest_users()
-    # )
+    guest_account_cleanup_task = asyncio.create_task(
+        execute_cleanup_inactive_guest_users()
+    )
     yield
     # Shutdown
     timer_task.cancel()
     cleanup_task.cancel()
-    # guest_account_cleanup_task.cancel()
+    guest_account_cleanup_task.cancel()
     await db_manager.close()
 
 
