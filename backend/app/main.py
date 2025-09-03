@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 from .routers import health, auth, websocket, game
 from .obj.game import GameStatus, GAME_START_TIMEOUT_SECONDS
-from .auth import cleanup_expired_refresh_tokens, cleanup_expired_guest_tokens
+from .auth import cleanup_expired_refresh_tokens
 from .database import db_manager
 
 load_dotenv()
@@ -122,11 +122,8 @@ async def cleanup_expired_tokens():
             expired_refresh = (
                 await cleanup_expired_refresh_tokens()
             )  # existing function
-            expired_guest = cleanup_expired_guest_tokens()  # new function
-            if expired_refresh > 0 or expired_guest > 0:
-                logging.info(
-                    f"Cleaned up {expired_refresh} expired refresh tokens and {expired_guest} expired guest tokens"
-                )
+            if expired_refresh > 0:
+                logging.info(f"Cleaned up {expired_refresh} expired refresh tokens")
         except Exception as e:
             logging.error(f"Error in token cleanup task: {e}")
 

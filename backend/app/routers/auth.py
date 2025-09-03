@@ -194,7 +194,7 @@ async def get_current_user(
     # If we still don't have a valid token, create guest session as fallback
     if not payload:
         # Create new guest session
-        guest_access_token, guest_refresh_token = create_guest_tokens()
+        guest_access_token, guest_refresh_token = await create_guest_tokens()
 
         token_payload = verify_jwt_token(guest_access_token)
         if token_payload and token_payload.get("user_type") == "guest":

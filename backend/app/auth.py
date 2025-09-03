@@ -5,7 +5,6 @@ import httpx
 from jose import JWTError, jwt
 from dotenv import load_dotenv
 import secrets
-import time
 import random
 from uuid import uuid4
 from app.database import get_db_session
@@ -33,10 +32,6 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 # Google OAuth URLs
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
-
-
-# In-memory storage for guest refresh tokens
-guest_refresh_tokens: dict[str, dict] = {}
 
 
 class GoogleOAuthError(Exception):
@@ -287,7 +282,7 @@ def create_jwt_token(payload: dict, expires_minutes: int = 60) -> str:
     return jwt.encode(payload_copy, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
-def create_guest_tokens(guest_name: str = None) -> Tuple[str, str]:
+async def create_guest_tokens(guest_name: str = None) -> Tuple[str, str]:
     """Create guest access and refresh tokens"""
     guest_id = "guest_" + str(uuid4())
     guest_name = guest_name or f"Guest_{random.randint(10000, 99999)}"
@@ -306,14 +301,19 @@ def create_guest_tokens(guest_name: str = None) -> Tuple[str, str]:
     # Create guest refresh token
     guest_refresh_token = "guest_refresh_" + secrets.token_urlsafe(32)
 
-    # Store guest session
-    guest_refresh_tokens[guest_refresh_token] = {
-        "guest_id": guest_id,
-        "guest_name": guest_name,
-        "created_at": time.time(),
-        "last_used": time.time(),
-        "expires_at": time.time() + (7 * 24 * 60 * 60),  # 7 days
-    }
+    # Store guest refresh token in database
+    refresh_expire = datetime.now(timezone.utc) + timedelta(days=7)
+    async for session in get_db_session():
+        db_service = DatabaseService(session)
+        token_data = {
+            "token": guest_refresh_token,
+            "user_id": guest_id,
+            "expires_at": refresh_expire.replace(tzinfo=None),
+            "google_refresh_token": None,
+            "google_token_expires_at": None,
+        }
+        await db_service.create_refresh_token(token_data)
+        break
 
     return guest_access_token, guest_refresh_token
 
@@ -323,40 +323,35 @@ async def refresh_guest_access_token(guest_refresh_token: str) -> Optional[str]:
     if not guest_refresh_token.startswith("guest_refresh_"):
         return None
 
-    if guest_refresh_token not in guest_refresh_tokens:
-        return None
+    async for session in get_db_session():
+        db_service = DatabaseService(session)
+        token_obj = await db_service.get_refresh_token(guest_refresh_token)
 
-    token_data = guest_refresh_tokens[guest_refresh_token]
+        if not token_obj:
+            return None
 
-    # Check expiry
-    if time.time() > token_data["expires_at"]:
-        del guest_refresh_tokens[guest_refresh_token]
-        return None
+        # Check if refresh token is expired
+        if datetime.now(timezone.utc).replace(tzinfo=None) > token_obj.expires_at:
+            # Clean up expired token
+            await db_service.delete_refresh_token(token_obj)
+            return None
 
-    # Update last used
-    token_data["last_used"] = time.time()
+        # Extract guest info from user_id (should be "guest_<uuid>")
+        guest_id = token_obj.user_id
+        if not guest_id.startswith("guest_"):
+            return None
 
-    # Create new access token
-    return create_jwt_token(
-        {
-            "sub": token_data["guest_id"],
-            "email": "guest@local",
-            "name": token_data["guest_name"],
-            "user_type": "guest",
-        },
-        expires_minutes=60,
-    )
+        # Try to get guest user from database, or create default name
+        guest_user = await db_service.get_user_by_id(guest_id)
+        guest_name = guest_user.name if guest_user else "Guest"
 
-
-def cleanup_expired_guest_tokens():
-    """Remove expired guest tokens"""
-    current_time = time.time()
-    expired_tokens = [
-        token
-        for token, data in guest_refresh_tokens.items()
-        if current_time > data["expires_at"]
-    ]
-    for token in expired_tokens:
-        del guest_refresh_tokens[token]
-
-    return len(expired_tokens)
+        # Create new access token
+        return create_jwt_token(
+            {
+                "sub": guest_id,
+                "email": "guest@local",
+                "name": guest_name,
+                "user_type": "guest",
+            },
+            expires_minutes=60,
+        )
