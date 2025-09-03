@@ -281,6 +281,7 @@ async def get_current_user(
             response.delete_cookie(
                 key="access_token",
                 path="/",
+                domain=COOKIE_DOMAIN,
                 httponly=True,
                 secure=ENVIRONMENT == "production",
                 samesite="lax",
@@ -288,6 +289,7 @@ async def get_current_user(
             response.delete_cookie(
                 key="refresh_token",
                 path="/",
+                domain=COOKIE_DOMAIN,
                 httponly=True,
                 secure=ENVIRONMENT == "production",
                 samesite="lax",
@@ -309,6 +311,7 @@ async def get_current_user(
     response.delete_cookie(
         key="access_token",
         path="/",
+        domain=COOKIE_DOMAIN,
         httponly=True,
         secure=ENVIRONMENT == "production",
         samesite="lax",
@@ -316,6 +319,7 @@ async def get_current_user(
     response.delete_cookie(
         key="refresh_token",
         path="/",
+        domain=COOKIE_DOMAIN,
         httponly=True,
         secure=ENVIRONMENT == "production",
         samesite="lax",
@@ -365,6 +369,7 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
     response.delete_cookie(
         key="access_token",
         path="/",
+        domain=COOKIE_DOMAIN,
         httponly=True,
         secure=ENVIRONMENT == "production",
         samesite="lax",
@@ -374,6 +379,7 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
     response.delete_cookie(
         key="refresh_token",
         path="/",
+        domain=COOKIE_DOMAIN,
         httponly=True,
         secure=ENVIRONMENT == "production",
         samesite="lax",
@@ -404,6 +410,7 @@ async def update_usernamename(
         response.delete_cookie(
             key="access_token",
             path="/",
+            domain=COOKIE_DOMAIN,
             httponly=True,
             secure=ENVIRONMENT == "production",
             samesite="lax",
@@ -411,6 +418,7 @@ async def update_usernamename(
         response.delete_cookie(
             key="refresh_token",
             path="/",
+            domain=COOKIE_DOMAIN,
             httponly=True,
             secure=ENVIRONMENT == "production",
             samesite="lax",
