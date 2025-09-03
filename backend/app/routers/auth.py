@@ -4,7 +4,6 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 import random
 import logging
-import os
 
 from ..auth import (
     GoogleOAuthError,
@@ -15,15 +14,13 @@ from ..auth import (
     revoke_refresh_token,
     get_google_auth_url,
     FRONTEND_URL,
-    ENVIRONMENT,
-    COOKIE_DOMAIN,
     verify_jwt_token,
     create_guest_tokens,
     refresh_guest_access_token,
 )
+from .cookie_utils import set_auth_cookie, delete_auth_cookie
 from ..models import (
     UserResponse,
-    TokenResponse,
     RefreshTokenRequest,
     UpdateUsernameRequest,
 )
@@ -198,15 +195,8 @@ async def get_current_user(
                         }
                     )
                     # Set new access token cookie
-                    response.set_cookie(
-                        key="access_token",
-                        value=new_access_token,
-                        httponly=True,
-                        secure=ENVIRONMENT == "production",
-                        samesite="lax",
-                        domain=COOKIE_DOMAIN,
-                        max_age=3600,  # 1 hour
-                        path="/",
+                    set_auth_cookie(
+                        response, "access_token", new_access_token, 3600
                     )
                     return response
 
@@ -241,27 +231,13 @@ async def get_current_user(
                     )
 
                     # Set guest access token cookie
-                    response.set_cookie(
-                        key="access_token",
-                        value=guest_access_token,
-                        httponly=True,
-                        secure=ENVIRONMENT == "production",
-                        samesite="lax",
-                        domain=COOKIE_DOMAIN,
-                        max_age=3600,  # 1 hour
-                        path="/",
+                    set_auth_cookie(
+                        response, "access_token", guest_access_token, 3600
                     )
 
                     # Set guest refresh token cookie
-                    response.set_cookie(
-                        key="refresh_token",
-                        value=guest_refresh_token,
-                        httponly=True,
-                        secure=ENVIRONMENT == "production",
-                        samesite="lax",
-                        domain=COOKIE_DOMAIN,
-                        max_age=7 * 24 * 60 * 60,  # 7 days
-                        path="/",
+                    set_auth_cookie(
+                        response, "refresh_token", guest_refresh_token, 7 * 24 * 60 * 60
                     )
 
                     return response
@@ -278,22 +254,8 @@ async def get_current_user(
             response = JSONResponse(
                 content={"detail": "User not found in database"}, status_code=404
             )
-            response.delete_cookie(
-                key="access_token",
-                path="/",
-                domain=COOKIE_DOMAIN,
-                httponly=True,
-                secure=ENVIRONMENT == "production",
-                samesite="lax",
-            )
-            response.delete_cookie(
-                key="refresh_token",
-                path="/",
-                domain=COOKIE_DOMAIN,
-                httponly=True,
-                secure=ENVIRONMENT == "production",
-                samesite="lax",
-            )
+            delete_auth_cookie(response, "access_token")
+            delete_auth_cookie(response, "refresh_token")
             return response
 
         return UserResponse(
@@ -308,22 +270,8 @@ async def get_current_user(
     response = JSONResponse(
         content={"detail": "Unable to authenticate user"}, status_code=401
     )
-    response.delete_cookie(
-        key="access_token",
-        path="/",
-        domain=COOKIE_DOMAIN,
-        httponly=True,
-        secure=ENVIRONMENT == "production",
-        samesite="lax",
-    )
-    response.delete_cookie(
-        key="refresh_token",
-        path="/",
-        domain=COOKIE_DOMAIN,
-        httponly=True,
-        secure=ENVIRONMENT == "production",
-        samesite="lax",
-    )
+    delete_auth_cookie(response, "access_token")
+    delete_auth_cookie(response, "refresh_token")
     return response
 
 
@@ -366,24 +314,8 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
     response = JSONResponse(content={"message": "Successfully logged out"})
 
     # Clear the access token cookie
-    response.delete_cookie(
-        key="access_token",
-        path="/",
-        domain=COOKIE_DOMAIN,
-        httponly=True,
-        secure=ENVIRONMENT == "production",
-        samesite="lax",
-    )
-
-    # Clear the refresh token cookie
-    response.delete_cookie(
-        key="refresh_token",
-        path="/",
-        domain=COOKIE_DOMAIN,
-        httponly=True,
-        secure=ENVIRONMENT == "production",
-        samesite="lax",
-    )
+    delete_auth_cookie(response, "access_token")
+    delete_auth_cookie(response, "refresh_token")
 
     return response
 
@@ -407,22 +339,8 @@ async def update_usernamename(
         response = JSONResponse(
             content={"detail": "Invalid or expired token"}, status_code=401
         )
-        response.delete_cookie(
-            key="access_token",
-            path="/",
-            domain=COOKIE_DOMAIN,
-            httponly=True,
-            secure=ENVIRONMENT == "production",
-            samesite="lax",
-        )
-        response.delete_cookie(
-            key="refresh_token",
-            path="/",
-            domain=COOKIE_DOMAIN,
-            httponly=True,
-            secure=ENVIRONMENT == "production",
-            samesite="lax",
-        )
+        delete_auth_cookie(response, "access_token")
+        delete_auth_cookie(response, "refresh_token")
         return response
 
     # Check if user is a guest - guests cannot change their username
@@ -482,30 +400,10 @@ def _create_auth_response(redirect_url: str, access_token: str, refresh_token: s
     response = RedirectResponse(url=redirect_url, status_code=302)
 
     # Set access token as an HTTP-only secure cookie
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,  # Prevents JavaScript access (XSS protection)
-        secure=os.getenv("ENVIRONMENT")
-        == "production",  # Only send over HTTPS in production
-        samesite="lax",  # Better CSRF protection
-        domain=COOKIE_DOMAIN,
-        max_age=3600,  # 1 hour in seconds
-        path="/",  # Cookie available for entire domain
-    )
+    set_auth_cookie(response, "access_token", access_token, 3600)
 
     # Set refresh token as an HTTP-only secure cookie
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,  # Prevents JavaScript access (XSS protection)
-        secure=os.getenv("ENVIRONMENT")
-        == "production",  # Only send over HTTPS in production
-        samesite="lax",  # Better CSRF protection
-        domain=COOKIE_DOMAIN,
-        max_age=30 * 24 * 60 * 60,  # 30 days in seconds
-        path="/",  # Cookie available for entire domain
-    )
+    set_auth_cookie(response, "refresh_token", refresh_token, 30 * 24 * 60 * 60)
 
     return response
 
