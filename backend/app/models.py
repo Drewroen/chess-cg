@@ -6,7 +6,7 @@ import re
 class UserResponse(BaseModel):
     id: str
     email: str
-    name: str
+    name: Optional[str] = None
     user_type: Optional[str] = "authenticated"
     username: Optional[str] = None
 
@@ -21,7 +21,6 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
-
 
 
 class ErrorResponse(BaseModel):
