@@ -247,6 +247,13 @@ async def cleanup_expired_refresh_tokens():
         return await db_service.cleanup_expired_refresh_tokens()
 
 
+async def cleanup_inactive_guest_users(hours: int = 24):
+    """Remove inactive guest users and their refresh tokens"""
+    async for session in get_db_session():
+        db_service = DatabaseService(session)
+        return await db_service.cleanup_inactive_guest_users(hours=hours)
+
+
 def verify_jwt_token(token: str) -> Optional[dict]:
     """Verify and decode JWT token"""
     try:

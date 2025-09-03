@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 from .routers import health, auth, websocket, game
 from .obj.game import GameStatus, GAME_START_TIMEOUT_SECONDS
-from .auth import cleanup_expired_refresh_tokens
+from .auth import cleanup_expired_refresh_tokens, cleanup_inactive_guest_users
 from .database import db_manager
 
 load_dotenv()
@@ -130,6 +130,19 @@ async def cleanup_expired_tokens():
         await asyncio.sleep(3600)  # Run every hour
 
 
+async def execute_cleanup_inactive_guest_users():
+    """Background task to clean up expired tokens"""
+    while True:
+        try:
+            expired_refresh = await cleanup_inactive_guest_users()  # existing function
+            if expired_refresh > 0:
+                logging.info(f"Cleaned up {expired_refresh} expired refresh tokens")
+        except Exception as e:
+            logging.error(f"Error in token cleanup task: {e}")
+
+        await asyncio.sleep(3600)  # Run every hour
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -152,10 +165,14 @@ async def lifespan(app: FastAPI):
 
     timer_task = asyncio.create_task(check_game_timers())
     cleanup_task = asyncio.create_task(cleanup_expired_tokens())
+    guest_account_cleanup_task = asyncio.create_task(
+        execute_cleanup_inactive_guest_users()
+    )
     yield
     # Shutdown
     timer_task.cancel()
     cleanup_task.cancel()
+    guest_account_cleanup_task.cancel()
     await db_manager.close()
 
 

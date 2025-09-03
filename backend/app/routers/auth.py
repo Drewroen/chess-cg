@@ -61,6 +61,9 @@ async def get_or_create_user(user_info: dict, db_service: DatabaseService) -> di
     existing_user = await db_service.get_user_by_id(user_info["id"])
 
     if existing_user:
+        # Update last activity timestamp for OAuth authentication
+        await db_service.update_user_last_activity(user_info["id"])
+        
         # Return existing user data
         return {
             "id": existing_user.id,
@@ -80,6 +83,10 @@ async def get_or_create_user(user_info: dict, db_service: DatabaseService) -> di
     }
 
     new_user = await db_service.create_user(user_data)
+    
+    # Update last activity timestamp for new user OAuth authentication  
+    await db_service.update_user_last_activity(new_user.id)
+    
     return {
         "id": new_user.id,
         "email": new_user.email,
@@ -176,6 +183,9 @@ async def get_current_user(
                 user = await db_service.get_user_by_id(payload["sub"])
 
                 if user:
+                    # Update last activity timestamp for token refresh
+                    await db_service.update_user_last_activity(payload["sub"])
+                    
                     response = JSONResponse(
                         content={
                             "id": user.id,
@@ -211,6 +221,9 @@ async def get_current_user(
                 # Get the created/existing guest user
                 user = await db_service.get_user_by_id(guest_id)
                 if user:
+                    # Update last activity timestamp for new guest session
+                    await db_service.update_user_last_activity(guest_id)
+                    
                     response = JSONResponse(
                         content={
                             "id": user.id,

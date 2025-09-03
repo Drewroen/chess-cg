@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from app.db_models import User, ChessGame, RefreshToken
 from typing import Optional
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 class DatabaseService:
@@ -72,6 +72,17 @@ class DatabaseService:
         await self.session.refresh(user)
         return user
 
+    async def update_user_last_activity(self, user_id: str) -> Optional[User]:
+        """Update a user's last activity timestamp."""
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return None
+
+        user.last_activity_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user
+
     async def create_chess_game(
         self,
         white_player_id: str,
@@ -130,6 +141,37 @@ class DatabaseService:
         count = len(expired_tokens)
         for token in expired_tokens:
             await self.session.delete(token)
+
+        await self.session.commit()
+        return count
+
+    async def cleanup_inactive_guest_users(self, hours: int = 24) -> int:
+        """Remove inactive guest users and their refresh tokens"""
+        cutoff_time = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+            hours=hours
+        )
+
+        # Find inactive guest users
+        result = await self.session.execute(
+            select(User).where(
+                User.user_type == "guest", User.last_activity_at < cutoff_time
+            )
+        )
+        inactive_guests = result.scalars().all()
+
+        count = len(inactive_guests)
+
+        print(count)
+
+        # Delete refresh tokens first (to maintain referential integrity)
+        for user in inactive_guests:
+            await self.session.execute(
+                delete(RefreshToken).where(RefreshToken.user_id == user.id)
+            )
+
+        # Delete the guest users
+        for user in inactive_guests:
+            await self.session.delete(user)
 
         await self.session.commit()
         return count

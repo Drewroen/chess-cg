@@ -14,6 +14,7 @@ class User(Base):
         String, default="authenticated", nullable=False
     )  # "authenticated" or "guest"
     elo = Column(Integer, nullable=True)
+    last_activity_at = Column(DateTime, nullable=True, index=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
