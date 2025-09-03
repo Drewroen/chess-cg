@@ -151,42 +151,6 @@ async def auth_callback(
         return _create_error_response(error_msg)
 
 
-@router.post("/token", response_model=TokenResponse)
-@get_limiter().limit("10/minute")
-async def get_token_from_code(
-    request: Request,
-    authorization_code: str,
-    db_session: AsyncSession = Depends(get_db_session),
-):
-    """Exchange authorization code for tokens (JSON response)"""
-
-    try:
-        auth_result = await _process_oauth_callback(authorization_code, db_session)
-
-        return TokenResponse(
-            access_token=auth_result["access_token"],
-            refresh_token=auth_result["refresh_token"],
-            token_type="bearer",
-            expires_in=3600,  # 1 hour in seconds
-            user=UserResponse(
-                id=auth_result["user_data"]["id"],
-                email=auth_result["user_data"]["email"],
-                name=auth_result["user_data"]["name"],
-                user_type="authenticated",
-                username=auth_result["user_data"]["username"],
-            ),
-        )
-
-    except GoogleOAuthError as e:
-        raise HTTPException(
-            status_code=400, detail=f"OAuth authentication failed: {str(e)}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Unexpected error during authentication: {str(e)}"
-        )
-
-
 @router.get("/me", response_model=UserResponse)
 @get_limiter().limit("60/minute")
 async def get_current_user(
@@ -359,73 +323,6 @@ async def get_current_user(
     return response
 
 
-@router.post("/refresh")
-@get_limiter().limit("10/minute")
-async def refresh_token(request: Request, refresh_request: RefreshTokenRequest = None):
-    """Refresh access token using refresh token"""
-
-    # Try to get refresh token from cookie first, then from request body
-    refresh_token_value = None
-
-    if refresh_request and refresh_request.refresh_token:
-        refresh_token_value = refresh_request.refresh_token
-    else:
-        # Try to get from cookie
-        refresh_token_value = request.cookies.get("refresh_token")
-
-    if not refresh_token_value:
-        raise HTTPException(status_code=400, detail="Refresh token not provided")
-
-    # Handle guest refresh tokens
-    if refresh_token_value.startswith("guest_refresh_"):
-        new_access_token = await refresh_guest_access_token(refresh_token_value)
-        if not new_access_token:
-            response = JSONResponse(
-                content={"detail": "Invalid or expired guest refresh token"},
-                status_code=401,
-            )
-            response.delete_cookie(
-                key="refresh_token",
-                path="/",
-                httponly=True,
-                secure=ENVIRONMENT == "production",
-                samesite="lax",
-            )
-            return response
-    else:
-        # Handle authenticated user refresh tokens (existing logic)
-        new_access_token = await refresh_access_token(refresh_token_value)
-        if not new_access_token:
-            # Clear the invalid refresh token cookie
-            response = JSONResponse(
-                content={"detail": "Invalid or expired refresh token"}, status_code=401
-            )
-            response.delete_cookie(
-                key="refresh_token",
-                path="/",
-                httponly=True,
-                secure=ENVIRONMENT == "production",
-                samesite="lax",
-            )
-            return response
-
-    # Return success message and set new access token in cookie
-    response = JSONResponse(content={"message": "Token refreshed successfully"})
-    response.set_cookie(
-        key="access_token",
-        value=new_access_token,
-        httponly=True,  # Prevents JavaScript access (XSS protection)
-        secure=os.getenv("ENVIRONMENT")
-        == "production",  # Only send over HTTPS in production
-        samesite="lax",  # Better CSRF protection
-        domain=COOKIE_DOMAIN,
-        max_age=3600,  # 1 hour in seconds
-        path="/",  # Cookie available for entire domain
-    )
-
-    return response
-
-
 @router.get("/ws-token")
 @get_limiter().limit("10/minute")
 async def get_websocket_token(request: Request):
@@ -480,92 +377,6 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
         httponly=True,
         secure=ENVIRONMENT == "production",
         samesite="lax",
-    )
-
-    return response
-
-
-@router.post("/guest-session")
-@get_limiter().limit("10/minute")
-async def create_guest_session(
-    request: Request, db_session: AsyncSession = Depends(get_db_session)
-):
-    """Create or reuse guest session with refresh token and store guest user in database"""
-
-    # Check for existing refresh token first - prioritize reuse over creation
-    existing_refresh_token = request.cookies.get("refresh_token")
-
-    if existing_refresh_token and existing_refresh_token.startswith("guest_refresh_"):
-        # Try to refresh the existing guest session
-        try:
-            new_access_token = await refresh_guest_access_token(existing_refresh_token)
-            if new_access_token:
-                # Existing session is valid, return refreshed access token (no DB operations needed)
-                response = JSONResponse(
-                    content={"message": "Guest session refreshed", "user_type": "guest"}
-                )
-
-                # Set refreshed access token cookie
-                response.set_cookie(
-                    key="access_token",
-                    value=new_access_token,
-                    httponly=True,
-                    secure=ENVIRONMENT == "production",
-                    samesite="lax",
-                    domain=COOKIE_DOMAIN,
-                    max_age=3600,  # 1 hour
-                    path="/",
-                )
-
-                return response
-        except Exception as e:
-            logging.error(f"Failed to refresh existing guest session: {e}")
-            # Continue to create new session below
-
-    # Create new guest session only if no existing valid session found
-    guest_access_token, guest_refresh_token = create_guest_tokens()
-
-    token_payload = verify_jwt_token(guest_access_token)
-    if token_payload and token_payload.get("user_type") == "guest":
-        guest_id = token_payload["sub"]
-        guest_name = token_payload.get("name", "Guest")
-
-        # Store guest user in database
-        try:
-            db_service = DatabaseService(db_session)
-            # Check if guest user already exists
-            existing_user = await db_service.get_user_by_id(guest_id)
-            if not existing_user:
-                await db_service.create_guest_user(guest_id, guest_name)
-        except Exception as e:
-            logging.error(f"Failed to store guest user {guest_id}: {e}")
-
-    response = JSONResponse(
-        content={"message": "Guest session created", "user_type": "guest"}
-    )
-
-    # Set guest access token cookie
-    response.set_cookie(
-        key="access_token",
-        value=guest_access_token,
-        httponly=True,
-        secure=ENVIRONMENT == "production",
-        samesite="lax",
-        domain=COOKIE_DOMAIN,
-        max_age=3600,  # 1 hour
-        path="/",
-    )
-
-    # Set guest refresh token cookie
-    response.set_cookie(
-        key="refresh_token",
-        value=guest_refresh_token,
-        httponly=True,
-        secure=ENVIRONMENT == "production",
-        samesite="lax",
-        domain=COOKIE_DOMAIN,
-        max_age=7 * 24 * 60 * 60,  # 7 days
-        path="/",
     )
 
     return response

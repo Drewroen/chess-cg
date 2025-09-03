@@ -14,7 +14,7 @@ import os
 import logging
 from dotenv import load_dotenv
 
-from .routers import health, auth, websocket, debug, game
+from .routers import health, auth, websocket, game
 from .obj.game import GameStatus, GAME_START_TIMEOUT_SECONDS
 from .auth import cleanup_expired_refresh_tokens, cleanup_expired_guest_tokens
 from .database import db_manager
@@ -32,7 +32,6 @@ limiter = Limiter(key_func=get_remote_address)
 # Set up shared services in routers
 websocket.room_manager = room_manager
 websocket.message_handler = message_handler
-debug.room_manager = room_manager
 game.room_manager = room_manager
 auth.limiter = limiter
 
@@ -48,7 +47,9 @@ async def check_game_timers():
                     if time_manager.check_timeout(room.game, current_time):
                         # Update game state to mark timeout
                         time_manager.update_player_time(room.game, current_time)
-                        logging.info(f"{room.game.turn.capitalize()} player has run out of time in room {room_id}")
+                        logging.info(
+                            f"{room.game.turn.capitalize()} player has run out of time in room {room_id}"
+                        )
                         room.game.end_reason = "time"
                         await room_manager.emit_game_state_to_room(room_id)
                         await room_manager.cleanup_room_with_elo_update(room_id)
@@ -138,7 +139,7 @@ async def lifespan(app: FastAPI):
     database_url = os.getenv("DATABASE_URL")
     if database_url:
         db_manager.initialize(database_url)
-        
+
         # Warm up database connection pool
         try:
             pool_size = int(os.getenv("DB_POOL_SIZE", "20"))
@@ -185,7 +186,6 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(websocket.router)
-app.include_router(debug.router)
 app.include_router(game.router)
 
 
