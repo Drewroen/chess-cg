@@ -4,6 +4,8 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 import random
 import logging
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from ..auth import (
     GoogleOAuthError,
@@ -29,19 +31,8 @@ from ..svc.database_service import DatabaseService
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
-# Rate limiter will be set from main.py
-limiter = None
-
-
-def get_limiter():
-    """Get the limiter instance, creating a default one if needed"""
-    global limiter
-    if limiter is None:
-        from slowapi import Limiter
-        from slowapi.util import get_remote_address
-
-        limiter = Limiter(key_func=get_remote_address)
-    return limiter
+# Rate limiter initialized at module level
+limiter = Limiter(key_func=get_remote_address)
 
 
 async def generate_unique_username(db_service: DatabaseService) -> str:
@@ -98,7 +89,7 @@ async def get_or_create_user(user_info: dict, db_service: DatabaseService) -> di
 
 
 @router.get("/google")
-@get_limiter().limit("10/minute")
+@limiter.limit("10/minute")
 async def google_auth(request: Request):
     """Initiate Google OAuth flow"""
     try:
@@ -111,7 +102,7 @@ async def google_auth(request: Request):
 
 
 @router.get("/callback")
-@get_limiter().limit("10/minute")
+@limiter.limit("10/minute")
 async def auth_callback(
     request: Request,
     code: Optional[str] = Query(None, description="Authorization code from Google"),
@@ -149,7 +140,7 @@ async def auth_callback(
 
 
 @router.get("/me", response_model=UserResponse)
-@get_limiter().limit("60/minute")
+@limiter.limit("60/minute")
 async def get_current_user(
     request: Request, db_session: AsyncSession = Depends(get_db_session)
 ):
@@ -276,7 +267,7 @@ async def get_current_user(
 
 
 @router.get("/ws-token")
-@get_limiter().limit("10/minute")
+@limiter.limit("10/minute")
 async def get_websocket_token(request: Request):
     """Get access token for WebSocket connections"""
 
@@ -294,7 +285,7 @@ async def get_websocket_token(request: Request):
 
 
 @router.post("/logout")
-@get_limiter().limit("10/minute")
+@limiter.limit("10/minute")
 async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
     """Logout user by revoking refresh token"""
 
@@ -321,7 +312,7 @@ async def logout(request: Request, refresh_request: RefreshTokenRequest = None):
 
 
 @router.patch("/me/username", response_model=UserResponse)
-@get_limiter().limit("10/minute")
+@limiter.limit("10/minute")
 async def update_usernamename(
     request: Request,
     update_request: UpdateUsernameRequest,
