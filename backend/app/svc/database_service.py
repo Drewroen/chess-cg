@@ -37,11 +37,11 @@ class DatabaseService:
         )
         return result.scalar_one_or_none()
 
-    async def create_guest_user(self, guest_id: str, name: str = "Guest") -> User:
+    async def create_guest_user(self, guest_id: str) -> User:
         guest_data = {
             "id": guest_id,
-            "name": "Guest",
-            "username": name,
+            "name": None,
+            "username": None,
             "user_type": "guest",
         }
         return await self.create_user(guest_data)

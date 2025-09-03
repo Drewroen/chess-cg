@@ -5,7 +5,6 @@ import httpx
 from jose import JWTError, jwt
 from dotenv import load_dotenv
 import secrets
-import random
 from uuid import uuid4
 from app.database import get_db_session
 from app.svc.database_service import DatabaseService
@@ -292,14 +291,13 @@ def create_jwt_token(payload: dict, expires_minutes: int = 60) -> str:
 async def create_guest_tokens(guest_name: str = None) -> Tuple[str, str]:
     """Create guest access and refresh tokens"""
     guest_id = "guest_" + str(uuid4())
-    guest_name = guest_name or f"Guest_{random.randint(10000, 99999)}"
 
     # Create guest access token (JWT)
     guest_access_token = create_jwt_token(
         {
             "sub": guest_id,
             "email": "guest@local",
-            "name": guest_name,
+            "name": None,
             "user_type": "guest",
         },
         expires_minutes=60,

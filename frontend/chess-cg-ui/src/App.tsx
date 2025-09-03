@@ -56,13 +56,19 @@ export default function App() {
             </p>
             {user && (
               <div className={`${styles.userInfo} ${user.user_type === "guest" ? styles.guest : styles.authenticated}`}>
-                Playing as{" "}
-                <span
-                  onClick={handleUsernameClick}
-                  className={styles.usernameLink}
-                >
-                  {user.username}
-                </span>
+                {user.user_type === "guest" ? (
+                  "Playing as Guest"
+                ) : (
+                  <>
+                    Playing as{" "}
+                    <span
+                      onClick={handleUsernameClick}
+                      className={styles.usernameLink}
+                    >
+                      {user.username}
+                    </span>
+                  </>
+                )}
               </div>
             )}
           </div>

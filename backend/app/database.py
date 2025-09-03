@@ -37,38 +37,6 @@ class DatabaseManager:
             expire_on_commit=False,
         )
 
-    async def warm_pool(self):
-        """Pre-warm database connection pool by creating and testing connections"""
-        if not self.engine:
-            raise RuntimeError("Database engine not initialized")
-
-        # Create test connections to warm the pool
-        pool_size = int(os.getenv("DB_POOL_SIZE", "20"))
-        # Warm up to 75% of pool size, minimum 3, maximum 15 connections
-        warm_count = max(3, min(15, int(pool_size * 0.75)))
-        connections = []
-
-        try:
-            # Acquire connections up to warm_count to warm them up
-            for i in range(warm_count):
-                conn = await self.engine.connect()
-                # Execute a simple query to ensure connection is working
-                await conn.execute("SELECT 1")
-                connections.append(conn)
-
-            # Return connections to pool
-            for conn in connections:
-                await conn.close()
-
-        except Exception as e:
-            # Clean up any connections we managed to create
-            for conn in connections:
-                try:
-                    await conn.close()
-                except Exception:
-                    pass
-            raise e
-
     async def close(self):
         if self.engine:
             await self.engine.dispose()
