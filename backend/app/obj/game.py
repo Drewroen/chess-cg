@@ -36,6 +36,8 @@ class Game:
         self.white_draw_requested = False
         self.black_draw_requested = False
         self.last_move = None
+        self.position_history = {}  # Hash -> count for threefold repetition detection
+        self._record_position()
 
     def move(self, start, end, player_color, promote_to=None):
         if self.status == GameStatus.COMPLETE:
@@ -61,7 +63,7 @@ class Game:
         if moved:
             # Store the last move from the board
             self.last_move = self.board.last_move
-            
+
             # Reset draw requests when a move is made
             self.reset_draw_requests()
 
@@ -76,6 +78,10 @@ class Game:
 
             self.turn = "black" if self.turn == "white" else "white"
             self.last_move_time = time.time()
+
+            # Record position for threefold repetition detection
+            if self._record_position():
+                return True  # Game ended due to threefold repetition
 
             # Execute premove if one exists for the current player
             self._execute_premove()
@@ -127,7 +133,7 @@ class Game:
         if self.status == GameStatus.IN_PROGRESS:
             current_time = time.time()
             self.time_manager.update_player_time(self, current_time)
-        
+
         self.status = GameStatus.COMPLETE
         self.completed_at = time.time()
         self.winner = winner
@@ -163,3 +169,21 @@ class Game:
         """Reset all draw requests (called when a move is made)"""
         self.white_draw_requested = False
         self.black_draw_requested = False
+
+    def _record_position(self):
+        """Record the current board position and check for threefold repetition"""
+        position_hash = self.board.get_position_hash(self.turn)
+        self.position_history[position_hash] = (
+            self.position_history.get(position_hash, 0) + 1
+        )
+
+        # Check for threefold repetition
+        if self.position_history[position_hash] >= 3:
+            self._finalize_game_end("draw", "threefold_repetition")
+            return True
+        return False
+
+    def is_threefold_repetition(self) -> bool:
+        """Check if current position would result in threefold repetition"""
+        position_hash = self.board.get_position_hash(self.turn)
+        return self.position_history.get(position_hash, 0) >= 2

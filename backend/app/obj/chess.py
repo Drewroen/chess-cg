@@ -1,4 +1,5 @@
 from app.obj.objects import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
+import hashlib
 
 BOARD_SIZE = 8
 PAWN_START_ROWS = {"white": 6, "black": 1}
@@ -42,6 +43,71 @@ class Board:
         self.last_move: ChessMove = None
         self.pieces: list[Piece] = []
         self.initialize_board()
+
+    def get_position_hash(self, turn: str) -> str:
+        """
+        Generate a unique hash for the current board position.
+        This includes piece positions, turn, castling rights, and en passant.
+        """
+        position_data = []
+
+        # Add piece positions
+        for row in range(BOARD_SIZE):
+            for col in range(BOARD_SIZE):
+                piece = self.squares[row][col]
+                if piece:
+                    position_data.append(f"{row},{col},{piece.type},{piece.color}")
+
+        # Add current turn
+        position_data.append(f"turn:{turn}")
+
+        # Add castling rights
+        white_king = None
+        black_king = None
+        for piece in self.pieces:
+            if piece.type == "king":
+                if piece.color == "white":
+                    white_king = piece
+                elif piece.color == "black":
+                    black_king = piece
+
+        if white_king:
+            position_data.append(f"white_king_moved:{white_king.moved}")
+        if black_king:
+            position_data.append(f"black_king_moved:{black_king.moved}")
+
+        # Add rook positions and moved status for castling
+        for piece in self.pieces:
+            if piece.type == "rook":
+                position_data.append(
+                    f"rook:{piece.position.row},{piece.position.col},{piece.color},{piece.moved}"
+                )
+
+        # Add en passant opportunity
+        if self.last_move and self._is_en_passant_opportunity():
+            position_data.append(f"en_passant:{self.last_move.position_to.notation()}")
+
+        # Sort to ensure consistent ordering
+        position_data.sort()
+        position_string = "|".join(position_data)
+
+        return hashlib.md5(position_string.encode()).hexdigest()
+
+    def _is_en_passant_opportunity(self) -> bool:
+        """Check if the last move created an en passant opportunity"""
+        if not self.last_move:
+            return False
+
+        # Get the piece that just moved
+        moved_piece = self.piece_from_position(self.last_move.position_to)
+        if not moved_piece or moved_piece.type != "pawn":
+            return False
+
+        # Check if it was a two-square pawn move
+        from_row, _ = self.last_move.position_from.coordinates()
+        to_row, _ = self.last_move.position_to.coordinates()
+
+        return abs(from_row - to_row) == 2
 
     def get_squares(self):
         return [
@@ -243,7 +309,7 @@ class Board:
         """Backup the current board state before applying a move."""
         from dataclasses import dataclass
         from typing import Optional, Tuple
-        
+
         @dataclass
         class BoardState:
             original_piece: object
@@ -253,22 +319,22 @@ class Board:
             captured_piece: object
             temp_piece: object
             additional_state: Optional[Tuple] = None
-            
+
         original_piece = self.piece_from_position(position)
         initial_pos = position.coordinates()
         target_pos = move.position_to.coordinates()
         capture_pos = move.position_to_capture.coordinates()
-        
+
         captured_piece = self.squares[capture_pos[0]][capture_pos[1]]
         temp_piece = self.squares[target_pos[0]][target_pos[1]]
-        
+
         return BoardState(
             original_piece=original_piece,
             initial_pos=initial_pos,
             target_pos=target_pos,
             capture_pos=capture_pos,
             captured_piece=captured_piece,
-            temp_piece=temp_piece
+            temp_piece=temp_piece,
         )
 
     def _apply_move_temporarily(self, move: ChessMove, board_state):
@@ -279,14 +345,22 @@ class Board:
 
         # Handle transformation (promotion)
         if move.transform_to:
-            self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = move.transform_to
+            self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = (
+                move.transform_to
+            )
         else:
-            self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = board_state.original_piece
-            board_state.original_piece.position = Position(board_state.target_pos[0], board_state.target_pos[1])
+            self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = (
+                board_state.original_piece
+            )
+            board_state.original_piece.position = Position(
+                board_state.target_pos[0], board_state.target_pos[1]
+            )
 
         # Handle additional moves (e.g., castling)
         if move.additional_move:
-            board_state.additional_state = self._apply_additional_move(move.additional_move)
+            board_state.additional_state = self._apply_additional_move(
+                move.additional_move
+            )
 
     def _apply_additional_move(self, additional_move):
         """Apply additional move (like castling rook movement) and return state for restoration."""
@@ -297,7 +371,7 @@ class Board:
 
         self.squares[additional_to[0]][additional_to[1]] = additional_piece
         self.squares[additional_from[0]][additional_from[1]] = None
-        
+
         return (additional_from, additional_to, additional_piece, additional_temp)
 
     def _check_king_safety(self, color: str) -> bool:
@@ -308,15 +382,25 @@ class Board:
     def _restore_board_state(self, board_state):
         """Restore the board to its original state."""
         # Restore original board state
-        self.squares[board_state.initial_pos[0]][board_state.initial_pos[1]] = board_state.original_piece
-        self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = board_state.temp_piece
-        self.squares[board_state.capture_pos[0]][board_state.capture_pos[1]] = board_state.captured_piece
+        self.squares[board_state.initial_pos[0]][board_state.initial_pos[1]] = (
+            board_state.original_piece
+        )
+        self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = (
+            board_state.temp_piece
+        )
+        self.squares[board_state.capture_pos[0]][board_state.capture_pos[1]] = (
+            board_state.captured_piece
+        )
 
-        board_state.original_piece.position = Position(board_state.initial_pos[0], board_state.initial_pos[1])
+        board_state.original_piece.position = Position(
+            board_state.initial_pos[0], board_state.initial_pos[1]
+        )
 
         # Restore additional move if it was made
         if board_state.additional_state:
-            additional_from, additional_to, additional_piece, additional_temp = board_state.additional_state
+            additional_from, additional_to, additional_piece, additional_temp = (
+                board_state.additional_state
+            )
             self.squares[additional_from[0]][additional_from[1]] = additional_piece
             self.squares[additional_to[0]][additional_to[1]] = additional_temp
 
@@ -522,8 +606,10 @@ class Board:
         expected_start = self.chess_notation_from_index(start_row, pawn_col)
         expected_end = self.chess_notation_from_index(end_row, pawn_col)
 
-        return (self.last_move.position_from.notation() == expected_start and 
-                self.last_move.position_to.notation() == expected_end)
+        return (
+            self.last_move.position_from.notation() == expected_start
+            and self.last_move.position_to.notation() == expected_end
+        )
 
     def _create_promotion_moves(
         self, position: Position, target_row: int, target_col: int, color: str
