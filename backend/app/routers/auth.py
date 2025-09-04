@@ -152,6 +152,7 @@ async def get_current_user(
     request: Request, db_session: AsyncSession = Depends(get_db_session)
 ):
     """Get current user information from database, with automatic token refresh and guest session fallback"""
+    db_service = DatabaseService(db_session)
 
     # Get access token from cookie
     access_token = request.cookies.get("access_token")
@@ -178,8 +179,7 @@ async def get_current_user(
             # Successfully refreshed, verify new token
             payload = verify_jwt_token(new_access_token)
             if payload:
-                # Create response with refreshed user data
-                db_service = DatabaseService(db_session)
+                # Get user data with refreshed token
                 user = await db_service.get_user_by_id(payload["sub"])
 
                 if user:
@@ -210,7 +210,6 @@ async def get_current_user(
 
             # Store guest user in database
             try:
-                db_service = DatabaseService(db_session)
                 existing_user = await db_service.get_user_by_id(guest_id)
                 if not existing_user:
                     await db_service.create_guest_user(guest_id)
@@ -245,7 +244,6 @@ async def get_current_user(
 
     # If we have a valid payload, get user from database
     if payload:
-        db_service = DatabaseService(db_session)
         user = await db_service.get_user_by_id(payload["sub"])
 
         if not user:
