@@ -157,6 +157,7 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
       playerId: data.player_id, // Player ID
       drawRequests: data.draw_requests,
       lastMove: data.last_move,
+      capturedPieces: data.captured_pieces,
     }));
   }, []);
 

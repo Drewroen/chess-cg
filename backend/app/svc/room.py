@@ -272,6 +272,7 @@ class RoomManager:
                     "white": room.game.white_draw_requested,
                     "black": room.game.black_draw_requested,
                 },
+                "captured_pieces": room.game.captured_pieces,
                 "last_move": room.game.last_move.to_dict()
                 if room.game.last_move
                 else None,

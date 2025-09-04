@@ -37,6 +37,7 @@ class Game:
         self.black_draw_requested = False
         self.last_move = None
         self.position_history = {}  # Hash -> count for threefold repetition detection
+        self.captured_pieces = {"white": [], "black": []}  # Track captured pieces by color
         self._record_position()
 
     def move(self, start, end, player_color, promote_to=None):
@@ -51,7 +52,12 @@ class Game:
 
         if player_color == self.turn:
             # Regular move - it's the player's turn
-            moved = self.board.move(start, end, self.turn, promote_to)
+            move_result = self.board.move(start, end, self.turn, promote_to)
+            moved = move_result["success"]
+            if moved and move_result["captured_piece"]:
+                # Track captured piece
+                captured_piece = move_result["captured_piece"]
+                self.captured_pieces[captured_piece["color"]].append(captured_piece)
         else:
             # Premove - store for later execution
             if player_color == "white":

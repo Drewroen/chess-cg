@@ -171,11 +171,14 @@ class Board:
     ):
         """
         Move a piece from the first position to the second position
-        Returns True if the move was successful, False otherwise
+        Returns dict with 'success': bool and 'captured_piece': dict or None if successful
         """
         piece = self.piece_from_position(position_from)
         if piece is None or piece.color != turn:
-            return False  # Invalid move if no piece or wrong color's turn
+            return {
+                "success": False,
+                "captured_piece": None,
+            }  # Invalid move if no piece or wrong color's turn
 
         available_moves: list[ChessMove] = self.get_available_moves(
             position_from, ignore_check=False, ignore_illegal_moves=False
@@ -198,10 +201,22 @@ class Board:
             position_to_capture = move.position_to_capture.coordinates()
 
             piece = self.piece_from_position(position_from)
-            self.squares[position_to_capture[0]][position_to_capture[1]] = None
+            
+            # Check for piece at the capture position (e.g., en passant)
             piece_to_capture = self.piece_from_position(move.position_to_capture)
+            captured_piece_info = None
             if piece_to_capture:
+                captured_piece_info = {"type": piece_to_capture.type, "color": piece_to_capture.color}
                 self.pieces.remove(piece_to_capture)
+            
+            # Also check for piece at the destination position (normal captures)
+            if not piece_to_capture:
+                piece_at_destination = self.piece_from_position(move.position_to)
+                if piece_at_destination:
+                    captured_piece_info = {"type": piece_at_destination.type, "color": piece_at_destination.color}
+                    self.pieces.remove(piece_at_destination)
+            
+            self.squares[position_to_capture[0]][position_to_capture[1]] = None
             self.squares[position_to[0]][position_to[1]] = move.transform_to or piece
             if move.transform_to:
                 move.transform_to.position = Position(position_to[0], position_to[1])
@@ -230,9 +245,9 @@ class Board:
                         additional_position_to[0], additional_position_to[1]
                     )
 
-            return True
+            return {"success": True, "captured_piece": captured_piece_info}
 
-        return False
+        return {"success": False, "captured_piece": None}
 
     def get_available_moves_for_color(self, color: str) -> list[ChessMove]:
         """
