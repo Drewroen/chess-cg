@@ -113,6 +113,7 @@ class RoomService:
 
         # Save game to database if it was completed or aborted
         if room.game.status in [GameStatus.COMPLETE, GameStatus.ABORTED]:
+            session = None
             try:
                 async for session in get_db_session():
                     db_service = DatabaseService(session)
@@ -147,8 +148,12 @@ class RoomService:
                         else "aborted"
                     )
                     logging.info(f"Saved {status_text} game {room_id} to database")
+                    break  # Exit the async generator after successful operation
             except Exception as e:
                 logging.error(f"Error saving game {room_id} to database: {e}")
+            finally:
+                # Session cleanup is handled by get_db_session() context manager
+                pass
 
         # Clean up player mappings
         if room.white in self.player_to_room_map:
@@ -171,6 +176,7 @@ class RoomManager:
         if not user_id or user_id.startswith("guest_"):
             return {"elo": None, "username": "Guest"}
 
+        session = None
         try:
             async for session in get_db_session():
                 db_service = DatabaseService(session)
@@ -182,6 +188,9 @@ class RoomManager:
         except Exception as e:
             logging.error(f"Error fetching user info for user {user_id}: {e}")
             return {"elo": None, "username": "Guest"}
+        finally:
+            # Session cleanup is handled by get_db_session() context manager
+            pass
 
     async def get_user_elo(self, user_id: str) -> int:
         """Get the ELO rating for a user."""
@@ -202,6 +211,7 @@ class RoomManager:
 
         # Update ELO ratings for completed games before cleanup
         if room.game.status == GameStatus.COMPLETE:
+            session = None
             try:
                 async for session in get_db_session():
                     db_service = DatabaseService(session)
@@ -212,8 +222,12 @@ class RoomManager:
                         self.get_user_info,
                         db_service,
                     )
+                    break  # Exit the async generator after successful operation
             except Exception as e:
                 logging.error(f"Error updating ELO ratings for room {room_id}: {e}")
+            finally:
+                # Session cleanup is handled by get_db_session() context manager
+                pass
 
         # Now clean up the room
         await self.room_service.cleanup_room(room_id)
