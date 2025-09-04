@@ -20,7 +20,9 @@ def position_from_notation(notation: str) -> Position:
 
 
 class Piece:
-    def __init__(self, color: str, type: str = None, position: Position = None, value: int = 0):
+    def __init__(
+        self, color: str, type: str = None, position: Position = None, value: int = 0
+    ):
         self.color = color
         self.moved = False
         self.type = type
@@ -30,10 +32,24 @@ class Piece:
     def mark_moved(self):
         self.moved = True
 
+    def get_acting_type(self) -> str:
+        return self.type
+
 
 class Pawn(Piece):
     def __init__(self, color, position: Position = None):
         super().__init__(color, "pawn", position=position, value=1)
+        self.promoted_to = None  # Track what piece this pawn is acting as
+
+    def promote_to(self, piece_type: str):
+        """Promote the pawn to act as the specified piece type"""
+        piece_values = {"queen": 9, "rook": 5, "bishop": 3, "knight": 3}
+        self.promoted_to = piece_type
+        self.value = piece_values.get(piece_type, 1)
+
+    def get_acting_type(self) -> str:
+        """Get the type this pawn is currently acting as"""
+        return self.promoted_to if self.promoted_to else "pawn"
 
 
 class Rook(Piece):

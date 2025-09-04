@@ -17,7 +17,7 @@ class ChessMove:
         position_from: Position,
         position_to: Position,
         position_to_capture: Position = None,
-        transform_to: Piece = None,
+        promote_to_type: str = None,
         additional_move: tuple[Position, Position] = None,
     ):
         self.position_from = position_from
@@ -25,7 +25,7 @@ class ChessMove:
         self.position_to_capture = (
             position_to_capture if position_to_capture else position_to
         )
-        self.transform_to = transform_to  # For pawn promotion
+        self.promote_to_type = promote_to_type  # For pawn promotion
         self.additional_move = additional_move
 
     def to_dict(self):
@@ -56,7 +56,8 @@ class Board:
             for col in range(BOARD_SIZE):
                 piece = self.squares[row][col]
                 if piece:
-                    position_data.append(f"{row},{col},{piece.type},{piece.color}")
+                    acting_type = piece.get_acting_type()
+                    position_data.append(f"{row},{col},{acting_type},{piece.color}")
 
         # Add current turn
         position_data.append(f"turn:{turn}")
@@ -112,7 +113,12 @@ class Board:
     def get_squares(self):
         return [
             [
-                {"type": piece.type, "color": piece.color} if piece else None
+                {
+                    "type": piece.get_acting_type(),
+                    "color": piece.color,
+                }
+                if piece
+                else None
                 for piece in row
             ]
             for row in self.squares
@@ -187,8 +193,8 @@ class Board:
             filter(
                 lambda move: move.position_to.notation() == position_to.notation()
                 and (
-                    (move.transform_to is None and promote_to is None)
-                    or move.transform_to.type == promote_to
+                    (move.promote_to_type is None and promote_to is None)
+                    or move.promote_to_type == promote_to
                 ),
                 available_moves,
             ),
@@ -201,29 +207,33 @@ class Board:
             position_to_capture = move.position_to_capture.coordinates()
 
             piece = self.piece_from_position(position_from)
-            
+
             # Check for piece at the capture position (e.g., en passant)
             piece_to_capture = self.piece_from_position(move.position_to_capture)
             captured_piece_info = None
             if piece_to_capture:
-                captured_piece_info = {"type": piece_to_capture.type, "color": piece_to_capture.color}
+                captured_piece_info = {
+                    "type": piece_to_capture.get_acting_type(),
+                    "color": piece_to_capture.color,
+                }
                 self.pieces.remove(piece_to_capture)
-            
+
             # Also check for piece at the destination position (normal captures)
             if not piece_to_capture:
                 piece_at_destination = self.piece_from_position(move.position_to)
                 if piece_at_destination:
-                    captured_piece_info = {"type": piece_at_destination.type, "color": piece_at_destination.color}
+                    captured_piece_info = {
+                        "type": piece_at_destination.get_acting_type(),
+                        "color": piece_at_destination.color,
+                    }
                     self.pieces.remove(piece_at_destination)
-            
+
             self.squares[position_to_capture[0]][position_to_capture[1]] = None
-            self.squares[position_to[0]][position_to[1]] = move.transform_to or piece
-            if move.transform_to:
-                move.transform_to.position = Position(position_to[0], position_to[1])
-                self.pieces.remove(piece)
-                self.pieces.append(move.transform_to)
-            else:
-                piece.position = Position(position_to[0], position_to[1])
+            self.squares[position_to[0]][position_to[1]] = piece
+            if move.promote_to_type:
+                # Promote the pawn to act as the specified piece
+                piece.promote_to(move.promote_to_type)
+            piece.position = Position(position_to[0], position_to[1])
             self.squares[initial_position[0]][initial_position[1]] = None
             piece.mark_moved()
             self.last_move = move
@@ -288,19 +298,23 @@ class Board:
         if piece is None:
             return []
         moves = []
-        if piece.type == "pawn":
+
+        # Use the piece's acting type (for promoted pawns)
+        acting_type = piece.get_acting_type()
+
+        if acting_type == "pawn":
             moves = self._get_pawn_moves(position, ignore_illegal_moves)
-        if piece.type == "rook":
+        elif acting_type == "rook":
             moves = self._get_rook_moves(position, ignore_illegal_moves)
-        if piece.type == "knight":
+        elif acting_type == "knight":
             moves = self._get_knight_moves(position, ignore_illegal_moves)
-        if piece.type == "bishop":
+        elif acting_type == "bishop":
             moves = self._get_bishop_moves(position, ignore_illegal_moves)
-        if piece.type == "queen":
+        elif acting_type == "queen":
             moves = self._get_rook_moves(
                 position, ignore_illegal_moves
             ) + self._get_bishop_moves(position, ignore_illegal_moves)
-        if piece.type == "king":
+        elif acting_type == "king":
             moves = self._get_king_moves(position, ignore_check, ignore_illegal_moves)
 
         if not ignore_check:
@@ -359,17 +373,22 @@ class Board:
         self.squares[board_state.capture_pos[0]][board_state.capture_pos[1]] = None
 
         # Handle transformation (promotion)
-        if move.transform_to:
-            self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = (
-                move.transform_to
+        if move.promote_to_type:
+            # Temporarily promote the pawn
+            original_promoted_to = getattr(
+                board_state.original_piece, "promoted_to", None
             )
-        else:
-            self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = (
-                board_state.original_piece
+            board_state.original_piece.promote_to(move.promote_to_type)
+            board_state.original_promoted_to = (
+                original_promoted_to  # Store for restoration
             )
-            board_state.original_piece.position = Position(
-                board_state.target_pos[0], board_state.target_pos[1]
-            )
+
+        self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = (
+            board_state.original_piece
+        )
+        board_state.original_piece.position = Position(
+            board_state.target_pos[0], board_state.target_pos[1]
+        )
 
         # Handle additional moves (e.g., castling)
         if move.additional_move:
@@ -410,6 +429,17 @@ class Board:
         board_state.original_piece.position = Position(
             board_state.initial_pos[0], board_state.initial_pos[1]
         )
+
+        # Restore promotion state if it was temporarily changed
+        if board_state.original_promoted_to is not None:
+            board_state.original_piece.promoted_to = board_state.original_promoted_to
+            if board_state.original_promoted_to:
+                piece_values = {"queen": 9, "rook": 5, "bishop": 3, "knight": 3}
+                board_state.original_piece.value = piece_values.get(
+                    board_state.original_promoted_to, 1
+                )
+            else:
+                board_state.original_piece.value = 1
 
         # Restore additional move if it was made
         if board_state.additional_state:
@@ -630,10 +660,12 @@ class Board:
         self, position: Position, target_row: int, target_col: int, color: str
     ) -> list[ChessMove]:
         """Create all possible promotion moves for a pawn"""
-        promotion_pieces = [Bishop(color), Knight(color), Rook(color), Queen(color)]
+        promotion_types = ["bishop", "knight", "rook", "queen"]
         return [
-            ChessMove(position, Position(target_row, target_col), transform_to=piece)
-            for piece in promotion_pieces
+            ChessMove(
+                position, Position(target_row, target_col), promote_to_type=piece_type
+            )
+            for piece_type in promotion_types
         ]
 
     def _opposite_color(self, color: str) -> str:
