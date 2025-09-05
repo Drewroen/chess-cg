@@ -348,6 +348,7 @@ class Board:
             captured_piece: object
             temp_piece: object
             additional_state: Optional[Tuple] = None
+            original_promoted_to: Optional[object] = None
 
         original_piece = self.piece_from_position(position)
         initial_pos = position.coordinates()
@@ -364,6 +365,7 @@ class Board:
             capture_pos=capture_pos,
             captured_piece=captured_piece,
             temp_piece=temp_piece,
+            original_promoted_to=getattr(original_piece, "promoted_to", None),
         )
 
     def _apply_move_temporarily(self, move: ChessMove, board_state):
@@ -431,7 +433,9 @@ class Board:
         )
 
         # Restore promotion state if it was temporarily changed
-        if board_state.original_promoted_to is not None:
+        if hasattr(board_state, "original_promoted_to") and hasattr(
+            board_state.original_piece, "promoted_to"
+        ):
             board_state.original_piece.promoted_to = board_state.original_promoted_to
             if board_state.original_promoted_to:
                 piece_values = {"queen": 9, "rook": 5, "bishop": 3, "knight": 3}
