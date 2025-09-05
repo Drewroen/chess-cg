@@ -50,7 +50,6 @@ async def check_game_timers():
                         logging.info(
                             f"{room.game.turn.capitalize()} player has run out of time in room {room_id}"
                         )
-                        room.game.end_reason = "time"
                         await room_manager.emit_game_state_to_room(room_id)
                         await room_manager.cleanup_room_with_elo_update(room_id)
 

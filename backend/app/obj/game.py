@@ -49,7 +49,7 @@ class Game:
 
         if self.status == GameStatus.IN_PROGRESS:
             current_time = time.time()
-            if not self.time_manager.update_player_time(self, current_time):
+            if self.time_manager.check_timeout(self, current_time):
                 logging.warning("The player has run out of time")
                 return False
 
