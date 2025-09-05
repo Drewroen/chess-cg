@@ -37,7 +37,10 @@ class Game:
         self.black_draw_requested = False
         self.last_move = None
         self.position_history = {}  # Hash -> count for threefold repetition detection
-        self.captured_pieces = {"white": [], "black": []}  # Track captured pieces by color
+        self.captured_pieces = {
+            "white": [],
+            "black": [],
+        }  # Track captured pieces by color
         self._record_position()
 
     def move(self, start, end, player_color, promote_to=None):
@@ -136,7 +139,9 @@ class Game:
 
     def _finalize_game_end(self, winner: str, end_reason: str):
         """Helper method to update time and complete the game"""
-        if self.status == GameStatus.IN_PROGRESS:
+        if self.status == GameStatus.IN_PROGRESS and end_reason != "time":
+            # Only update player time if game is not ending due to timeout
+            # (to avoid infinite recursion)
             current_time = time.time()
             self.time_manager.update_player_time(self, current_time)
 
