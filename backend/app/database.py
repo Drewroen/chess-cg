@@ -42,6 +42,7 @@ async def get_db_session(max_retries: int = 3) -> AsyncGenerator[AsyncSession, N
                     yield session
                 finally:
                     await session.close()
+                    return
         except (DisconnectionError, OperationalError) as e:
             if attempt == max_retries - 1:
                 logging.error(
