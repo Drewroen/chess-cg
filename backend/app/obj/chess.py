@@ -18,6 +18,7 @@ class ChessMove:
         position_to: Position,
         position_to_capture: Position = None,
         promote_to_type: str = None,
+        promote_from_type: str = None,
         additional_move: tuple[Position, Position] = None,
     ):
         self.position_from = position_from
@@ -26,6 +27,7 @@ class ChessMove:
             position_to_capture if position_to_capture else position_to
         )
         self.promote_to_type = promote_to_type  # For pawn promotion
+        self.promote_from_type = promote_from_type  # Original piece type before promotion
         self.additional_move = additional_move
 
     def to_dict(self):
@@ -325,124 +327,80 @@ class Board:
                 return piece.position
         return None
 
-    def _backup_board_state(self, position: Position, move: ChessMove):
-        """Backup the current board state before applying a move."""
-        from dataclasses import dataclass
-        from typing import Optional, Tuple
 
-        @dataclass
-        class BoardState:
-            original_piece: object
-            initial_pos: Tuple[int, int]
-            target_pos: Tuple[int, int]
-            capture_pos: Tuple[int, int]
-            captured_piece: object
-            temp_piece: object
-            additional_state: Optional[Tuple] = None
-            original_promoted_to: Optional[object] = None
-
+    def _apply_move_temporarily(self, position: Position, move: ChessMove):
+        """Apply a move temporarily to the board."""
         original_piece = self.piece_from_position(position)
         initial_pos = position.coordinates()
         target_pos = move.position_to.coordinates()
         capture_pos = move.position_to_capture.coordinates()
 
-        captured_piece = self.squares[capture_pos[0]][capture_pos[1]]
-        temp_piece = self.squares[target_pos[0]][target_pos[1]]
-
-        return BoardState(
-            original_piece=original_piece,
-            initial_pos=initial_pos,
-            target_pos=target_pos,
-            capture_pos=capture_pos,
-            captured_piece=captured_piece,
-            temp_piece=temp_piece,
-            original_promoted_to=getattr(original_piece, "promoted_to", None),
-        )
-
-    def _apply_move_temporarily(self, move: ChessMove, board_state):
-        """Apply a move temporarily to the board."""
-        # Apply the move temporarily
-        self.squares[board_state.initial_pos[0]][board_state.initial_pos[1]] = None
-        self.squares[board_state.capture_pos[0]][board_state.capture_pos[1]] = None
+        # Clear the original position and capture position
+        self.squares[initial_pos[0]][initial_pos[1]] = None
+        self.squares[capture_pos[0]][capture_pos[1]] = None
 
         # Handle transformation (promotion)
         if move.promote_to_type:
             # Temporarily promote the pawn
-            original_promoted_to = getattr(
-                board_state.original_piece, "promoted_to", None
-            )
-            board_state.original_piece.promote_to(move.promote_to_type)
-            board_state.original_promoted_to = (
-                original_promoted_to  # Store for restoration
-            )
+            original_piece.promote_to(move.promote_to_type)
 
-        self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = (
-            board_state.original_piece
-        )
-        board_state.original_piece.position = Position(
-            board_state.target_pos[0], board_state.target_pos[1]
-        )
+        # Place piece at target position
+        self.squares[target_pos[0]][target_pos[1]] = original_piece
+        original_piece.position = Position(target_pos[0], target_pos[1])
 
         # Handle additional moves (e.g., castling)
         if move.additional_move:
-            board_state.additional_state = self._apply_additional_move(
-                move.additional_move
-            )
+            self._apply_additional_move(move.additional_move)
 
     def _apply_additional_move(self, additional_move):
-        """Apply additional move (like castling rook movement) and return state for restoration."""
+        """Apply additional move (like castling rook movement)."""
         additional_from = additional_move[0].coordinates()
         additional_to = additional_move[1].coordinates()
         additional_piece = self.squares[additional_from[0]][additional_from[1]]
-        additional_temp = self.squares[additional_to[0]][additional_to[1]]
 
         self.squares[additional_to[0]][additional_to[1]] = additional_piece
         self.squares[additional_from[0]][additional_from[1]] = None
-
-        return (additional_from, additional_to, additional_piece, additional_temp)
+        additional_piece.position = Position(additional_to[0], additional_to[1])
 
     def _check_king_safety(self, color: str) -> bool:
         """Check if the king is in check after the temporary move."""
         king_position = self._find_king_position(color)
         return king_position and self._is_square_attacked(king_position, color)
 
-    def _restore_board_state(self, board_state):
-        """Restore the board to its original state."""
-        # Restore original board state
-        self.squares[board_state.initial_pos[0]][board_state.initial_pos[1]] = (
-            board_state.original_piece
-        )
-        self.squares[board_state.target_pos[0]][board_state.target_pos[1]] = (
-            board_state.temp_piece
-        )
-        self.squares[board_state.capture_pos[0]][board_state.capture_pos[1]] = (
-            board_state.captured_piece
-        )
+    def _restore_board_state(self, position: Position, move: ChessMove, captured_piece, temp_piece):
+        """Restore the board to its original state using move data."""
+        original_piece = self.piece_from_position(move.position_to)
+        initial_pos = position.coordinates()
+        target_pos = move.position_to.coordinates()
+        capture_pos = move.position_to_capture.coordinates()
 
-        board_state.original_piece.position = Position(
-            board_state.initial_pos[0], board_state.initial_pos[1]
-        )
+        # Restore original board state
+        self.squares[initial_pos[0]][initial_pos[1]] = original_piece
+        self.squares[target_pos[0]][target_pos[1]] = temp_piece
+        self.squares[capture_pos[0]][capture_pos[1]] = captured_piece
+
+        original_piece.position = Position(initial_pos[0], initial_pos[1])
 
         # Restore promotion state if it was temporarily changed
-        if hasattr(board_state, "original_promoted_to") and hasattr(
-            board_state.original_piece, "promoted_to"
-        ):
-            board_state.original_piece.promoted_to = board_state.original_promoted_to
-            if board_state.original_promoted_to:
-                piece_values = {"queen": 9, "rook": 5, "bishop": 3, "knight": 3}
-                board_state.original_piece.value = piece_values.get(
-                    board_state.original_promoted_to, 1
-                )
-            else:
-                board_state.original_piece.value = 1
+        if move.promote_to_type and move.promote_from_type:
+            if hasattr(original_piece, "promoted_to"):
+                # Reset to original state (unpromoted pawn)
+                original_piece.promoted_to = None
+                original_piece.value = 1
 
         # Restore additional move if it was made
-        if board_state.additional_state:
-            additional_from, additional_to, additional_piece, additional_temp = (
-                board_state.additional_state
-            )
-            self.squares[additional_from[0]][additional_from[1]] = additional_piece
-            self.squares[additional_to[0]][additional_to[1]] = additional_temp
+        if move.additional_move:
+            self._restore_additional_move(move.additional_move)
+
+    def _restore_additional_move(self, additional_move):
+        """Restore additional move (like castling rook movement)."""
+        additional_from = additional_move[0].coordinates()
+        additional_to = additional_move[1].coordinates()
+        additional_piece = self.squares[additional_to[0]][additional_to[1]]
+
+        self.squares[additional_from[0]][additional_from[1]] = additional_piece
+        self.squares[additional_to[0]][additional_to[1]] = None
+        additional_piece.position = Position(additional_from[0], additional_from[1])
 
     def _is_king_in_check_after_move(self, position: Position, move: ChessMove) -> bool:
         """
@@ -452,10 +410,21 @@ class Board:
         if not original_piece:
             return False
 
-        board_state = self._backup_board_state(position, move)
-        self._apply_move_temporarily(move, board_state)
-        in_check = self._check_king_safety(board_state.original_piece.color)
-        self._restore_board_state(board_state)
+        # Store necessary data for restoration
+        capture_pos = move.position_to_capture.coordinates()
+        target_pos = move.position_to.coordinates()
+        captured_piece = self.squares[capture_pos[0]][capture_pos[1]]
+        temp_piece = self.squares[target_pos[0]][target_pos[1]]
+
+        # Apply move temporarily
+        self._apply_move_temporarily(position, move)
+        
+        # Check if king is in check
+        in_check = self._check_king_safety(original_piece.color)
+        
+        # Restore board state
+        self._restore_board_state(position, move, captured_piece, temp_piece)
+        
         return in_check
 
     def _is_square_attacked(self, position: Position, color: str) -> bool:
@@ -655,10 +624,15 @@ class Board:
         self, position: Position, target_row: int, target_col: int, color: str
     ) -> list[ChessMove]:
         """Create all possible promotion moves for a pawn"""
+        piece = self.piece_from_position(position)
+        promote_from_type = piece.type if piece else None
+        
         promotion_types = ["bishop", "knight", "rook", "queen"]
         return [
             ChessMove(
-                position, Position(target_row, target_col), promote_to_type=piece_type
+                position, Position(target_row, target_col), 
+                promote_to_type=piece_type,
+                promote_from_type=promote_from_type
             )
             for piece_type in promotion_types
         ]
