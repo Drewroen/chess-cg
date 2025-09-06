@@ -5,8 +5,6 @@ interface GameOverProps {
 }
 
 function getGameEndMessage(winner?: string, endReason?: string): string {
-  console.log(endReason);
-  console.log(winner);
   if (!winner || !endReason) {
     return "Game Over.";
   }

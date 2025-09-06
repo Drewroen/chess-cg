@@ -42,6 +42,7 @@ class Board:
         ]
         self.last_move: ChessMove = None
         self.pieces: list[Piece] = []
+        self.captured_pieces: list[Piece] = []  # Track captured pieces
         self.initialize_board()
 
     def get_position_hash(self, turn: str) -> str:
@@ -174,17 +175,14 @@ class Board:
         position_to: Position,
         turn: str,
         promote_to: str = None,
-    ):
+    ) -> bool:
         """
         Move a piece from the first position to the second position
-        Returns dict with 'success': bool and 'captured_piece': dict or None if successful
+        Returns true if the move was successful, false otherwise
         """
         piece = self.piece_from_position(position_from)
         if piece is None or piece.color != turn:
-            return {
-                "success": False,
-                "captured_piece": None,
-            }  # Invalid move if no piece or wrong color's turn
+            return False  # Invalid move if no piece or wrong color's turn
 
         available_moves: list[ChessMove] = self.get_available_moves(
             position_from, ignore_check=False, ignore_illegal_moves=False
@@ -210,22 +208,15 @@ class Board:
 
             # Check for piece at the capture position (e.g., en passant)
             piece_to_capture = self.piece_from_position(move.position_to_capture)
-            captured_piece_info = None
             if piece_to_capture:
-                captured_piece_info = {
-                    "type": piece_to_capture.get_acting_type(),
-                    "color": piece_to_capture.color,
-                }
+                self.captured_pieces.append(piece_to_capture)
                 self.pieces.remove(piece_to_capture)
 
             # Also check for piece at the destination position (normal captures)
             if not piece_to_capture:
                 piece_at_destination = self.piece_from_position(move.position_to)
                 if piece_at_destination:
-                    captured_piece_info = {
-                        "type": piece_at_destination.get_acting_type(),
-                        "color": piece_at_destination.color,
-                    }
+                    self.captured_pieces.append(piece_at_destination)
                     self.pieces.remove(piece_at_destination)
 
             self.squares[position_to_capture[0]][position_to_capture[1]] = None
@@ -255,9 +246,9 @@ class Board:
                         additional_position_to[0], additional_position_to[1]
                     )
 
-            return {"success": True, "captured_piece": captured_piece_info}
+            return True
 
-        return {"success": False, "captured_piece": None}
+        return False
 
     def get_available_moves_for_color(self, color: str) -> list[ChessMove]:
         """

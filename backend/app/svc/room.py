@@ -286,7 +286,18 @@ class RoomManager:
                     "white": room.game.white_draw_requested,
                     "black": room.game.black_draw_requested,
                 },
-                "captured_pieces": room.game.captured_pieces,
+                "captured_pieces": {
+                    "white": [
+                        {"type": piece.type, "color": piece.color}
+                        for piece in room.game.board.captured_pieces
+                        if piece.color == "white"
+                    ],
+                    "black": [
+                        {"type": piece.type, "color": piece.color}
+                        for piece in room.game.board.captured_pieces
+                        if piece.color == "black"
+                    ],
+                },
                 "last_move": room.game.last_move.to_dict()
                 if room.game.last_move
                 else None,

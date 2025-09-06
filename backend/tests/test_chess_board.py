@@ -385,7 +385,11 @@ def find_position_that_can_move_to_position(
         for col in cols_to_search:
             pos = Position(row=row, col=col)
             piece = game.board.squares[row][col]
-            if piece and piece.type == piece_type and piece.color == game.turn:
+            if (
+                piece
+                and piece.get_acting_type() == piece_type
+                and piece.color == game.turn
+            ):
                 # Check if this piece can legally move to the target square
                 available_moves = game.board.get_available_moves(pos)
                 if to_square.notation() in [
