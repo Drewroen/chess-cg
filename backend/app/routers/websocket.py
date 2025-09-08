@@ -1,7 +1,9 @@
 from app.svc.room import RoomManager
 from app.svc.websocket_handler import WebSocketMessageHandler
+from app.obj.game import GameStatus
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import logging
+import time
 
 router = APIRouter()
 
@@ -32,4 +34,16 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
         await room_manager.disconnect(connection_id)
         room = room_manager.room_service.find_player_room(user_id)
         if room:
-            await room_manager.emit_game_state_to_room(room.id)
+            # If game hasn't started yet and a player disconnects, abort the game
+            if room.game.status == GameStatus.NOT_STARTED:
+                room.game.status = GameStatus.ABORTED
+                room.game.end_reason = "aborted"
+                room.game.completed_at = time.time()
+                room.game.winner = "aborted"
+                logging.info(
+                    f"Aborted game {room.id} due to player {user_id} disconnect before game start"
+                )
+                await room_manager.emit_game_state_to_room(room.id)
+                await room_manager.cleanup_room_with_elo_update(room.id)
+            else:
+                await room_manager.emit_game_state_to_room(room.id)
