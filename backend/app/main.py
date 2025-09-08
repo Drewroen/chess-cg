@@ -82,32 +82,6 @@ async def check_game_timers():
                         await room_manager.emit_game_state_to_room(room_id)
                         await room_manager.room_service.cleanup_room(room_id)
                         continue
-
-                    # Check if both players are disconnected
-                    white_connected = (
-                        len(
-                            room_manager.manager.user_id_to_connection_map.get(
-                                room.white, []
-                            )
-                        )
-                        > 0
-                    )
-                    black_connected = (
-                        len(
-                            room_manager.manager.user_id_to_connection_map.get(
-                                room.black, []
-                            )
-                        )
-                        > 0
-                    )
-
-                    if not white_connected and not black_connected:
-                        room.game.status = GameStatus.ABORTED
-                        room.game.end_reason = "aborted"
-                        room.game.completed_at = current_time
-                        room.game.winner = "aborted"
-                        await room_manager.emit_game_state_to_room(room_id)
-                        await room_manager.room_service.cleanup_room(room_id)
         except Exception as e:
             logging.error(f"Error in timer check task: {e}")
 
