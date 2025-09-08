@@ -27,7 +27,9 @@ class ChessMove:
             position_to_capture if position_to_capture else position_to
         )
         self.promote_to_type = promote_to_type  # For pawn promotion
-        self.promote_from_type = promote_from_type  # Original piece type before promotion
+        self.promote_from_type = (
+            promote_from_type  # Original piece type before promotion
+        )
         self.additional_move = additional_move
 
     def to_dict(self):
@@ -327,7 +329,6 @@ class Board:
                 return piece.position
         return None
 
-
     def _apply_move_temporarily(self, position: Position, move: ChessMove):
         """Apply a move temporarily to the board."""
         original_piece = self.piece_from_position(position)
@@ -367,7 +368,9 @@ class Board:
         king_position = self._find_king_position(color)
         return king_position and self._is_square_attacked(king_position, color)
 
-    def _restore_board_state(self, position: Position, move: ChessMove, captured_piece, temp_piece):
+    def _restore_board_state(
+        self, position: Position, move: ChessMove, captured_piece, temp_piece
+    ):
         """Restore the board to its original state using move data."""
         original_piece = self.piece_from_position(move.position_to)
         initial_pos = position.coordinates()
@@ -386,7 +389,6 @@ class Board:
             if hasattr(original_piece, "promoted_to"):
                 # Reset to original state (unpromoted pawn)
                 original_piece.promoted_to = None
-                original_piece.value = 1
 
         # Restore additional move if it was made
         if move.additional_move:
@@ -418,13 +420,13 @@ class Board:
 
         # Apply move temporarily
         self._apply_move_temporarily(position, move)
-        
+
         # Check if king is in check
         in_check = self._check_king_safety(original_piece.color)
-        
+
         # Restore board state
         self._restore_board_state(position, move, captured_piece, temp_piece)
-        
+
         return in_check
 
     def _is_square_attacked(self, position: Position, color: str) -> bool:
@@ -626,13 +628,14 @@ class Board:
         """Create all possible promotion moves for a pawn"""
         piece = self.piece_from_position(position)
         promote_from_type = piece.type if piece else None
-        
+
         promotion_types = ["bishop", "knight", "rook", "queen"]
         return [
             ChessMove(
-                position, Position(target_row, target_col), 
+                position,
+                Position(target_row, target_col),
                 promote_to_type=piece_type,
-                promote_from_type=promote_from_type
+                promote_from_type=promote_from_type,
             )
             for piece_type in promotion_types
         ]

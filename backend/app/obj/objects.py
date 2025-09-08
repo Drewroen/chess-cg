@@ -20,14 +20,20 @@ def position_from_notation(notation: str) -> Position:
 
 
 class Piece:
-    def __init__(
-        self, color: str, type: str = None, position: Position = None, value: int = 0
-    ):
+    PIECE_VALUES = {
+        "pawn": 1,
+        "knight": 3,
+        "bishop": 3,
+        "rook": 5,
+        "queen": 9,
+        "king": 0,
+    }
+
+    def __init__(self, color: str, type: str = None, position: Position = None):
         self.color = color
         self.moved = False
         self.type = type
         self.position = position
-        self.value = value
 
     def mark_moved(self):
         self.moved = True
@@ -35,17 +41,18 @@ class Piece:
     def get_acting_type(self) -> str:
         return self.type
 
+    def get_base_value(self) -> int:
+        return self.PIECE_VALUES.get(self.get_acting_type(), 0)
+
 
 class Pawn(Piece):
     def __init__(self, color, position: Position = None):
-        super().__init__(color, "pawn", position=position, value=1)
+        super().__init__(color, "pawn", position=position)
         self.promoted_to = None  # Track what piece this pawn is acting as
 
     def promote_to(self, piece_type: str):
         """Promote the pawn to act as the specified piece type"""
-        piece_values = {"queen": 9, "rook": 5, "bishop": 3, "knight": 3}
         self.promoted_to = piece_type
-        self.value = piece_values.get(piece_type, 1)
 
     def get_acting_type(self) -> str:
         """Get the type this pawn is currently acting as"""
@@ -54,24 +61,24 @@ class Pawn(Piece):
 
 class Rook(Piece):
     def __init__(self, color, position: Position = None):
-        super().__init__(color, "rook", position=position, value=5)
+        super().__init__(color, "rook", position=position)
 
 
 class Knight(Piece):
     def __init__(self, color, position: Position = None):
-        super().__init__(color, "knight", position=position, value=3)
+        super().__init__(color, "knight", position=position)
 
 
 class Bishop(Piece):
     def __init__(self, color, position: Position = None):
-        super().__init__(color, "bishop", position=position, value=3)
+        super().__init__(color, "bishop", position=position)
 
 
 class Queen(Piece):
     def __init__(self, color, position: Position = None):
-        super().__init__(color, "queen", position=position, value=9)
+        super().__init__(color, "queen", position=position)
 
 
 class King(Piece):
     def __init__(self, color, position: Position = None):
-        super().__init__(color, "king", position=position, value=0)
+        super().__init__(color, "king", position=position)
