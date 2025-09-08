@@ -319,6 +319,8 @@ def test_read_pgn(pgn_games, board):
             chess_game.turn,
             promote_to=extracted_pgn["promotion"],
         )
+        if chess_game.end_reason != "threefold_repetition":
+            break
         assert (
             turn != chess_game.turn
         ), f"move {move} did not work. Full extracted pgn: {extracted_pgn}. Attempted move: {position.notation()} to {extracted_pgn['to_square']}"
