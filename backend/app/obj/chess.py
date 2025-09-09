@@ -1,4 +1,4 @@
-from app.obj.objects import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
+from app.obj.pieces import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
 import hashlib
 
 BOARD_SIZE = 8

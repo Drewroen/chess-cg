@@ -6,7 +6,7 @@ Script to read and parse PGN files step by step
 import os
 import re
 from typing import Dict, Generator
-from app.obj.objects import Position, position_from_notation
+from app.obj.position import Position, position_from_notation
 from app.obj.game import Game, GameStatus
 import pytest
 
