@@ -28,28 +28,56 @@ export class CookieAuthService {
     return CookieAuthService.instance;
   }
 
-
   // Get current user information from backend (now handles refresh and guest session internally)
   async getCurrentUser(): Promise<User | null> {
-    try {
-      const response = await fetch(`${backendUrl}/auth/me`, {
-        method: "GET",
-        credentials: "include", // Include cookies in request
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+    const maxRetries = 3;
+    const timeout = 5000; // 5 seconds
 
-      if (!response.ok) {
-        console.error("Failed to get current user:", response.status, response.statusText);
-        return null;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        const response = await fetch(`${backendUrl}/auth/me`, {
+          method: "GET",
+          credentials: "include", // Include cookies in request
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          console.error(
+            "Failed to get current user:",
+            response.status,
+            response.statusText
+          );
+          return null;
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error(
+          `Error fetching current user (attempt ${attempt}/${maxRetries}):`,
+          error
+        );
+
+        // If this was the last attempt, return null
+        if (attempt === maxRetries) {
+          return null;
+        }
+
+        // Wait before retrying (exponential backoff: 1s, 2s, 4s)
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, attempt - 1) * 1000)
+        );
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching current user:", error);
-      return null;
     }
+
+    return null;
   }
 
   // Update current user's username
