@@ -13,6 +13,15 @@ class Position:
         return {"row": self.row, "col": self.col}
 
 
+class Modifier:
+    def __init__(self, modifier_type: str, data: dict = None):
+        self.modifier_type = modifier_type
+        self.data = data or {}
+
+    def to_dict(self) -> dict:
+        return {"modifier_type": self.modifier_type, "data": self.data}
+
+
 def position_from_notation(notation: str) -> Position:
     col = ord(notation[0].lower()) - 97
     row = 8 - int(notation[1])
@@ -34,6 +43,7 @@ class Piece:
         self.moved = False
         self.type = type
         self.position = position
+        self.modifiers: list[Modifier] = []
 
     def mark_moved(self):
         self.moved = True
@@ -43,6 +53,28 @@ class Piece:
 
     def get_base_value(self) -> int:
         return self.PIECE_VALUES.get(self.get_acting_type(), 0)
+
+    def add_modifier(self, modifier: Modifier) -> bool:
+        if not any(m.modifier_type == modifier.modifier_type for m in self.modifiers):
+            self.modifiers.append(modifier)
+            return True
+        return False
+
+    def remove_modifier(self, modifier_type: str) -> bool:
+        for i, modifier in enumerate(self.modifiers):
+            if modifier.modifier_type == modifier_type:
+                del self.modifiers[i]
+                return True
+        return False
+
+    def has_modifier(self, modifier_type: str) -> bool:
+        return any(m.modifier_type == modifier_type for m in self.modifiers)
+
+    def get_modifier(self, modifier_type: str) -> Modifier:
+        for modifier in self.modifiers:
+            if modifier.modifier_type == modifier_type:
+                return modifier
+        return None
 
 
 class Pawn(Piece):
