@@ -1,37 +1,15 @@
 from app.obj.pieces import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
+from app.obj.chess_move import ChessMove
 from app.obj.constants import (
-    BOARD_SIZE, PAWN_START_ROWS, PAWN_PROMOTION_ROWS, EN_PASSANT_ROWS, 
-    PAWN_DIRECTIONS, KNIGHT_MOVES, KING_MOVES
+    BOARD_SIZE,
+    PAWN_START_ROWS,
+    PAWN_PROMOTION_ROWS,
+    EN_PASSANT_ROWS,
+    PAWN_DIRECTIONS,
+    KNIGHT_MOVES,
+    KING_MOVES,
 )
 import hashlib
-
-
-class ChessMove:
-    def __init__(
-        self,
-        position_from: Position,
-        position_to: Position,
-        position_to_capture: Position = None,
-        promote_to_type: str = None,
-        promote_from_type: str = None,
-        additional_move: tuple[Position, Position] = None,
-    ):
-        self.position_from = position_from
-        self.position_to = position_to
-        self.position_to_capture = (
-            position_to_capture if position_to_capture else position_to
-        )
-        self.promote_to_type = promote_to_type  # For pawn promotion
-        self.promote_from_type = (
-            promote_from_type  # Original piece type before promotion
-        )
-        self.additional_move = additional_move
-
-    def to_dict(self):
-        return {
-            "from": self.position_from.to_dict(),
-            "to": self.position_to.to_dict(),
-        }
 
 
 class Board:
@@ -185,7 +163,6 @@ class Board:
     def is_square_attacked(self, position: Position, color: str) -> bool:
         """Check if a square is attacked by the opponent"""
         return self._is_square_attacked(position, color)
-
 
     def kings_in_check(self) -> dict[str, bool]:
         """

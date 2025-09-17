@@ -3,7 +3,7 @@
 from typing import Optional, Tuple
 
 from ..obj.game import GameStatus
-from ..obj.chess import Position
+from ..obj.position import Position
 
 
 class GameService:

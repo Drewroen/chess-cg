@@ -1,5 +1,5 @@
 from enum import Enum
-from app.obj.chess import Board
+from app.obj.board import Board
 from app.svc.time_manager import TimeManager
 import time
 import logging

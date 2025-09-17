@@ -13,7 +13,8 @@ from .constants import (
 )
 
 if TYPE_CHECKING:
-    from .chess import Board, ChessMove
+    from .board import Board
+    from .chess_move import ChessMove
 
 
 class Piece(ABC):
@@ -105,7 +106,7 @@ class Pawn(Piece):
         ignore_illegal_moves: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this pawn"""
-        from .chess import ChessMove  # Import at runtime to avoid circular dependency
+        from .chess_move import ChessMove  # Import at runtime to avoid circular dependency
 
         row, col = self.position.coordinates()
         color = self.color
@@ -145,7 +146,7 @@ class Pawn(Piece):
         ignore_illegal_moves: bool,
     ) -> List["ChessMove"]:
         """Get forward moves for a pawn (1 or 2 squares)"""
-        from .chess import ChessMove
+        from .chess_move import ChessMove
 
         moves = []
         target_row = row + direction
@@ -190,7 +191,7 @@ class Pawn(Piece):
         ignore_illegal_moves: bool,
     ) -> List["ChessMove"]:
         """Get diagonal capture moves for a pawn"""
-        from .chess import ChessMove
+        from .chess_move import ChessMove
 
         moves = []
         target_row = row + direction
@@ -230,7 +231,7 @@ class Pawn(Piece):
         ignore_illegal_moves: bool,
     ) -> List["ChessMove"]:
         """Get en passant moves for a pawn"""
-        from .chess import ChessMove
+        from .chess_move import ChessMove
 
         moves = []
 
@@ -280,7 +281,7 @@ class Knight(Piece):
         ignore_illegal_moves: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this knight"""
-        from .chess import ChessMove
+        from .chess_move import ChessMove
 
         moves = []
         row, col = self.position.coordinates()
@@ -344,7 +345,7 @@ class King(Piece):
         ignore_illegal_moves: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this king"""
-        from .chess import ChessMove
+        from .chess_move import ChessMove
 
         moves = []
         row, col = self.position.coordinates()
@@ -369,7 +370,7 @@ class King(Piece):
         self, board: "Board", ignore_illegal_moves: bool = False
     ) -> List["ChessMove"]:
         """Get castling moves for this king"""
-        from .chess import ChessMove
+        from .chess_move import ChessMove
 
         moves = []
         row, col = self.position.coordinates()
