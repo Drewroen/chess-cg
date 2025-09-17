@@ -1,14 +1,9 @@
 from app.obj.pieces import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
+from app.obj.constants import (
+    BOARD_SIZE, PAWN_START_ROWS, PAWN_PROMOTION_ROWS, EN_PASSANT_ROWS, 
+    PAWN_DIRECTIONS, KNIGHT_MOVES, KING_MOVES
+)
 import hashlib
-
-BOARD_SIZE = 8
-PAWN_START_ROWS = {"white": 6, "black": 1}
-PAWN_PROMOTION_ROWS = {"white": 0, "black": 7}
-EN_PASSANT_ROWS = {"white": 3, "black": 4}
-PAWN_DIRECTIONS = {"white": -1, "black": 1}
-
-KNIGHT_MOVES = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
-KING_MOVES = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
 
 
 class ChessMove:
@@ -142,6 +137,55 @@ class Board:
         if not self._is_valid_position(row, col):
             return False
         return self.squares[row][col] is None
+
+    # Public utility methods for pieces to use
+    def is_valid_position(self, row: int, col: int) -> bool:
+        """Check if the given row and column are within board bounds"""
+        return self._is_valid_position(row, col)
+
+    def is_enemy_piece(self, row: int, col: int, color: str) -> bool:
+        """Check if there's an enemy piece at the given position"""
+        return self._is_enemy_piece(row, col, color)
+
+    def is_empty_square(self, row: int, col: int) -> bool:
+        """Check if the given square is empty"""
+        return self._is_empty_square(row, col)
+
+    def get_sliding_moves(
+        self,
+        position: Position,
+        directions: list[tuple[int, int]],
+        ignore_illegal_moves: bool = False,
+    ) -> list[ChessMove]:
+        """Generate sliding moves in the given directions for pieces like rook, bishop, queen"""
+        return self._get_sliding_moves(position, directions, ignore_illegal_moves)
+
+    def can_capture_en_passant(self, pawn_row: int, pawn_col: int, color: str) -> bool:
+        """Check if we can capture en passant at the given position"""
+        return self._can_capture_en_passant(pawn_row, pawn_col, color)
+
+    def create_promotion_moves(
+        self, position: Position, target_row: int, target_col: int, color: str
+    ) -> list[ChessMove]:
+        """Create all possible promotion moves for a pawn"""
+        return self._create_promotion_moves(position, target_row, target_col, color)
+
+    def opposite_color(self, color: str) -> str:
+        """Get the opposite color"""
+        return self._opposite_color(color)
+
+    def can_castle_kingside(self, row: int, col: int, color: str) -> bool:
+        """Check if kingside castling is possible"""
+        return self._can_castle_kingside(row, col, color)
+
+    def can_castle_queenside(self, row: int, col: int, color: str) -> bool:
+        """Check if queenside castling is possible"""
+        return self._can_castle_queenside(row, col, color)
+
+    def is_square_attacked(self, position: Position, color: str) -> bool:
+        """Check if a square is attacked by the opponent"""
+        return self._is_square_attacked(position, color)
+
 
     def kings_in_check(self) -> dict[str, bool]:
         """
@@ -292,26 +336,11 @@ class Board:
         piece = self.piece_from_position(position)
         if piece is None:
             return []
-        moves = []
 
-        # Use the piece's acting type (for promoted pawns)
-        acting_type = piece.get_acting_type()
+        # Delegate to the piece's get_possible_moves method
+        moves = piece.get_possible_moves(self, ignore_check, ignore_illegal_moves)
 
-        if acting_type == "pawn":
-            moves = self._get_pawn_moves(position, ignore_illegal_moves)
-        elif acting_type == "rook":
-            moves = self._get_rook_moves(position, ignore_illegal_moves)
-        elif acting_type == "knight":
-            moves = self._get_knight_moves(position, ignore_illegal_moves)
-        elif acting_type == "bishop":
-            moves = self._get_bishop_moves(position, ignore_illegal_moves)
-        elif acting_type == "queen":
-            moves = self._get_rook_moves(
-                position, ignore_illegal_moves
-            ) + self._get_bishop_moves(position, ignore_illegal_moves)
-        elif acting_type == "king":
-            moves = self._get_king_moves(position, ignore_check, ignore_illegal_moves)
-
+        # Filter out moves that would leave the king in check (unless ignoring check)
         if not ignore_check:
             moves = [
                 m for m in moves if not self._is_king_in_check_after_move(position, m)

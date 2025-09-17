@@ -1,8 +1,22 @@
 from .position import Position
 from .modifier import Modifier
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, List
+
+from .constants import (
+    PAWN_DIRECTIONS,
+    PAWN_START_ROWS,
+    PAWN_PROMOTION_ROWS,
+    EN_PASSANT_ROWS,
+    KNIGHT_MOVES,
+    KING_MOVES,
+)
+
+if TYPE_CHECKING:
+    from .chess import Board, ChessMove
 
 
-class Piece:
+class Piece(ABC):
     PIECE_VALUES = {
         "pawn": 1,
         "knight": 3,
@@ -50,6 +64,26 @@ class Piece:
                 return modifier
         return None
 
+    @abstractmethod
+    def get_possible_moves(
+        self,
+        board: "Board",
+        ignore_check: bool = False,
+        ignore_illegal_moves: bool = False,
+    ) -> List["ChessMove"]:
+        """
+        Get all possible moves for this piece on the given board.
+
+        Args:
+            board: The board instance containing game state
+            ignore_check: If True, include moves that would leave king in check
+            ignore_illegal_moves: If True, include technically illegal moves (for analysis)
+
+        Returns:
+            List of possible ChessMove objects
+        """
+        pass
+
 
 class Pawn(Piece):
     def __init__(self, color, position: Position = None):
@@ -64,27 +98,292 @@ class Pawn(Piece):
         """Get the type this pawn is currently acting as"""
         return self.promoted_to if self.promoted_to else "pawn"
 
+    def get_possible_moves(
+        self,
+        board: "Board",
+        ignore_check: bool = False,
+        ignore_illegal_moves: bool = False,
+    ) -> List["ChessMove"]:
+        """Get all possible moves for this pawn"""
+        from .chess import ChessMove  # Import at runtime to avoid circular dependency
+
+        row, col = self.position.coordinates()
+        color = self.color
+        direction = PAWN_DIRECTIONS[color]
+        moves = []
+
+        # Forward moves (1 or 2 squares from starting position)
+        moves.extend(
+            self._get_forward_moves(
+                board, row, col, color, direction, ignore_illegal_moves
+            )
+        )
+
+        # Diagonal captures (including promotions)
+        moves.extend(
+            self._get_capture_moves(
+                board, row, col, color, direction, ignore_illegal_moves
+            )
+        )
+
+        # En passant captures
+        moves.extend(
+            self._get_en_passant_moves(
+                board, row, col, color, direction, ignore_illegal_moves
+            )
+        )
+
+        return moves
+
+    def _get_forward_moves(
+        self,
+        board: "Board",
+        row: int,
+        col: int,
+        color: str,
+        direction: int,
+        ignore_illegal_moves: bool,
+    ) -> List["ChessMove"]:
+        """Get forward moves for a pawn (1 or 2 squares)"""
+        from .chess import ChessMove
+
+        moves = []
+        target_row = row + direction
+
+        # Check if one square forward is valid and empty
+        if not (
+            board.is_valid_position(target_row, col)
+            and (board.is_empty_square(target_row, col) or ignore_illegal_moves)
+        ):
+            return moves
+
+        # Handle promotion or regular move
+        if target_row == PAWN_PROMOTION_ROWS[color]:
+            moves.extend(
+                board.create_promotion_moves(self.position, target_row, col, color)
+            )
+        else:
+            moves.append(ChessMove(self.position, Position(target_row, col)))
+
+            # Check for two-square initial move
+            if (
+                row == PAWN_START_ROWS[color]
+                and board.is_valid_position(target_row + direction, col)
+                and (
+                    board.is_empty_square(target_row + direction, col)
+                    or ignore_illegal_moves
+                )
+            ):
+                moves.append(
+                    ChessMove(self.position, Position(target_row + direction, col))
+                )
+
+        return moves
+
+    def _get_capture_moves(
+        self,
+        board: "Board",
+        row: int,
+        col: int,
+        color: str,
+        direction: int,
+        ignore_illegal_moves: bool,
+    ) -> List["ChessMove"]:
+        """Get diagonal capture moves for a pawn"""
+        from .chess import ChessMove
+
+        moves = []
+        target_row = row + direction
+
+        # Check both diagonal directions
+        for col_offset in [-1, 1]:
+            target_col = col + col_offset
+
+            if not (
+                board.is_valid_position(target_row, target_col)
+                and (
+                    board.is_enemy_piece(target_row, target_col, color)
+                    or ignore_illegal_moves
+                )
+            ):
+                continue
+
+            # Handle promotion or regular capture
+            if target_row == PAWN_PROMOTION_ROWS[color]:
+                moves.extend(
+                    board.create_promotion_moves(
+                        self.position, target_row, target_col, color
+                    )
+                )
+            else:
+                moves.append(ChessMove(self.position, Position(target_row, target_col)))
+
+        return moves
+
+    def _get_en_passant_moves(
+        self,
+        board: "Board",
+        row: int,
+        col: int,
+        color: str,
+        direction: int,
+        ignore_illegal_moves: bool,
+    ) -> List["ChessMove"]:
+        """Get en passant moves for a pawn"""
+        from .chess import ChessMove
+
+        moves = []
+
+        # En passant is only possible from specific rows
+        if row != EN_PASSANT_ROWS[color]:
+            return moves
+
+        # Check both sides for en passant opportunities
+        for col_offset in [-1, 1]:
+            target_col = col + col_offset
+
+            if board.is_valid_position(row, target_col) and (
+                board.can_capture_en_passant(row, target_col, color)
+                or ignore_illegal_moves
+            ):
+                capture_position = Position(row, target_col)
+                move_position = Position(row + direction, target_col)
+                moves.append(ChessMove(self.position, move_position, capture_position))
+
+        return moves
+
 
 class Rook(Piece):
     def __init__(self, color, position: Position = None):
         super().__init__(color, "rook", position=position)
+
+    def get_possible_moves(
+        self,
+        board: "Board",
+        ignore_check: bool = False,
+        ignore_illegal_moves: bool = False,
+    ) -> List["ChessMove"]:
+        """Get all possible moves for this rook"""
+        # Rook moves horizontally and vertically
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        return board.get_sliding_moves(self.position, directions, ignore_illegal_moves)
 
 
 class Knight(Piece):
     def __init__(self, color, position: Position = None):
         super().__init__(color, "knight", position=position)
 
+    def get_possible_moves(
+        self,
+        board: "Board",
+        ignore_check: bool = False,
+        ignore_illegal_moves: bool = False,
+    ) -> List["ChessMove"]:
+        """Get all possible moves for this knight"""
+        from .chess import ChessMove
+
+        moves = []
+        row, col = self.position.coordinates()
+
+        for dr, dc in KNIGHT_MOVES:
+            new_row, new_col = row + dr, col + dc
+            if board.is_valid_position(new_row, new_col):
+                target_piece = board.squares[new_row][new_col]
+                if ignore_illegal_moves or (
+                    target_piece is None or target_piece.color != self.color
+                ):
+                    moves.append(ChessMove(self.position, Position(new_row, new_col)))
+
+        return moves
+
 
 class Bishop(Piece):
     def __init__(self, color, position: Position = None):
         super().__init__(color, "bishop", position=position)
+
+    def get_possible_moves(
+        self,
+        board: "Board",
+        ignore_check: bool = False,
+        ignore_illegal_moves: bool = False,
+    ) -> List["ChessMove"]:
+        """Get all possible moves for this bishop"""
+        # Bishop moves diagonally
+        directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
+        return board.get_sliding_moves(self.position, directions, ignore_illegal_moves)
 
 
 class Queen(Piece):
     def __init__(self, color, position: Position = None):
         super().__init__(color, "queen", position=position)
 
+    def get_possible_moves(
+        self,
+        board: "Board",
+        ignore_check: bool = False,
+        ignore_illegal_moves: bool = False,
+    ) -> List["ChessMove"]:
+        """Get all possible moves for this queen"""
+        # Queen combines rook and bishop moves (horizontal, vertical, and diagonal)
+        rook_directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        bishop_directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
+        all_directions = rook_directions + bishop_directions
+        return board.get_sliding_moves(
+            self.position, all_directions, ignore_illegal_moves
+        )
+
 
 class King(Piece):
     def __init__(self, color, position: Position = None):
         super().__init__(color, "king", position=position)
+
+    def get_possible_moves(
+        self,
+        board: "Board",
+        ignore_check: bool = False,
+        ignore_illegal_moves: bool = False,
+    ) -> List["ChessMove"]:
+        """Get all possible moves for this king"""
+        from .chess import ChessMove
+
+        moves = []
+        row, col = self.position.coordinates()
+
+        # Standard king moves
+        for dr, dc in KING_MOVES:
+            new_row, new_col = row + dr, col + dc
+            if board.is_valid_position(new_row, new_col):
+                target_piece = board.squares[new_row][new_col]
+                if ignore_illegal_moves or (
+                    target_piece is None or target_piece.color != self.color
+                ):
+                    moves.append(ChessMove(self.position, Position(new_row, new_col)))
+
+        # Castling logic
+        if (not ignore_check or ignore_illegal_moves) and not self.moved:
+            moves.extend(self._get_castling_moves(board, ignore_illegal_moves))
+
+        return moves
+
+    def _get_castling_moves(
+        self, board: "Board", ignore_illegal_moves: bool = False
+    ) -> List["ChessMove"]:
+        """Get castling moves for this king"""
+        from .chess import ChessMove
+
+        moves = []
+        row, col = self.position.coordinates()
+
+        # Kingside castling
+        if board.can_castle_kingside(row, col, self.color) or ignore_illegal_moves:
+            move = ChessMove(self.position, Position(row, col + 2))
+            move.additional_move = (Position(row, col + 3), Position(row, col + 1))
+            moves.append(move)
+
+        # Queenside castling
+        if board.can_castle_queenside(row, col, self.color) or ignore_illegal_moves:
+            move = ChessMove(self.position, Position(row, col - 2))
+            move.additional_move = (Position(row, col - 4), Position(row, col - 1))
+            moves.append(move)
+
+        return moves
