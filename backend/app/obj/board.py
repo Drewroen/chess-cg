@@ -94,6 +94,7 @@ class Board:
                 {
                     "type": piece.get_acting_type(),
                     "color": piece.color,
+                    "modifiers": [modifier.type for modifier in piece.modifiers],
                 }
                 if piece
                 else None

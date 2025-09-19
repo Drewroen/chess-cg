@@ -8,7 +8,7 @@ import { ChessGame, PieceColor } from "./obj/ChessGame";
 
 /**
  * Formats a time value in seconds to a human-readable string.
- * 
+ *
  * @param seconds - The time in seconds to format
  * @returns Formatted time string in MM:SS or H:MM:SS format
  */
@@ -31,26 +31,34 @@ export const formatTime = (seconds: number): string => {
 /**
  * Gets the opponent's display information based on player color
  */
-export const getOpponentInfo = (gameInfo: GameInfo | null, playerColor: PieceColor) => {
+export const getOpponentInfo = (
+  gameInfo: GameInfo | null,
+  playerColor: PieceColor
+) => {
   if (!gameInfo) return { name: "Opponent", elo: "" };
-  
-  const opponent = playerColor === "white" ? gameInfo.players.black : gameInfo.players.white;
+
+  const opponent =
+    playerColor === "white" ? gameInfo.players.black : gameInfo.players.white;
   return {
     name: opponent.name || "Opponent",
-    elo: opponent.elo || ""
+    elo: opponent.elo || "",
   };
 };
 
 /**
  * Gets the current player's display information based on player color
  */
-export const getCurrentPlayerInfo = (gameInfo: GameInfo | null, playerColor: PieceColor) => {
+export const getCurrentPlayerInfo = (
+  gameInfo: GameInfo | null,
+  playerColor: PieceColor
+) => {
   if (!gameInfo) return { name: "You", elo: "" };
-  
-  const currentPlayer = playerColor === "white" ? gameInfo.players.white : gameInfo.players.black;
+
+  const currentPlayer =
+    playerColor === "white" ? gameInfo.players.white : gameInfo.players.black;
   return {
     name: currentPlayer.name || "You",
-    elo: currentPlayer.elo || ""
+    elo: currentPlayer.elo || "",
   };
 };
 
@@ -67,11 +75,13 @@ export const getTimerInitialTime = (
   isOpponent: boolean = false
 ): number => {
   if (chessGame.status === "not started") {
-    return 10;
+    return 20;
   }
 
-  const targetColor = isOpponent 
-    ? (playerColor === "white" ? "black" : "white")
+  const targetColor = isOpponent
+    ? playerColor === "white"
+      ? "black"
+      : "white"
     : playerColor;
 
   return chessGame.time?.[targetColor as "white" | "black"] || 0;
@@ -86,14 +96,18 @@ export const isTimerActive = (
   isOpponent: boolean = false
 ): boolean => {
   if (chessGame.status === "not started") {
-    return isOpponent ? chessGame.turn !== playerColor : chessGame.turn === playerColor;
+    return isOpponent
+      ? chessGame.turn !== playerColor
+      : chessGame.turn === playerColor;
   }
 
   if (chessGame.status !== "in progress") {
     return false;
   }
 
-  return isOpponent ? chessGame.turn !== playerColor : chessGame.turn === playerColor;
+  return isOpponent
+    ? chessGame.turn !== playerColor
+    : chessGame.turn === playerColor;
 };
 
 // ============================================================================
@@ -121,7 +135,7 @@ export const transformCoordinates = (
 ): [number, number] => {
   return [
     transformCoordinate(x, playerColor),
-    transformCoordinate(y, playerColor)
+    transformCoordinate(y, playerColor),
   ];
 };
 
