@@ -8,7 +8,6 @@ from .constants import (
     PAWN_START_ROWS,
     PAWN_PROMOTION_ROWS,
     EN_PASSANT_ROWS,
-    KNIGHT_MOVES,
     KING_MOVES,
 )
 
@@ -43,11 +42,29 @@ class Piece(ABC):
     def get_base_value(self) -> int:
         return self.PIECE_VALUES.get(self.get_acting_type(), 0)
 
+    def get_total_value(self) -> int:
+        """Get the total value including base value and all modifier scores"""
+        base_value = self.get_base_value()
+        modifier_score = sum(modifier.score for modifier in self.modifiers)
+        return base_value + modifier_score
+
     def add_modifier(self, modifier: Modifier) -> bool:
+        """Add a modifier to this piece if valid and not already present"""
+        # Check if modifier can be applied to this piece type
+        if not modifier.can_apply_to_piece(self.get_acting_type()):
+            return False
+
+        # Check if modifier is already present
         if not any(m.modifier_type == modifier.modifier_type for m in self.modifiers):
             self.modifiers.append(modifier)
             return True
         return False
+
+    def can_add_modifier(self, modifier: Modifier) -> bool:
+        """Check if a modifier can be added to this piece without adding it"""
+        return modifier.can_apply_to_piece(self.get_acting_type()) and not any(
+            m.modifier_type == modifier.modifier_type for m in self.modifiers
+        )
 
     def remove_modifier(self, modifier_type: str) -> bool:
         for i, modifier in enumerate(self.modifiers):
@@ -106,7 +123,9 @@ class Pawn(Piece):
         ignore_illegal_moves: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this pawn"""
-        from .chess_move import ChessMove  # Import at runtime to avoid circular dependency
+        from .chess_move import (
+            ChessMove,
+        )  # Import at runtime to avoid circular dependency
 
         row, col = self.position.coordinates()
         color = self.color
@@ -266,8 +285,33 @@ class Rook(Piece):
     ) -> List["ChessMove"]:
         """Get all possible moves for this rook"""
         # Rook moves horizontally and vertically
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-        return board.get_sliding_moves(self.position, directions, ignore_illegal_moves)
+        rook_directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        bishop_directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
+
+        if self.has_modifier("Quook"):
+            return board.get_sliding_moves(
+                self.position, rook_directions + bishop_directions, ignore_illegal_moves
+            )
+
+        moves = board.get_sliding_moves(
+            self.position, rook_directions, ignore_illegal_moves
+        )
+
+        if self.has_modifier("Knook"):
+            moves.extend(
+                board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
+            )
+
+        if self.has_modifier("DiagonalRook"):
+            moves.extend(
+                board.get_sliding_moves(
+                    self.position,
+                    bishop_directions,
+                    ignore_illegal_moves,
+                    1,
+                )
+            )
+        return moves
 
 
 class Knight(Piece):
@@ -281,21 +325,7 @@ class Knight(Piece):
         ignore_illegal_moves: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this knight"""
-        from .chess_move import ChessMove
-
-        moves = []
-        row, col = self.position.coordinates()
-
-        for dr, dc in KNIGHT_MOVES:
-            new_row, new_col = row + dr, col + dc
-            if board.is_valid_position(new_row, new_col):
-                target_piece = board.squares[new_row][new_col]
-                if ignore_illegal_moves or (
-                    target_piece is None or target_piece.color != self.color
-                ):
-                    moves.append(ChessMove(self.position, Position(new_row, new_col)))
-
-        return moves
+        return board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
 
 
 class Bishop(Piece):

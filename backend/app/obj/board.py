@@ -1,3 +1,4 @@
+from app.obj.modifier import DIAGONAL_ROOK_MODIFIER, KNOOK_MODIFIER, QUOOK_MODIFIER
 from app.obj.pieces import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
 from app.obj.chess_move import ChessMove
 from app.obj.constants import (
@@ -94,7 +95,7 @@ class Board:
                 {
                     "type": piece.get_acting_type(),
                     "color": piece.color,
-                    "modifiers": [modifier.type for modifier in piece.modifiers],
+                    "modifiers": [modifier.to_dict() for modifier in piece.modifiers],
                 }
                 if piece
                 else None
@@ -135,9 +136,33 @@ class Board:
         position: Position,
         directions: list[tuple[int, int]],
         ignore_illegal_moves: bool = False,
+        limit=None,
     ) -> list[ChessMove]:
         """Generate sliding moves in the given directions for pieces like rook, bishop, queen"""
-        return self._get_sliding_moves(position, directions, ignore_illegal_moves)
+        return self._get_sliding_moves(
+            position, directions, ignore_illegal_moves, limit
+        )
+
+    def get_knight_moves(
+        self,
+        position: Position,
+        color: str,
+        ignore_illegal_moves: bool = False,
+    ) -> list[ChessMove]:
+        """Generate all possible knight moves from the given position"""
+        moves = []
+        row, col = position.coordinates()
+
+        for dr, dc in KNIGHT_MOVES:
+            new_row, new_col = row + dr, col + dc
+            if self.is_valid_position(new_row, new_col):
+                target_piece = self.squares[new_row][new_col]
+                if ignore_illegal_moves or (
+                    target_piece is None or target_piece.color != color
+                ):
+                    moves.append(ChessMove(position, Position(new_row, new_col)))
+
+        return moves
 
     def can_capture_en_passant(self, pawn_row: int, pawn_col: int, color: str) -> bool:
         """Check if we can capture en passant at the given position"""
@@ -656,6 +681,7 @@ class Board:
         position: Position,
         directions: list[tuple[int, int]],
         ignore_illegal_moves: bool = False,
+        limit: int = None,
     ) -> list[ChessMove]:
         moves = []
         row, col = position.coordinates()
@@ -663,7 +689,12 @@ class Board:
 
         for dr, dc in directions:
             current_row, current_col = row + dr, col + dc
+            distance = 1
             while self._is_valid_position(current_row, current_col):
+                # Check limit constraint
+                if limit is not None and distance > limit:
+                    break
+
                 target_piece = self.squares[current_row][current_col]
 
                 if ignore_illegal_moves:
@@ -683,6 +714,7 @@ class Board:
                     break
                 current_row += dr
                 current_col += dc
+                distance += 1
 
         return moves
 
