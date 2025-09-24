@@ -153,6 +153,13 @@ class Pawn(Piece):
             )
         )
 
+        if self.has_modifier("BackwardsPawn"):
+            moves.extend(
+                self._get_backward_moves(
+                    board, row, col, color, direction, ignore_illegal_moves
+                )
+            )
+
         return moves
 
     def _get_forward_moves(
@@ -198,6 +205,45 @@ class Pawn(Piece):
                     ChessMove(self.position, Position(target_row + direction, col))
                 )
 
+            if self.has_modifier("LongLeapPawn"):
+                # Check for three-square initial move
+                if (
+                    row == PAWN_START_ROWS[color]
+                    and board.is_valid_position(target_row + (2 * direction), col)
+                    and (
+                        board.is_empty_square(target_row + (2 * direction), col)
+                        or ignore_illegal_moves
+                    )
+                ):
+                    moves.append(
+                        ChessMove(
+                            self.position, Position(target_row + (2 * direction), col)
+                        )
+                    )
+
+        return moves
+
+    def _get_backward_moves(
+        self,
+        board: "Board",
+        row: int,
+        col: int,
+        color: str,
+        direction: int,
+        ignore_illegal_moves: bool,
+    ) -> List["ChessMove"]:
+        """Get backward moves for a pawn if it has the BackwardsPawn modifier"""
+
+        moves = []
+
+        target_row = row - direction
+
+        # Check if one square backward is valid and empty
+        if board.is_valid_position(target_row, col) and (
+            board.is_empty_square(target_row, col) or ignore_illegal_moves
+        ):
+            moves.append(ChessMove(self.position, Position(target_row, col)))
+
         return moves
 
     def _get_capture_moves(
@@ -219,14 +265,12 @@ class Pawn(Piece):
         for col_offset in [-1, 1]:
             target_col = col + col_offset
 
-            if not (
-                board.is_valid_position(target_row, target_col)
-                and (
-                    board.is_enemy_piece(target_row, target_col, color)
-                    or ignore_illegal_moves
-                )
-            ):
+            if not board.is_valid_position(target_row, target_col):
                 continue
+
+            if not board.is_enemy_piece(target_row, target_col, color):
+                if not self.has_modifier("DiagonalPawn"):
+                    continue
 
             # Handle promotion or regular capture
             if target_row == PAWN_PROMOTION_ROWS[color]:

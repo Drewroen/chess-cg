@@ -52,9 +52,25 @@ QUOOK_MODIFIER = Modifier(
     description="You're the queen of the castle.",
 )
 
+# PAWN MODIFIERS
+
 BACKWARDS_PAWN_MODIFIER = Modifier(
     modifier_type="BackwardsPawn",
     score=1,
     applicable_pieces=["pawn"],
     description="A pawn that can move one square backward.",
+)
+
+DIAGONAL_PAWN_MODIFIER = Modifier(
+    modifier_type="DiagonalPawn",
+    score=1,
+    applicable_pieces=["pawn"],
+    description="A pawn that can move one square diagonally forward without capturing.",
+)
+
+LONG_LEAP_PAWN_MODIFIER = Modifier(
+    modifier_type="LongLeapPawn",
+    score=2,
+    applicable_pieces=["pawn"],
+    description="A pawn that can move three squares forward on its first move.",
 )
