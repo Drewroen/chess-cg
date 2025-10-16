@@ -4,11 +4,6 @@ This document tracks modifiers that have been defined but not yet implemented in
 
 ## Knight Modifiers
 
-### Longhorn
-- **Score**: 3
-- **Description**: This piece can also move two squares in a straight line
-- **Implementation needed**: Add straight-line two-square moves to Knight.get_possible_moves()
-
 ### Pegasus
 - **Score**: 4
 - **Description**: This piece may also move in an L shape with 2 squares in each direction

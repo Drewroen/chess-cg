@@ -385,7 +385,26 @@ class Knight(Piece):
         ignore_illegal_moves: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this knight"""
-        return board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
+        from .chess_move import ChessMove
+
+        moves = board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
+
+        # Longhorn modifier: can also move two squares in a straight line
+        if self.has_modifier("Longhorn"):
+            row, col = self.position.coordinates()
+            # Straight-line two-square moves (up, down, left, right)
+            straight_moves = [(2, 0), (-2, 0), (0, 2), (0, -2)]
+
+            for dr, dc in straight_moves:
+                new_row, new_col = row + dr, col + dc
+                if board.is_valid_position(new_row, new_col):
+                    target_piece = board.squares[new_row][new_col]
+                    if ignore_illegal_moves or (
+                        target_piece is None or target_piece.color != self.color
+                    ):
+                        moves.append(ChessMove(self.position, Position(new_row, new_col)))
+
+        return moves
 
 
 class Bishop(Piece):
