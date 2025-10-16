@@ -9,6 +9,7 @@ from .constants import (
     PAWN_PROMOTION_ROWS,
     EN_PASSANT_ROWS,
     KING_MOVES,
+    KNIGHT_MOVES,
 )
 
 if TYPE_CHECKING:
@@ -593,6 +594,29 @@ class King(Piece):
         # Castling logic
         if (not ignore_check or ignore_illegal_moves) and not self.moved:
             moves.extend(self._get_castling_moves(board, ignore_illegal_moves))
+
+        # AggressiveKing: can move to any square within 2-square radius
+        if (
+            self.has_modifier("AggressiveKing")
+            and self.get_modifier_uses_remaining("AggressiveKing") > 0
+        ):
+            # Add moves for 2-square radius in all 8 directions
+            for dr, dc in KING_MOVES:
+                # Move 2 squares in this direction
+                new_row, new_col = row + (dr * 2), col + (dc * 2)
+                if board.is_valid_position(new_row, new_col):
+                    target_piece = board.squares[new_row][new_col]
+                    if ignore_illegal_moves or (
+                        target_piece is None or target_piece.color != self.color
+                    ):
+                        move = ChessMove(self.position, Position(new_row, new_col))
+                        move.used_modifier = "AggressiveKing"
+                        moves.append(move)
+
+            # Also add knight moves (covers remaining squares in 2-square radius)
+            moves.append(
+                board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
+            )
 
         # EscapeHatch: can move to any unoccupied square on the home row
         if (

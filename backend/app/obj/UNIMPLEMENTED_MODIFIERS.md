@@ -4,13 +4,6 @@ This document tracks modifiers that have been defined but not yet implemented in
 
 ## King Modifiers
 
-### AggressiveKing
-
-- **Score**: 4
-- **Uses**: 1 (limited use)
-- **Description**: This piece may move up to two squares in any direction
-- **Implementation needed**: Extend king moves to include 2-square radius
-
 ### Teleport
 
 - **Score**: 4
