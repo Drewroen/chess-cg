@@ -4,11 +4,6 @@ This document tracks modifiers that have been defined but not yet implemented in
 
 ## Knight Modifiers
 
-### Pegasus
-- **Score**: 4
-- **Description**: This piece may also move in an L shape with 2 squares in each direction
-- **Implementation needed**: Add extended L-shaped moves (2x2 instead of 2x1) to Knight.get_possible_moves()
-
 ### RoyalGuard
 - **Score**: 3
 - **Description**: This piece may also move like a king

@@ -404,6 +404,21 @@ class Knight(Piece):
                     ):
                         moves.append(ChessMove(self.position, Position(new_row, new_col)))
 
+        # Pegasus modifier: can also move in an L-shape with 2 squares in each direction
+        if self.has_modifier("Pegasus"):
+            row, col = self.position.coordinates()
+            # Extended L-shaped moves (2x2 instead of 2x1)
+            pegasus_moves = [(-2, -2), (-2, 2), (2, -2), (2, 2)]
+
+            for dr, dc in pegasus_moves:
+                new_row, new_col = row + dr, col + dc
+                if board.is_valid_position(new_row, new_col):
+                    target_piece = board.squares[new_row][new_col]
+                    if ignore_illegal_moves or (
+                        target_piece is None or target_piece.color != self.color
+                    ):
+                        moves.append(ChessMove(self.position, Position(new_row, new_col)))
+
         return moves
 
 
