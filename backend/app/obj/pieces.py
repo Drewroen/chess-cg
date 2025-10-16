@@ -594,6 +594,26 @@ class King(Piece):
         if (not ignore_check or ignore_illegal_moves) and not self.moved:
             moves.extend(self._get_castling_moves(board, ignore_illegal_moves))
 
+        # EscapeHatch: can move to any unoccupied square on the home row
+        if (
+            self.has_modifier("EscapeHatch")
+            and self.get_modifier_uses_remaining("EscapeHatch") > 0
+        ):
+            # Determine king's home row (row 0 for white, row 7 for black)
+            home_row = 0 if self.color == "white" else 7
+
+            # Add moves to all empty squares on home row
+            for col in range(8):
+                target_piece = board.squares[home_row][col]
+                # Can only move to empty squares
+                if ignore_illegal_moves or target_piece is None:
+                    target_pos = Position(home_row, col)
+                    # Skip if this is the king's current position
+                    if target_pos.coordinates() != self.position.coordinates():
+                        move = ChessMove(self.position, target_pos)
+                        move.used_modifier = "EscapeHatch"
+                        moves.append(move)
+
         return moves
 
     def _get_castling_moves(
