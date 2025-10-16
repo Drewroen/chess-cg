@@ -498,13 +498,38 @@ class Queen(Piece):
         ignore_illegal_moves: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this queen"""
+        from .chess_move import ChessMove
+
         # Queen combines rook and bishop moves (horizontal, vertical, and diagonal)
         rook_directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
         bishop_directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
         all_directions = rook_directions + bishop_directions
-        return board.get_sliding_moves(
+        moves = board.get_sliding_moves(
             self.position, all_directions, ignore_illegal_moves
         )
+
+        # SacrificialQueen: can move to any square if king is in check
+        if (
+            self.has_modifier("SacrificialQueen")
+            and self.get_modifier_uses_remaining("SacrificialQueen") > 0
+            and board.is_king_in_check(self.color)
+        ):
+            # Add moves to every square on the board
+            for row in range(8):
+                for col in range(8):
+                    target_piece = board.squares[row][col]
+                    # Can move to empty squares or capture enemy pieces
+                    if ignore_illegal_moves or (
+                        target_piece is None or target_piece.color != self.color
+                    ):
+                        target_pos = Position(row, col)
+                        # Skip if this is the queen's current position
+                        if target_pos.coordinates() != self.position.coordinates():
+                            move = ChessMove(self.position, target_pos)
+                            move.used_modifier = "SacrificialQueen"
+                            moves.append(move)
+
+        return moves
 
 
 class King(Piece):
