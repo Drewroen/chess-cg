@@ -32,6 +32,7 @@ class Piece(ABC):
         self.type = type
         self.position = position
         self.modifiers: list[Modifier] = []
+        self.modifier_uses_remaining: dict[str, int] = {}
 
     def mark_moved(self):
         self.moved = True
@@ -57,6 +58,9 @@ class Piece(ABC):
         # Check if modifier is already present
         if not any(m.modifier_type == modifier.modifier_type for m in self.modifiers):
             self.modifiers.append(modifier)
+            # Initialize remaining uses from the modifier definition
+            if modifier.uses > 0:
+                self.modifier_uses_remaining[modifier.modifier_type] = modifier.uses
             return True
         return False
 
@@ -81,6 +85,18 @@ class Piece(ABC):
             if modifier.modifier_type == modifier_type:
                 return modifier
         return None
+
+    def get_modifier_uses_remaining(self, modifier_type: str) -> int:
+        """Get the number of uses remaining for a modifier (0 means unlimited or not present)"""
+        return self.modifier_uses_remaining.get(modifier_type, 0)
+
+    def decrement_modifier_uses(self, modifier_type: str) -> bool:
+        """Decrement the uses remaining for a modifier. Returns True if successful."""
+        if modifier_type in self.modifier_uses_remaining:
+            if self.modifier_uses_remaining[modifier_type] > 0:
+                self.modifier_uses_remaining[modifier_type] -= 1
+                return True
+        return False
 
     @abstractmethod
     def get_possible_moves(
@@ -405,17 +421,21 @@ class Bishop(Piece):
                 board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
             )
 
-        if self.has_modifier("Corner Hop"):
+        if (
+            self.has_modifier("Corner Hop")
+            and self.get_modifier_uses_remaining("Corner Hop") > 0
+        ):
             # Add moves to any open corner square
             corners = [(0, 0), (0, 7), (7, 0), (7, 7)]
             for corner_row, corner_col in corners:
-                if board.is_empty_square(corner_row, corner_col):
+                if (
+                    board.is_empty_square(corner_row, corner_col)
+                    or ignore_illegal_moves
+                ):
                     corner_pos = Position(corner_row, corner_col)
                     move = ChessMove(self.position, corner_pos)
-                    if ignore_illegal_moves or not board.is_check_after_move(
-                        move, self.color
-                    ):
-                        moves.append(move)
+                    move.used_modifier = "Corner Hop"
+                    moves.append(move)
 
         return moves
 

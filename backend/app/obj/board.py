@@ -96,6 +96,7 @@ class Board:
                     "type": piece.get_acting_type(),
                     "color": piece.color,
                     "modifiers": [modifier.to_dict() for modifier in piece.modifiers],
+                    "modifier_uses_remaining": piece.modifier_uses_remaining,
                 }
                 if piece
                 else None
@@ -279,6 +280,10 @@ class Board:
             self.squares[initial_position[0]][initial_position[1]] = None
             piece.mark_moved()
             self.last_move = move
+
+            # Decrement modifier uses if this move used a limited-use modifier
+            if move.used_modifier:
+                piece.decrement_modifier_uses(move.used_modifier)
 
             if move.additional_move:
                 additional_piece = self.piece_from_position(move.additional_move[0])

@@ -10,6 +10,7 @@ class ChessMove:
         promote_to_type: str = None,
         promote_from_type: str = None,
         additional_move: tuple[Position, Position] = None,
+        used_modifier: str = None,
     ):
         self.position_from = position_from
         self.position_to = position_to
@@ -21,6 +22,7 @@ class ChessMove:
             promote_from_type  # Original piece type before promotion
         )
         self.additional_move = additional_move
+        self.used_modifier = used_modifier  # Track which modifier enabled this move
 
     def to_dict(self):
         return {

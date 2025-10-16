@@ -11,6 +11,7 @@ class Modifier:
         self.score = score
         self.applicable_piece = applicable_piece
         self.description = description
+        self.uses = uses
 
     def can_apply_to_piece(self, piece_type: str) -> bool:
         """Check if this modifier can be applied to the given piece type"""
@@ -24,6 +25,7 @@ class Modifier:
             "score": self.score,
             "applicable_piece": self.applicable_piece,
             "description": self.description,
+            "uses": self.uses,
         }
 
 
