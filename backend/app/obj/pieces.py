@@ -419,6 +419,19 @@ class Knight(Piece):
                     ):
                         moves.append(ChessMove(self.position, Position(new_row, new_col)))
 
+        # RoyalGuard modifier: can also move like a king
+        if self.has_modifier("RoyalGuard"):
+            row, col = self.position.coordinates()
+            # Add king moves (one square in any direction)
+            for dr, dc in KING_MOVES:
+                new_row, new_col = row + dr, col + dc
+                if board.is_valid_position(new_row, new_col):
+                    target_piece = board.squares[new_row][new_col]
+                    if ignore_illegal_moves or (
+                        target_piece is None or target_piece.color != self.color
+                    ):
+                        moves.append(ChessMove(self.position, Position(new_row, new_col)))
+
         return moves
 
 

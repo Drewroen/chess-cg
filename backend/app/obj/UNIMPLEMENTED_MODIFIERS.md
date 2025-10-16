@@ -2,13 +2,6 @@
 
 This document tracks modifiers that have been defined but not yet implemented in the game logic.
 
-## Knight Modifiers
-
-### RoyalGuard
-- **Score**: 3
-- **Description**: This piece may also move like a king
-- **Implementation needed**: Add king moves to Knight.get_possible_moves()
-
 ## Queen Modifiers
 
 ### SacrificialQueen
