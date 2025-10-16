@@ -2,14 +2,6 @@
 
 This document tracks modifiers that have been defined but not yet implemented in the game logic.
 
-## Bishop Modifiers
-
-### Corner Hop
-- **Score**: 2
-- **Uses**: 1 (limited use)
-- **Description**: This piece may move to an open corner
-- **Implementation needed**: Add special move to any corner square (a1, a8, h1, h8)
-
 ## Knight Modifiers
 
 ### Longhorn

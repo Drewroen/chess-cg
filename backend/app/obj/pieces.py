@@ -405,6 +405,18 @@ class Bishop(Piece):
                 board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
             )
 
+        if self.has_modifier("Corner Hop"):
+            # Add moves to any open corner square
+            corners = [(0, 0), (0, 7), (7, 0), (7, 7)]
+            for corner_row, corner_col in corners:
+                if board.is_empty_square(corner_row, corner_col):
+                    corner_pos = Position(corner_row, corner_col)
+                    move = ChessMove(self.position, corner_pos)
+                    if ignore_illegal_moves or not board.is_check_after_move(
+                        move, self.color
+                    ):
+                        moves.append(move)
+
         return moves
 
 
