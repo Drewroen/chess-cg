@@ -638,6 +638,26 @@ class King(Piece):
                         move.used_modifier = "EscapeHatch"
                         moves.append(move)
 
+        # Teleport: can swap places with any friendly piece
+        if (
+            self.has_modifier("Teleport")
+            and self.get_modifier_uses_remaining("Teleport") > 0
+        ):
+            # Add moves to swap with every friendly piece on the board
+            for row in range(8):
+                for col in range(8):
+                    target_piece = board.squares[row][col]
+                    # Can only swap with friendly pieces
+                    if target_piece is not None and target_piece.color == self.color:
+                        target_pos = Position(row, col)
+                        # Skip if this is the king's current position
+                        if target_pos.coordinates() != self.position.coordinates():
+                            move = ChessMove(self.position, target_pos)
+                            # The additional_move swaps the friendly piece to king's position
+                            move.additional_move = (target_pos, self.position)
+                            move.used_modifier = "Teleport"
+                            moves.append(move)
+
         return moves
 
     def _get_castling_moves(
