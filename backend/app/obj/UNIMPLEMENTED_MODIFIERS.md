@@ -2,14 +2,6 @@
 
 This document tracks modifiers that have been defined but not yet implemented in the game logic.
 
-## Queen Modifiers
-
-### Infiltration
-- **Score**: 3
-- **Uses**: 1 (limited use)
-- **Description**: This piece may move to any open space on your opponent's home row
-- **Implementation needed**: Add special move to any empty square on opponent's back rank
-
 ## King Modifiers
 
 ### EscapeHatch
@@ -33,5 +25,12 @@ This document tracks modifiers that have been defined but not yet implemented in
 ## Implementation Notes
 
 - Limited use modifiers (uses=1) will require additional tracking to ensure they can only be used once per game
-- Special moves (Corner Hop, Infiltration, EscapeHatch, Teleport) may need new move validation logic
-- SacrificialQueen requires checking if the king is currently in check
+- Special moves (EscapeHatch, Teleport) may need new move validation logic
+
+## Implemented Modifiers
+
+### Infiltration (Queen)
+- **Score**: 3
+- **Uses**: 1 (limited use)
+- **Description**: This piece may move to any open space on your opponent's home row
+- **Implementation**: Added in `pieces.py:538-556` - allows queen to teleport to any empty square on opponent's back rank

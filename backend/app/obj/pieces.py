@@ -402,7 +402,9 @@ class Knight(Piece):
                     if ignore_illegal_moves or (
                         target_piece is None or target_piece.color != self.color
                     ):
-                        moves.append(ChessMove(self.position, Position(new_row, new_col)))
+                        moves.append(
+                            ChessMove(self.position, Position(new_row, new_col))
+                        )
 
         # Pegasus modifier: can also move in an L-shape with 2 squares in each direction
         if self.has_modifier("Pegasus"):
@@ -417,7 +419,9 @@ class Knight(Piece):
                     if ignore_illegal_moves or (
                         target_piece is None or target_piece.color != self.color
                     ):
-                        moves.append(ChessMove(self.position, Position(new_row, new_col)))
+                        moves.append(
+                            ChessMove(self.position, Position(new_row, new_col))
+                        )
 
         # RoyalGuard modifier: can also move like a king
         if self.has_modifier("RoyalGuard"):
@@ -430,7 +434,9 @@ class Knight(Piece):
                     if ignore_illegal_moves or (
                         target_piece is None or target_piece.color != self.color
                     ):
-                        moves.append(ChessMove(self.position, Position(new_row, new_col)))
+                        moves.append(
+                            ChessMove(self.position, Position(new_row, new_col))
+                        )
 
         return moves
 
@@ -534,6 +540,26 @@ class Queen(Piece):
                             move = ChessMove(self.position, target_pos)
                             move.used_modifier = "SacrificialQueen"
                             moves.append(move)
+
+        # Infiltration: can move to any open space on opponent's home row
+        if (
+            self.has_modifier("Infiltration")
+            and self.get_modifier_uses_remaining("Infiltration") > 0
+        ):
+            # Determine opponent's home row (row 0 for white, row 7 for black)
+            opponent_home_row = 0 if self.color == "black" else 7
+
+            # Add moves to all empty squares on opponent's home row
+            for col in range(8):
+                target_piece = board.squares[opponent_home_row][col]
+                # Can only move to empty squares
+                if ignore_illegal_moves or target_piece is None:
+                    target_pos = Position(opponent_home_row, col)
+                    # Skip if this is the queen's current position
+                    if target_pos.coordinates() != self.position.coordinates():
+                        move = ChessMove(self.position, target_pos)
+                        move.used_modifier = "Infiltration"
+                        moves.append(move)
 
         return moves
 
