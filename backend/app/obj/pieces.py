@@ -385,7 +385,21 @@ class Bishop(Piece):
         """Get all possible moves for this bishop"""
         # Bishop moves diagonally
         directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
-        return board.get_sliding_moves(self.position, directions, ignore_illegal_moves)
+        moves = board.get_sliding_moves(self.position, directions, ignore_illegal_moves)
+
+        if self.has_modifier("SidestepBishop"):
+            # Add horizontal one-square moves
+            horizontal_directions = [(0, 1), (0, -1)]
+            moves.extend(
+                board.get_sliding_moves(
+                    self.position,
+                    horizontal_directions,
+                    ignore_illegal_moves,
+                    1,
+                )
+            )
+
+        return moves
 
 
 class Queen(Piece):
