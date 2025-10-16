@@ -508,6 +508,12 @@ class Queen(Piece):
             self.position, all_directions, ignore_illegal_moves
         )
 
+        # Kneen: can also move like a knight
+        if self.has_modifier("Kneen"):
+            moves.extend(
+                board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
+            )
+
         # SacrificialQueen: can move to any square if king is in check
         if (
             self.has_modifier("SacrificialQueen")

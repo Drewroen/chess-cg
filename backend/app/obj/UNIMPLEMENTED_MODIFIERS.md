@@ -4,11 +4,6 @@ This document tracks modifiers that have been defined but not yet implemented in
 
 ## Queen Modifiers
 
-### Kneen
-- **Score**: 4
-- **Description**: This piece combines the movement of a Queen and a Knight
-- **Implementation needed**: Add knight moves to Queen.get_possible_moves()
-
 ### Infiltration
 - **Score**: 3
 - **Uses**: 1 (limited use)
