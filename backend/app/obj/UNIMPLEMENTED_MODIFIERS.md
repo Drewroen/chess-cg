@@ -4,11 +4,6 @@ This document tracks modifiers that have been defined but not yet implemented in
 
 ## Bishop Modifiers
 
-### Unicorn
-- **Score**: 5
-- **Description**: This piece combines the movement of a Bishop and a Knight
-- **Implementation needed**: Add knight moves to Bishop.get_possible_moves()
-
 ### Corner Hop
 - **Score**: 2
 - **Uses**: 1 (limited use)

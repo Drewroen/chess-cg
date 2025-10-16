@@ -399,6 +399,12 @@ class Bishop(Piece):
                 )
             )
 
+        if self.has_modifier("Unicorn"):
+            # Add knight moves
+            moves.extend(
+                board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
+            )
+
         return moves
 
 
