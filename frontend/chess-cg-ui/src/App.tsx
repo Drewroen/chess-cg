@@ -5,6 +5,7 @@ import { AuthCallback } from "./components/AuthCallback";
 import { AuthSuccess } from "./components/AuthSuccess";
 import { AuthError } from "./components/AuthError";
 import { UsernameEditModal } from "./components/UsernameEditModal";
+import { Modifiers } from "./components/Modifiers";
 import { Button } from "./components/Button";
 import { useAuth } from "./hooks/useAuth";
 import { useResponsive } from "./utils";
@@ -14,12 +15,17 @@ import styles from "./App.module.css";
 
 export default function App() {
   const [showGame, setShowGame] = useState(false);
+  const [showModifiers, setShowModifiers] = useState(false);
   const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
   const isMobile = useResponsive();
   const { user, setUser, isCheckingAuth, login, logout } = useAuth();
 
   function startGame() {
     setShowGame(true);
+  }
+
+  function showModifiersPage() {
+    setShowModifiers(true);
   }
 
   function handleUsernameClick() {
@@ -99,13 +105,22 @@ export default function App() {
                       Login with Google
                     </Button>
                   ) : user?.user_type === "authenticated" ? (
-                    <Button
-                      onClick={logout}
-                      variant="danger"
-                      isMobile={isMobile}
-                    >
-                      Logout
-                    </Button>
+                    <>
+                      <Button
+                        onClick={showModifiersPage}
+                        variant="secondary"
+                        isMobile={isMobile}
+                      >
+                        Modifiers
+                      </Button>
+                      <Button
+                        onClick={logout}
+                        variant="danger"
+                        isMobile={isMobile}
+                      >
+                        Logout
+                      </Button>
+                    </>
                   ) : (
                     <div className={`${styles.loadingText} ${isMobile ? styles.mobile : ''}`}>
                       Loading user session...
@@ -127,7 +142,16 @@ export default function App() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/success" element={<AuthSuccess />} />
           <Route path="/auth/error" element={<AuthError />} />
-          <Route path="/" element={showGame ? <GameView isMobile={isMobile} /> : <LandingPage />} />
+          <Route path="/" element={
+            showGame ? <GameView isMobile={isMobile} /> :
+            showModifiers ? <Modifiers isMobile={isMobile} /> :
+            <LandingPage />
+          } />
+          <Route path="*" element={
+            showGame ? <GameView isMobile={isMobile} /> :
+            showModifiers ? <Modifiers isMobile={isMobile} /> :
+            <LandingPage />
+          } />
         </Routes>
         {user && (
           <UsernameEditModal

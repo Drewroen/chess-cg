@@ -1,0 +1,164 @@
+.modifiersContainer {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.modifiersContainer.mobile {
+  padding: 1rem;
+}
+
+.modifiersContainer h2 {
+  font-size: 2rem;
+}
+
+.modifiersContainer.mobile h2 {
+  font-size: 1.5rem;
+}
+
+.toggleContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.toggleLabel {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 26px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: #333;
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+.boardPreview {
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+  margin: 0 auto;
+  border: 2px solid #333;
+}
+
+.boardRow {
+  display: flex;
+  flex-direction: row;
+}
+
+.squareWrapper {
+  position: relative;
+}
+
+.selectedHighlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(255, 255, 0, 0.5);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.contentWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.modifierList {
+  flex: 1;
+  max-width: 300px;
+  padding: 1.5rem;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  border: 2px solid #444;
+}
+
+.modifierList h3 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: #ffffff;
+}
+
+.modifierList ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.modifierList li {
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  background-color: #2a2a2a;
+  border-radius: 6px;
+  border: 1px solid #444;
+  transition: background-color 0.2s;
+}
+
+.modifierList li:hover {
+  background-color: #333;
+}
+
+.modifierList li strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.modifierList li p {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+  color: #cccccc;
+  line-height: 1.4;
+}
+
+.modifierList li em {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #888;
+}
