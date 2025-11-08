@@ -170,7 +170,7 @@ class Pawn(Piece):
             )
         )
 
-        if self.has_modifier("BackwardsPawn"):
+        if self.has_modifier("Reverse"):
             moves.extend(
                 self._get_backward_moves(
                     board, row, col, color, direction, ignore_illegal_moves
@@ -222,7 +222,7 @@ class Pawn(Piece):
                     ChessMove(self.position, Position(target_row + direction, col))
                 )
 
-            if self.has_modifier("LongLeapPawn"):
+            if self.has_modifier("Long Leaper"):
                 # Check for three-square initial move
                 if (
                     row == PAWN_START_ROWS[color]
@@ -249,7 +249,7 @@ class Pawn(Piece):
         direction: int,
         ignore_illegal_moves: bool,
     ) -> List["ChessMove"]:
-        """Get backward moves for a pawn if it has the BackwardsPawn modifier"""
+        """Get backward moves for a pawn if it has the Reverse modifier"""
 
         moves = []
 
@@ -286,7 +286,7 @@ class Pawn(Piece):
                 continue
 
             if not board.is_enemy_piece(target_row, target_col, color):
-                if not self.has_modifier("DiagonalPawn"):
+                if not self.has_modifier("Kitty"):
                     continue
 
             # Handle promotion or regular capture
@@ -363,7 +363,7 @@ class Rook(Piece):
                 board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
             )
 
-        if self.has_modifier("DiagonalRook"):
+        if self.has_modifier("Kitty Castle"):
             moves.extend(
                 board.get_sliding_moves(
                     self.position,
@@ -424,8 +424,8 @@ class Knight(Piece):
                             ChessMove(self.position, Position(new_row, new_col))
                         )
 
-        # RoyalGuard modifier: can also move like a king
-        if self.has_modifier("RoyalGuard"):
+        # Royal Guard modifier: can also move like a king
+        if self.has_modifier("Royal Guard"):
             row, col = self.position.coordinates()
             # Add king moves (one square in any direction)
             for dr, dc in KING_MOVES:
@@ -457,7 +457,7 @@ class Bishop(Piece):
         directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
         moves = board.get_sliding_moves(self.position, directions, ignore_illegal_moves)
 
-        if self.has_modifier("SidestepBishop"):
+        if self.has_modifier("Sidestepper"):
             # Add horizontal one-square moves
             horizontal_directions = [(0, 1), (0, -1)]
             moves.extend(
@@ -521,10 +521,10 @@ class Queen(Piece):
                 board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
             )
 
-        # SacrificialQueen: can move to any square if king is in check
+        # Sacrificial Lamb: can move to any square if king is in check
         if (
-            self.has_modifier("SacrificialQueen")
-            and self.get_modifier_uses_remaining("SacrificialQueen") > 0
+            self.has_modifier("Sacrificial Lamb")
+            and self.get_modifier_uses_remaining("Sacrificial Lamb") > 0
             and board.is_king_in_check(self.color)
         ):
             # Add moves to every square on the board
@@ -539,7 +539,7 @@ class Queen(Piece):
                         # Skip if this is the queen's current position
                         if target_pos.coordinates() != self.position.coordinates():
                             move = ChessMove(self.position, target_pos)
-                            move.used_modifier = "SacrificialQueen"
+                            move.used_modifier = "Sacrificial Lamb"
                             moves.append(move)
 
         # Infiltration: can move to any open space on opponent's home row
@@ -595,10 +595,10 @@ class King(Piece):
         if (not ignore_check or ignore_illegal_moves) and not self.moved:
             moves.extend(self._get_castling_moves(board, ignore_illegal_moves))
 
-        # AggressiveKing: can move to any square within 2-square radius
+        # Aggression: can move to any square within 2-square radius
         if (
-            self.has_modifier("AggressiveKing")
-            and self.get_modifier_uses_remaining("AggressiveKing") > 0
+            self.has_modifier("Aggression")
+            and self.get_modifier_uses_remaining("Aggression") > 0
         ):
             # Add moves for 2-square radius in all 8 directions
             for dr, dc in KING_MOVES:
@@ -610,7 +610,7 @@ class King(Piece):
                         target_piece is None or target_piece.color != self.color
                     ):
                         move = ChessMove(self.position, Position(new_row, new_col))
-                        move.used_modifier = "AggressiveKing"
+                        move.used_modifier = "Aggression"
                         moves.append(move)
 
             # Also add knight moves (covers remaining squares in 2-square radius)
@@ -618,10 +618,10 @@ class King(Piece):
                 board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
             )
 
-        # EscapeHatch: can move to any unoccupied square on the home row
+        # Escape Hatch: can move to any unoccupied square on the home row
         if (
-            self.has_modifier("EscapeHatch")
-            and self.get_modifier_uses_remaining("EscapeHatch") > 0
+            self.has_modifier("Escape Hatch")
+            and self.get_modifier_uses_remaining("Escape Hatch") > 0
         ):
             # Determine king's home row (row 0 for white, row 7 for black)
             home_row = 0 if self.color == "white" else 7
@@ -635,7 +635,7 @@ class King(Piece):
                     # Skip if this is the king's current position
                     if target_pos.coordinates() != self.position.coordinates():
                         move = ChessMove(self.position, target_pos)
-                        move.used_modifier = "EscapeHatch"
+                        move.used_modifier = "Escape Hatch"
                         moves.append(move)
 
         # Teleport: can swap places with any friendly piece

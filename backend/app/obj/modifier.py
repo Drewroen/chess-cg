@@ -40,7 +40,7 @@ KNOOK_MODIFIER = Modifier(
 )
 
 DIAGONAL_ROOK_MODIFIER = Modifier(
-    modifier_type="DiagonalRook",
+    modifier_type="Kitty Castle",
     score=2,
     applicable_piece="rook",
     description="This piece can also move one square diagonally",
@@ -57,7 +57,7 @@ QUOOK_MODIFIER = Modifier(
 
 # PAWN MODIFIERS
 BACKWARDS_PAWN_MODIFIER = Modifier(
-    modifier_type="BackwardsPawn",
+    modifier_type="Reverse",
     score=1,
     applicable_piece="pawn",
     description="This piece can move one square backward",
@@ -65,7 +65,7 @@ BACKWARDS_PAWN_MODIFIER = Modifier(
 )
 
 DIAGONAL_PAWN_MODIFIER = Modifier(
-    modifier_type="DiagonalPawn",
+    modifier_type="Kitty",
     score=1,
     applicable_piece="pawn",
     description="This piece can move one square diagonally forward without capturing",
@@ -73,7 +73,7 @@ DIAGONAL_PAWN_MODIFIER = Modifier(
 )
 
 LONG_LEAP_PAWN_MODIFIER = Modifier(
-    modifier_type="LongLeapPawn",
+    modifier_type="Long Leaper",
     score=1,
     applicable_piece="pawn",
     description="This piece can move three squares forward on its first move",
@@ -82,7 +82,7 @@ LONG_LEAP_PAWN_MODIFIER = Modifier(
 
 # BISHOP MODIFIERS
 SIDESTEP_BISHOP_MODIFIER = Modifier(
-    modifier_type="SidestepBishop",
+    modifier_type="Sidestepper",
     score=2,
     applicable_piece="bishop",
     description="This piece can also move one square horizontally",
@@ -121,7 +121,7 @@ PEGASUS_MODIFIER = Modifier(
     uses=0,
 )
 ROYAL_GUARD_MODIFIER = Modifier(
-    modifier_type="RoyalGuard",
+    modifier_type="Royal Guard",
     score=3,
     applicable_piece="knight",
     description="This piece may also move like a king",
@@ -130,7 +130,7 @@ ROYAL_GUARD_MODIFIER = Modifier(
 
 # QUEEN MODIFIERS
 SACRIFICIAL_QUEEN_MODIFIER = Modifier(
-    modifier_type="SacrificialQueen",
+    modifier_type="Sacrificial Lamb",
     score=4,
     applicable_piece="queen",
     description="This piece may move anywhere if the king is in check",
@@ -155,7 +155,7 @@ INFILTRATION_MODIFIER = Modifier(
 
 # KING MODIFIERS
 ESCAPE_HATCH_MODIFIER = Modifier(
-    modifier_type="EscapeHatch",
+    modifier_type="Escape Hatch",
     score=3,
     applicable_piece="king",
     description="This piece may move to any unoccupied square on the home row",
@@ -163,7 +163,7 @@ ESCAPE_HATCH_MODIFIER = Modifier(
 )
 
 AGGRESSIVE_KING_MODIFIER = Modifier(
-    modifier_type="AggressiveKing",
+    modifier_type="Aggression",
     score=4,
     applicable_piece="king",
     description="This piece may move up to two squares in any direction",
