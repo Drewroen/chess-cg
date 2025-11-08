@@ -78,6 +78,75 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
     return selectedModifiers[pieceKey]?.includes(modifierType) || false;
   };
 
+  // Save loadout - convert selectedModifiers to backend format
+  const handleSaveLoadout = async () => {
+    const loadout = Object.entries(selectedModifiers).map(([pieceKey, modifiers]) => {
+      const [color, rowStr, colStr] = pieceKey.split('-');
+      const uiRow = parseInt(rowStr);
+      const col = parseInt(colStr);
+
+      // Determine piece type based on row and col
+      let pieceType: string;
+      if (uiRow === 0) {
+        pieceType = 'pawn';
+      } else {
+        const piece = initialWhitePieces.find(p => p.col === col);
+        pieceType = piece?.type || 'pawn';
+      }
+
+      // Map UI rows to backend board positions
+      // UI: row 0 = pawns, row 1 = pieces
+      // Backend white: row 6 = pawns, row 7 = pieces
+      // Backend black: row 1 = pawns, row 0 = pieces
+      let backendRow: number;
+      if (color === 'white') {
+        backendRow = uiRow === 0 ? 6 : 7;
+      } else {
+        backendRow = uiRow === 0 ? 1 : 0;
+      }
+
+      return {
+        color,
+        piece_type: pieceType,
+        position: { row: backendRow, col },
+        modifiers
+      };
+    });
+
+    const payload = { loadout };
+    console.log('Sending loadout to backend:');
+    console.log(JSON.stringify(payload, null, 2));
+
+    try {
+      const response = await fetch(
+        'http://localhost:8000/api/game/loadout/save',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // Include cookies for authentication
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Loadout saved successfully:');
+        console.log(data);
+        alert('Loadout saved successfully!');
+      } else {
+        console.error('Loadout save failed:');
+        console.error(data);
+        alert(`Save failed:\n${data.detail?.errors?.join('\n') || data.detail || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to save loadout:', error);
+      alert('Failed to connect to server');
+    }
+  };
+
   useEffect(() => {
     const fetchModifiers = async () => {
       try {
@@ -91,7 +160,55 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
       }
     };
 
+    const fetchLoadout = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:8000/api/game/loadout",
+          {
+            credentials: "include", // Include cookies for authentication
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.loadout && data.loadout.loadout) {
+            // Convert backend loadout format to frontend selectedModifiers format
+            const modifiersMap: Record<string, string[]> = {};
+
+            data.loadout.loadout.forEach((piece: any) => {
+              const { color, position, modifiers } = piece;
+
+              // Map backend positions to UI rows
+              // Backend white: row 6 = pawns, row 7 = pieces
+              // Backend black: row 1 = pawns, row 0 = pieces
+              // UI: row 0 = pawns, row 1 = pieces
+              let uiRow: number;
+              if (color === 'white') {
+                uiRow = position.row === 6 ? 0 : 1;
+              } else {
+                uiRow = position.row === 1 ? 0 : 1;
+              }
+
+              const pieceKey = `${color}-${uiRow}-${position.col}`;
+              modifiersMap[pieceKey] = modifiers;
+            });
+
+            setSelectedModifiers(modifiersMap);
+            console.log('Loaded existing loadout:', modifiersMap);
+          }
+        } else if (response.status === 401) {
+          console.log('User not authenticated, skipping loadout fetch');
+        } else {
+          console.error('Failed to fetch loadout:', response.status);
+        }
+      } catch (error) {
+        console.error("Failed to fetch loadout:", error);
+      }
+    };
+
     fetchModifiers();
+    fetchLoadout();
   }, []);
 
   const availableModifiers = selectedPiece
@@ -119,6 +236,9 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
         </label>
         <span className={styles.toggleLabel}>Black</span>
       </div>
+      <button className={styles.saveButton} onClick={handleSaveLoadout}>
+        Save Loadout
+      </button>
       <div className={styles.contentWrapper}>
         <div className={styles.boardPreview}>
           {/* Render 2 rows (row 0 = pawns, row 1 = pieces) */}

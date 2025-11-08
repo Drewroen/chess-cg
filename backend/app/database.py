@@ -38,11 +38,8 @@ async def get_db_session(max_retries: int = 3) -> AsyncGenerator[AsyncSession, N
     for attempt in range(max_retries):
         try:
             async with db_manager.async_session_maker() as session:
-                try:
-                    yield session
-                finally:
-                    await session.close()
-                    return
+                yield session
+                return
         except (DisconnectionError, OperationalError) as e:
             if attempt == max_retries - 1:
                 logging.error(

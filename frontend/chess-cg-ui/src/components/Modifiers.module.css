@@ -74,6 +74,27 @@
   transform: translateX(24px);
 }
 
+.saveButton {
+  padding: 0.75rem 1.5rem;
+  background-color: #4ade80;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 1.5rem;
+}
+
+.saveButton:hover {
+  background-color: #5ef38f;
+}
+
+.saveButton:active {
+  background-color: #3bc969;
+}
+
 .boardPreview {
   display: flex;
   flex-direction: column;

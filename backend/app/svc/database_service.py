@@ -83,6 +83,17 @@ class DatabaseService:
         await self.session.refresh(user)
         return user
 
+    async def update_user_loadout(self, user_id: str, loadout: dict) -> Optional[User]:
+        """Update a user's piece modifiers loadout."""
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return None
+
+        user.loadout = loadout
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user
+
     async def create_chess_game(
         self,
         white_player_id: Optional[str],

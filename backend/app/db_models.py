@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Text
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Text, JSON
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -14,6 +14,7 @@ class User(Base):
         String, default="authenticated", nullable=False
     )  # "authenticated" or "guest"
     elo = Column(Integer, nullable=True)
+    loadout = Column(JSON, nullable=True)  # Stores piece modifiers loadout as JSON
     last_activity_at = Column(DateTime, nullable=True, index=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
