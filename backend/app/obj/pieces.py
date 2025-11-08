@@ -2,6 +2,7 @@ from .position import Position
 from .modifier import Modifier
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List
+from .chess_move import ChessMove
 
 from .constants import (
     PAWN_DIRECTIONS,
@@ -14,7 +15,6 @@ from .constants import (
 
 if TYPE_CHECKING:
     from .board import Board
-    from .chess_move import ChessMove
 
 
 class Piece(ABC):

@@ -5,6 +5,27 @@ from ..auth import verify_jwt_token
 from ..database import get_db_session
 from ..svc.database_service import DatabaseService
 from ..svc.elo_service import EloService
+from ..obj.modifier import (
+    KNOOK_MODIFIER,
+    DIAGONAL_ROOK_MODIFIER,
+    QUOOK_MODIFIER,
+    BACKWARDS_PAWN_MODIFIER,
+    DIAGONAL_PAWN_MODIFIER,
+    LONG_LEAP_PAWN_MODIFIER,
+    SIDESTEP_BISHOP_MODIFIER,
+    UNICORN_MODIFIER,
+    CORNER_HOP_MODIFIER,
+    LONGHORN_MODIFIER,
+    PEGASUS_MODIFIER,
+    ROYAL_GUARD_MODIFIER,
+    SACRIFICIAL_QUEEN_MODIFIER,
+    KNEEN_MODIFIER,
+    INFILTRATION_MODIFIER,
+    ESCAPE_HATCH_MODIFIER,
+    AGGRESSIVE_KING_MODIFIER,
+    TELEPORT_MODIFIER,
+)
+from ..obj.position import Position
 import time
 import logging
 
@@ -63,6 +84,28 @@ class Room:
 
 
 class RoomService:
+    # Map of all modifiers by type for quick lookup
+    MODIFIERS_MAP = {
+        "Knook": KNOOK_MODIFIER,
+        "Kitty Castle": DIAGONAL_ROOK_MODIFIER,
+        "Quook": QUOOK_MODIFIER,
+        "Reverse": BACKWARDS_PAWN_MODIFIER,
+        "Kitty": DIAGONAL_PAWN_MODIFIER,
+        "Long Leaper": LONG_LEAP_PAWN_MODIFIER,
+        "Sidestepper": SIDESTEP_BISHOP_MODIFIER,
+        "Unicorn": UNICORN_MODIFIER,
+        "Corner Hop": CORNER_HOP_MODIFIER,
+        "Longhorn": LONGHORN_MODIFIER,
+        "Pegasus": PEGASUS_MODIFIER,
+        "Royal Guard": ROYAL_GUARD_MODIFIER,
+        "Sacrificial Lamb": SACRIFICIAL_QUEEN_MODIFIER,
+        "Kneen": KNEEN_MODIFIER,
+        "Infiltration": INFILTRATION_MODIFIER,
+        "Escape Hatch": ESCAPE_HATCH_MODIFIER,
+        "Aggression": AGGRESSIVE_KING_MODIFIER,
+        "Teleport": TELEPORT_MODIFIER,
+    }
+
     def __init__(self):
         self.rooms: dict[UUID, Room] = {}
         self.queue: list[str] = []
@@ -77,7 +120,7 @@ class RoomService:
         """Return the number of players in the queue."""
         return len(self.queue)
 
-    def new_room(self, white: str, black: str) -> UUID:
+    async def new_room(self, white: str, black: str) -> UUID:
         """Create a new room with the given players."""
         room = Room()
         room.white = white
@@ -91,7 +134,94 @@ class RoomService:
             self.queue.remove(black)
             self.player_to_room_map[black] = room.id
 
+        # Load and apply loadouts for both players
+        await self._apply_player_loadouts(room)
+
         return room.id
+
+    async def _apply_player_loadouts(self, room: Room):
+        """Load and apply loadouts for both players in the room."""
+        # Load loadouts for both players
+        white_loadout = await self._get_player_loadout(room.white)
+        black_loadout = await self._get_player_loadout(room.black)
+
+        # Apply white's loadout
+        if white_loadout:
+            self._apply_loadout_to_board(room.game.board, white_loadout, "white")
+
+        # Apply black's loadout
+        if black_loadout:
+            self._apply_loadout_to_board(room.game.board, black_loadout, "black")
+
+    async def _get_player_loadout(self, player_id: str):
+        """Get the loadout for a player from the database."""
+        # Skip guest players
+        if not player_id or player_id.startswith("guest_"):
+            return None
+
+        try:
+            async for session in get_db_session():
+                db_service = DatabaseService(session)
+                user = await db_service.get_user_by_id(player_id)
+                if user and user.loadout:
+                    return user.loadout
+                return None
+        except Exception as e:
+            logging.error(f"Error loading loadout for player {player_id}: {e}")
+            return None
+
+    def _apply_loadout_to_board(self, board, loadout_data, player_color):
+        """Apply a loadout to the board for a specific player."""
+        if not loadout_data:
+            return
+
+        # Extract the loadout array from the data structure
+        # The loadout is stored as {"loadout": [...]}
+        loadout = loadout_data.get("loadout", []) if isinstance(loadout_data, dict) else loadout_data
+
+        for piece_loadout in loadout:
+            # Validate the piece belongs to this player
+            if piece_loadout.get("color") != player_color:
+                continue
+
+            # Get the position
+            position_data = piece_loadout.get("position")
+            if not position_data:
+                continue
+
+            row = position_data.get("row")
+            col = position_data.get("col")
+
+            # Mirror column for black pieces
+            # Black's a-file should be at column 0, but from black's perspective
+            # the UI shows it mirrored, so we need to flip it back
+            if player_color == "black":
+                col = 7 - col
+
+            # Get the piece at this position
+            piece = board.piece_from_position(Position(row, col))
+            if not piece:
+                logging.warning(
+                    f"No piece found at position ({row}, {col}) for {player_color}"
+                )
+                continue
+
+            # Apply modifiers to the piece
+            modifiers = piece_loadout.get("modifiers", [])
+            for modifier_name in modifiers:
+                modifier = self.MODIFIERS_MAP.get(modifier_name)
+                if modifier:
+                    success = piece.add_modifier(modifier)
+                    if success:
+                        logging.info(
+                            f"Applied {modifier_name} to {player_color} {piece.type} at ({row}, {col})"
+                        )
+                    else:
+                        logging.warning(
+                            f"Failed to apply {modifier_name} to {player_color} {piece.type} at ({row}, {col})"
+                        )
+                else:
+                    logging.warning(f"Unknown modifier: {modifier_name}")
 
     def find_player_room(self, player_name: str) -> Room:
         """Find the room ID for a given player."""
@@ -243,7 +373,7 @@ class RoomManager:
             # If the player is not already in a room, add them to the queue
             self.room_service.add_to_queue(name)
             if self.room_service.queue_length() >= 2:
-                room_id = self.room_service.new_room(
+                room_id = await self.room_service.new_room(
                     self.room_service.queue[0], self.room_service.queue[1]
                 )
                 await self.emit_game_state_to_room(room_id)
