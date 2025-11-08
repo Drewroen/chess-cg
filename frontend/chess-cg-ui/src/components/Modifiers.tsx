@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import styles from "./Modifiers.module.css";
 import { Square } from "./Square";
 import { Piece } from "./Piece";
+import { modifierIcons } from "../utils/modifierIcons";
 
 interface ModifiersProps {
   isMobile?: boolean;
@@ -35,6 +36,10 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
     row: number;
     col: number;
   } | null>(null);
+  // Track selected modifiers for each piece: key is "color-row-col", value is array of modifier types
+  const [selectedModifiers, setSelectedModifiers] = useState<
+    Record<string, string[]>
+  >({});
   const squareSize = isMobile ? 40 : 60;
   const boardDimensions = { width: squareSize * 8, height: squareSize * 2 };
 
@@ -42,6 +47,35 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
   const handleColorChange = (newColor: "white" | "black") => {
     setPieceColor(newColor);
     setSelectedPiece(null);
+  };
+
+  // Toggle modifier selection for current piece
+  const toggleModifier = (modifierType: string) => {
+    if (!selectedPiece) return;
+
+    const pieceKey = `${pieceColor}-${selectedPiece.row}-${selectedPiece.col}`;
+    const currentSelections = selectedModifiers[pieceKey] || [];
+
+    if (currentSelections.includes(modifierType)) {
+      // Remove modifier
+      setSelectedModifiers({
+        ...selectedModifiers,
+        [pieceKey]: currentSelections.filter((m) => m !== modifierType),
+      });
+    } else {
+      // Add modifier
+      setSelectedModifiers({
+        ...selectedModifiers,
+        [pieceKey]: [...currentSelections, modifierType],
+      });
+    }
+  };
+
+  // Check if modifier is selected for current piece
+  const isModifierSelected = (modifierType: string): boolean => {
+    if (!selectedPiece) return false;
+    const pieceKey = `${pieceColor}-${selectedPiece.row}-${selectedPiece.col}`;
+    return selectedModifiers[pieceKey]?.includes(modifierType) || false;
   };
 
   useEffect(() => {
@@ -151,6 +185,11 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
                         playerColor={pieceColor}
                         boardDimensions={boardDimensions}
                         gameStatus="completed"
+                        modifiers={
+                          selectedModifiers[
+                            `${pieceColor}-${row}-${col}`
+                          ] || []
+                        }
                       />
                     )}
                   </div>
@@ -166,15 +205,36 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
                 selectedPiece.type.slice(1)}
             </h3>
             {availableModifiers.length > 0 ? (
-              <ul>
-                {availableModifiers.map((modifier) => (
-                  <li key={modifier.type}>
-                    <strong>{modifier.type}</strong> +{modifier.score}
-                    <p>{modifier.description}</p>
-                    {modifier.uses > 0 && <em>Uses: {modifier.uses}</em>}
-                  </li>
-                ))}
-              </ul>
+              <div className={styles.modifierCards}>
+                {availableModifiers.map((modifier) => {
+                  const isSelected = isModifierSelected(modifier.type);
+                  return (
+                    <div
+                      key={modifier.type}
+                      className={`${styles.modifierCard} ${
+                        isSelected ? styles.selected : ""
+                      }`}
+                      onClick={() => toggleModifier(modifier.type)}
+                    >
+                      <div className={styles.iconContainer}>
+                        {modifierIcons[modifier.type] || modifierIcons["default"]}
+                      </div>
+                      <div className={styles.modifierContent}>
+                        <div className={styles.modifierHeader}>
+                          <h4>{modifier.type}</h4>
+                          <span className={styles.modifierScore}>
+                            +{modifier.score}
+                            {modifier.score === 25 ? "%" : ""}
+                          </span>
+                        </div>
+                        <p className={styles.modifierDescription}>
+                          {modifier.description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <p>No modifiers available for this piece.</p>
             )}

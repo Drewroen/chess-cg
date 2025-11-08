@@ -110,55 +110,94 @@
 
 .modifierList {
   flex: 1;
-  max-width: 300px;
+  max-width: 600px;
+  width: 100%;
   padding: 1.5rem;
-  background-color: #1a1a1a;
-  border-radius: 8px;
-  border: 2px solid #444;
 }
 
 .modifierList h3 {
   font-size: 1.2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   color: #ffffff;
 }
 
-.modifierList ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.modifierCards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.modifierList li {
-  padding: 1rem;
-  margin-bottom: 0.75rem;
+.modifierCard {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
   background-color: #2a2a2a;
-  border-radius: 6px;
   border: 1px solid #444;
-  transition: background-color 0.2s;
+  border-radius: 12px;
+  transition: background-color 0.2s, border-color 0.2s;
+  cursor: pointer;
 }
 
-.modifierList li:hover {
+.modifierCard:hover {
   background-color: #333;
+  border-color: #555;
 }
 
-.modifierList li strong {
-  display: block;
-  margin-bottom: 0.25rem;
+.modifierCard.selected {
+  background-color: #1a3a2a;
+  border-color: #4ade80;
+  border-width: 2px;
+}
+
+.modifierCard.selected:hover {
+  background-color: #1e4430;
+  border-color: #5ef38f;
+}
+
+.iconContainer {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modifierContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.modifierHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  width: 100%;
+}
+
+.modifierHeader h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
   color: #ffffff;
-  font-size: 1rem;
 }
 
-.modifierList li p {
-  margin: 0.5rem 0 0 0;
+.modifierScore {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #4ade80;
+}
+
+.modifierDescription {
+  margin: 0;
   font-size: 0.9rem;
-  color: #cccccc;
-  line-height: 1.4;
-}
-
-.modifierList li em {
-  display: block;
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: #888;
+  color: #9ca3af;
+  line-height: 1.5;
 }

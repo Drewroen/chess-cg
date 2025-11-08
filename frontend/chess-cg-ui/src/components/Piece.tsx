@@ -12,6 +12,7 @@ import WhiteKnight from "../assets/white_knight.svg";
 import WhitePawn from "../assets/white_pawn.svg";
 import React, { CSSProperties, useRef } from "react";
 import Draggable from "react-draggable";
+import { modifierIcons } from "../utils/modifierIcons";
 
 export const Piece = React.memo(function Piece({
   type,
@@ -21,6 +22,7 @@ export const Piece = React.memo(function Piece({
   onPieceDrop,
   boardDimensions,
   gameStatus,
+  modifiers = [],
 }: {
   type?: string;
   color?: string;
@@ -29,6 +31,7 @@ export const Piece = React.memo(function Piece({
   onPieceDrop?: (x: number, y: number) => void;
   boardDimensions: { width: number; height: number };
   gameStatus?: string;
+  modifiers?: string[];
 }) {
   const nodeRef = useRef(null);
   function getSvg(type: string, color: string) {
@@ -58,13 +61,54 @@ export const Piece = React.memo(function Piece({
   }
 
   const pieceImage = (
-    <img
-      ref={nodeRef}
-      src={svgSrc}
-      alt=""
-      style={{ ...style, zIndex: color === playerColor ? 1001 : 1000 }}
-      draggable={false}
-    />
+    <div style={{ position: "relative", ...style }}>
+      <img
+        ref={nodeRef}
+        src={svgSrc}
+        alt=""
+        style={{
+          width: "100%",
+          height: "100%",
+          zIndex: color === playerColor ? 1001 : 1000,
+        }}
+        draggable={false}
+      />
+      {modifiers.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: "2px",
+            left: "2px",
+            display: "flex",
+            gap: "2px",
+            padding: "2px",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            borderRadius: "4px",
+            zIndex: 1002,
+          }}
+        >
+          {modifiers.map((modifierType, index) => (
+            <div
+              key={`${modifierType}-${index}`}
+              style={{
+                width: "16px",
+                height: "16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {React.cloneElement(
+                modifierIcons[modifierType] || modifierIcons["default"],
+                {
+                  style: { width: "14px", height: "14px" },
+                }
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 
   return color === playerColor &&
