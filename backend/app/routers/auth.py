@@ -273,7 +273,7 @@ async def get_current_user(
 
 
 @router.get("/ws-token")
-@limiter.limit("10/minute")
+@limiter.limit("100/minute")
 async def get_websocket_token(request: Request):
     """Get access token for WebSocket connections"""
 
