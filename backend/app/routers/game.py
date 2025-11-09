@@ -1,7 +1,6 @@
 from uuid import UUID
 from app.svc.room import RoomManager
 from fastapi import APIRouter, HTTPException, Request, Depends
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
@@ -218,14 +217,13 @@ async def validate_loadout(loadout_request: LoadoutRequest):
     return {
         "status": "valid",
         "message": "Loadout is valid",
-        "loadout": loadout_request.model_dump()
+        "loadout": loadout_request.model_dump(),
     }
 
 
 @router.get("/loadout")
 async def get_loadout(
-    request: Request,
-    db_session: AsyncSession = Depends(get_db_session)
+    request: Request, db_session: AsyncSession = Depends(get_db_session)
 ):
     """Get the piece loadout with modifiers for the authenticated user."""
 
@@ -249,16 +247,14 @@ async def get_loadout(
         raise HTTPException(status_code=404, detail="User not found")
 
     # Return the loadout (or null if not set)
-    return {
-        "loadout": user.loadout
-    }
+    return {"loadout": user.loadout}
 
 
 @router.post("/loadout/save")
 async def save_loadout(
     loadout_request: LoadoutRequest,
     request: Request,
-    db_session: AsyncSession = Depends(get_db_session)
+    db_session: AsyncSession = Depends(get_db_session),
 ):
     """Save a piece loadout with modifiers for the authenticated user."""
 
@@ -372,5 +368,5 @@ async def save_loadout(
     return {
         "status": "success",
         "message": "Loadout saved successfully",
-        "loadout": loadout_request.model_dump()
+        "loadout": loadout_request.model_dump(),
     }

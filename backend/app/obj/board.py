@@ -1,4 +1,3 @@
-from app.obj.modifier import DIAGONAL_ROOK_MODIFIER, KNOOK_MODIFIER, QUOOK_MODIFIER
 from app.obj.pieces import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
 from app.obj.chess_move import ChessMove
 from app.obj.constants import (
