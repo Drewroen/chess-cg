@@ -258,6 +258,13 @@ class Board:
 
             piece = self.piece_from_position(position_from)
 
+            # For swap moves (teleport), save the piece at the destination before we overwrite it
+            saved_additional_piece = None
+            if move.additional_move:
+                saved_additional_piece = self.piece_from_position(
+                    move.additional_move[0]
+                )
+
             # Check for piece at the capture position (e.g., en passant)
             piece_to_capture = self.piece_from_position(move.position_to_capture)
             if piece_to_capture:
@@ -265,7 +272,8 @@ class Board:
                 self.pieces.remove(piece_to_capture)
 
             # Also check for piece at the destination position (normal captures)
-            if not piece_to_capture:
+            # But don't capture if this is a swap move (teleport) - the piece will be moved instead
+            if not piece_to_capture and not move.additional_move:
                 piece_at_destination = self.piece_from_position(move.position_to)
                 if piece_at_destination:
                     self.captured_pieces.append(piece_at_destination)
@@ -286,17 +294,25 @@ class Board:
                 piece.decrement_modifier_uses(move.used_modifier)
 
             if move.additional_move:
-                additional_piece = self.piece_from_position(move.additional_move[0])
+                # Use saved piece for swaps, or fetch for castling
+                additional_piece = (
+                    saved_additional_piece
+                    if saved_additional_piece
+                    else self.piece_from_position(move.additional_move[0])
+                )
                 if additional_piece:
-                    # Move the additional piece (like in castling)
+                    # Move the additional piece (like in castling or teleport)
                     additional_initial_position = move.additional_move[0].coordinates()
                     additional_position_to = move.additional_move[1].coordinates()
                     self.squares[additional_position_to[0]][
                         additional_position_to[1]
                     ] = additional_piece
-                    self.squares[additional_initial_position[0]][
-                        additional_initial_position[1]
-                    ] = None
+                    # Only clear the additional piece's initial position if it's not where we just placed the main piece
+                    # (This matters for teleport where they swap positions)
+                    if additional_initial_position != position_to:
+                        self.squares[additional_initial_position[0]][
+                            additional_initial_position[1]
+                        ] = None
                     additional_piece.mark_moved()
                     additional_piece.position = Position(
                         additional_position_to[0], additional_position_to[1]
@@ -373,9 +389,25 @@ class Board:
         target_pos = move.position_to.coordinates()
         capture_pos = move.position_to_capture.coordinates()
 
+        # For moves with additional_move (like castling or teleport), save the piece
+        # at target_pos before we clear it
+        additional_piece = None
+        additional_initial_pos = None
+        additional_capture_pos = None
+        if move.additional_move:
+            additional_initial_pos = move.additional_move[0].coordinates()
+            additional_capture_pos = move.additional_move[1].coordinates()
+            additional_piece = self.squares[additional_initial_pos[0]][
+                additional_initial_pos[1]
+            ]
+
         # Clear the original position and capture position
         self.squares[initial_pos[0]][initial_pos[1]] = None
         self.squares[capture_pos[0]][capture_pos[1]] = None
+
+        if additional_initial_pos and additional_capture_pos:
+            self.squares[additional_initial_pos[0]][additional_initial_pos[1]] = None
+            self.squares[additional_capture_pos[0]][additional_capture_pos[1]] = None
 
         # Handle transformation (promotion)
         if move.promote_to_type:
@@ -386,19 +418,14 @@ class Board:
         self.squares[target_pos[0]][target_pos[1]] = original_piece
         original_piece.position = Position(target_pos[0], target_pos[1])
 
-        # Handle additional moves (e.g., castling)
+        # Handle additional moves (e.g., castling, teleport)
         if move.additional_move:
-            self._apply_additional_move(move.additional_move)
-
-    def _apply_additional_move(self, additional_move):
-        """Apply additional move (like castling rook movement)."""
-        additional_from = additional_move[0].coordinates()
-        additional_to = additional_move[1].coordinates()
-        additional_piece = self.squares[additional_from[0]][additional_from[1]]
-
-        self.squares[additional_to[0]][additional_to[1]] = additional_piece
-        self.squares[additional_from[0]][additional_from[1]] = None
-        additional_piece.position = Position(additional_to[0], additional_to[1])
+            self.squares[additional_capture_pos[0]][additional_capture_pos[1]] = (
+                additional_piece
+            )
+            additional_piece.position = Position(
+                additional_capture_pos[0], additional_capture_pos[1]
+            )
 
     def _check_king_safety(self, color: str) -> bool:
         """Check if the king is in check after the temporary move."""
@@ -413,11 +440,23 @@ class Board:
         initial_pos = position.coordinates()
         target_pos = move.position_to.coordinates()
         capture_pos = move.position_to_capture.coordinates()
+        additional_from = None
+        additional_to = None
+        additional_piece = None
+
+        if move.additional_move:
+            additional_from = move.additional_move[0].coordinates()
+            additional_to = move.additional_move[1].coordinates()
+            additional_piece = self.squares[additional_to[0]][additional_to[1]]
+
+        self.squares[target_pos[0]][target_pos[1]] = temp_piece
+        self.squares[capture_pos[0]][capture_pos[1]] = captured_piece
+
+        if move.additional_move:
+            self.squares[additional_to[0]][additional_to[1]] = None
 
         # Restore original board state
         self.squares[initial_pos[0]][initial_pos[1]] = original_piece
-        self.squares[target_pos[0]][target_pos[1]] = temp_piece
-        self.squares[capture_pos[0]][capture_pos[1]] = captured_piece
 
         original_piece.position = Position(initial_pos[0], initial_pos[1])
 
@@ -429,17 +468,8 @@ class Board:
 
         # Restore additional move if it was made
         if move.additional_move:
-            self._restore_additional_move(move.additional_move)
-
-    def _restore_additional_move(self, additional_move):
-        """Restore additional move (like castling rook movement)."""
-        additional_from = additional_move[0].coordinates()
-        additional_to = additional_move[1].coordinates()
-        additional_piece = self.squares[additional_to[0]][additional_to[1]]
-
-        self.squares[additional_from[0]][additional_from[1]] = additional_piece
-        self.squares[additional_to[0]][additional_to[1]] = None
-        additional_piece.position = Position(additional_from[0], additional_from[1])
+            self.squares[additional_from[0]][additional_from[1]] = additional_piece
+            additional_piece.position = Position(additional_from[0], additional_from[1])
 
     def _is_king_in_check_after_move(self, position: Position, move: ChessMove) -> bool:
         """
@@ -897,3 +927,35 @@ class Board:
                     ):
                         return True
         return False
+
+    def print_board(self):
+        """
+        Print the board to console for debugging purposes.
+        Shows piece symbols with white pieces in uppercase and black pieces in lowercase.
+        """
+        piece_symbols = {
+            "pawn": "P",
+            "rook": "R",
+            "knight": "N",
+            "bishop": "B",
+            "queen": "Q",
+            "king": "K",
+        }
+
+        print("\n  a b c d e f g h")
+        print("  ---------------")
+        for row in range(BOARD_SIZE):
+            print(f"{8 - row}|", end="")
+            for col in range(BOARD_SIZE):
+                piece = self.squares[row][col]
+                if piece:
+                    acting_type = piece.get_acting_type()
+                    symbol = piece_symbols.get(acting_type, "?")
+                    if piece.color == "black":
+                        symbol = symbol.lower()
+                    print(f"{symbol}", end=" ")
+                else:
+                    print(".", end=" ")
+            print(f"|{8 - row}")
+        print("  ---------------")
+        print("  a b c d e f g h\n")
