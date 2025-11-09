@@ -24,7 +24,6 @@ export class ChessPiece {
 export class ChessGame {
   board?: ChessBoard = new ChessBoard();
   possibleMoves?: Array<[number, number]> = [];
-  players?: ChessPlayers = new ChessPlayers();
   kingsInCheck?: KingsInCheck = new KingsInCheck();
   turn: PieceColor = "white";
   status: GameStatus = "not started";
@@ -38,18 +37,6 @@ export class ChessGame {
   drawRequests: { white: boolean; black: boolean } = { white: false, black: false };
   lastMove: ChessMove | null = null; // Last move made in the game
   capturedPieces: { white: ChessPiece[]; black: ChessPiece[] } = { white: [], black: [] };
-}
-export class ChessPlayers {
-  white: { id: number; name: string; connected: boolean; elo?: number } = {
-    id: -1,
-    name: "Disconnected",
-    connected: false,
-  };
-  black: { id: number; name: string; connected: boolean; elo?: number } = {
-    id: -1,
-    name: "Disconnected",
-    connected: false,
-  };
 }
 
 export class KingsInCheck {
@@ -65,11 +52,6 @@ export interface ChessMove {
 export interface Move {
   from: [number, number];
   to: [number, number];
-}
-
-export class ChessMoves {
-  white: ChessMove[] = [];
-  black: ChessMove[] = [];
 }
 
 export class RemainingTime {

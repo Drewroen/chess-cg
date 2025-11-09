@@ -322,16 +322,6 @@ class RoomManager:
             # Session cleanup is handled by get_db_session() context manager
             pass
 
-    async def get_user_elo(self, user_id: str) -> int:
-        """Get the ELO rating for a user."""
-        user_info = await self.get_user_info(user_id)
-        return user_info["elo"]
-
-    async def get_user_username(self, user_id: str) -> str:
-        """Get the username for a user."""
-        user_info = await self.get_user_info(user_id)
-        return user_info["username"]
-
     async def cleanup_room_with_elo_update(self, room_id: UUID):
         """Clean up a room and update ELO ratings if the game was completed."""
         if room_id not in self.room_service.rooms:

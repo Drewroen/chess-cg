@@ -184,8 +184,3 @@ class Game:
             self._finalize_game_end("draw", "threefold_repetition")
             return True
         return False
-
-    def is_threefold_repetition(self) -> bool:
-        """Check if current position would result in threefold repetition"""
-        position_hash = self.board.get_position_hash(self.turn)
-        return self.position_history.get(position_hash, 0) >= 2

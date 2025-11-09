@@ -103,19 +103,6 @@ async def cleanup_expired_tokens():
         await asyncio.sleep(3600)  # Run every hour
 
 
-async def execute_cleanup_inactive_guest_users():
-    """Background task to clean up expired tokens"""
-    while True:
-        try:
-            expired_refresh = await cleanup_inactive_guest_users()  # existing function
-            if expired_refresh > 0:
-                logging.info(f"Cleaned up {expired_refresh} expired refresh tokens")
-        except Exception as e:
-            logging.error(f"Error in token cleanup task: {e}")
-
-        await asyncio.sleep(3600)  # Run every hour
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup

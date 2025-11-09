@@ -41,15 +41,6 @@ class Piece(ABC):
     def get_acting_type(self) -> str:
         return self.type
 
-    def get_base_value(self) -> int:
-        return self.PIECE_VALUES.get(self.get_acting_type(), 0)
-
-    def get_total_value(self) -> int:
-        """Get the total value including base value and all modifier scores"""
-        base_value = self.get_base_value()
-        modifier_score = sum(modifier.score for modifier in self.modifiers)
-        return base_value + modifier_score
-
     def add_modifier(self, modifier: Modifier) -> bool:
         """Add a modifier to this piece if valid and not already present"""
         # Check if modifier can be applied to this piece type
@@ -65,27 +56,8 @@ class Piece(ABC):
             return True
         return False
 
-    def can_add_modifier(self, modifier: Modifier) -> bool:
-        """Check if a modifier can be added to this piece without adding it"""
-        return modifier.can_apply_to_piece(self.get_acting_type()) and not any(
-            m.modifier_type == modifier.modifier_type for m in self.modifiers
-        )
-
-    def remove_modifier(self, modifier_type: str) -> bool:
-        for i, modifier in enumerate(self.modifiers):
-            if modifier.modifier_type == modifier_type:
-                del self.modifiers[i]
-                return True
-        return False
-
     def has_modifier(self, modifier_type: str) -> bool:
         return any(m.modifier_type == modifier_type for m in self.modifiers)
-
-    def get_modifier(self, modifier_type: str) -> Modifier:
-        for modifier in self.modifiers:
-            if modifier.modifier_type == modifier_type:
-                return modifier
-        return None
 
     def get_modifier_uses_remaining(self, modifier_type: str) -> int:
         """Get the number of uses remaining for a modifier (0 means unlimited or not present)"""

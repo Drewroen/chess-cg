@@ -926,35 +926,3 @@ class Board:
                     ):
                         return True
         return False
-
-    def print_board(self):
-        """
-        Print the board to console for debugging purposes.
-        Shows piece symbols with white pieces in uppercase and black pieces in lowercase.
-        """
-        piece_symbols = {
-            "pawn": "P",
-            "rook": "R",
-            "knight": "N",
-            "bishop": "B",
-            "queen": "Q",
-            "king": "K",
-        }
-
-        print("\n  a b c d e f g h")
-        print("  ---------------")
-        for row in range(BOARD_SIZE):
-            print(f"{8 - row}|", end="")
-            for col in range(BOARD_SIZE):
-                piece = self.squares[row][col]
-                if piece:
-                    acting_type = piece.get_acting_type()
-                    symbol = piece_symbols.get(acting_type, "?")
-                    if piece.color == "black":
-                        symbol = symbol.lower()
-                    print(f"{symbol}", end=" ")
-                else:
-                    print(".", end=" ")
-            print(f"|{8 - row}")
-        print("  ---------------")
-        print("  a b c d e f g h\n")
