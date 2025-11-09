@@ -32,7 +32,9 @@ class Board:
         cloned_board.squares = [[None] * BOARD_SIZE for _ in range(BOARD_SIZE)]
         cloned_board.pieces = []
         cloned_board.captured_pieces = []
-        cloned_board.last_move = copy.deepcopy(self.last_move) if self.last_move else None
+        cloned_board.last_move = (
+            copy.deepcopy(self.last_move) if self.last_move else None
+        )
 
         # Deep copy all pieces
         piece_map = {}  # Map original pieces to cloned pieces
@@ -787,7 +789,7 @@ class Board:
                     moves.append(ChessMove(position, Position(new_row, new_col)))
 
         # Castling logic
-        if (not ignore_check or ignore_illegal_moves) and not piece.moved:
+        if not piece.moved:
             moves.extend(self._get_castling_moves(position, ignore_illegal_moves))
 
         return moves
