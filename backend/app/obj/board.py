@@ -22,6 +22,35 @@ class Board:
         self.captured_pieces: list[Piece] = []  # Track captured pieces
         self.initialize_board()
 
+    def clone(self):
+        """
+        Create a deep copy of the board for move validation.
+        """
+        import copy
+
+        cloned_board = Board.__new__(Board)
+        cloned_board.squares = [[None] * BOARD_SIZE for _ in range(BOARD_SIZE)]
+        cloned_board.pieces = []
+        cloned_board.captured_pieces = []
+        cloned_board.last_move = copy.deepcopy(self.last_move) if self.last_move else None
+
+        # Deep copy all pieces
+        piece_map = {}  # Map original pieces to cloned pieces
+        for piece in self.pieces:
+            cloned_piece = copy.deepcopy(piece)
+            cloned_board.pieces.append(cloned_piece)
+            piece_map[id(piece)] = cloned_piece
+
+            # Place the cloned piece on the cloned board
+            row, col = cloned_piece.position.coordinates()
+            cloned_board.squares[row][col] = cloned_piece
+
+        # Deep copy captured pieces
+        for piece in self.captured_pieces:
+            cloned_board.captured_pieces.append(copy.deepcopy(piece))
+
+        return cloned_board
+
     def get_position_hash(self, turn: str) -> str:
         """
         Generate a unique hash for the current board position.
@@ -381,119 +410,72 @@ class Board:
                 return piece.position
         return None
 
-    def _apply_move_temporarily(self, position: Position, move: ChessMove):
-        """Apply a move temporarily to the board."""
-        original_piece = self.piece_from_position(position)
+    def _apply_move_to_board(self, position: Position, move: ChessMove):
+        """
+        Apply a move directly to the board without validation.
+        Used for check validation on cloned boards.
+        """
+        piece = self.piece_from_position(position)
+        if not piece:
+            return
+
         initial_pos = position.coordinates()
         target_pos = move.position_to.coordinates()
         capture_pos = move.position_to_capture.coordinates()
 
-        # For moves with additional_move (like castling or teleport), save the piece
-        # at target_pos before we clear it
-        additional_piece = None
-        additional_initial_pos = None
-        additional_capture_pos = None
-        if move.additional_move:
-            additional_initial_pos = move.additional_move[0].coordinates()
-            additional_capture_pos = move.additional_move[1].coordinates()
-            additional_piece = self.squares[additional_initial_pos[0]][
-                additional_initial_pos[1]
-            ]
+        # Handle piece capture
+        piece_to_capture = self.piece_from_position(move.position_to_capture)
+        if piece_to_capture:
+            self.pieces.remove(piece_to_capture)
 
-        # Clear the original position and capture position
+        # Handle normal captures (not for swap moves)
+        if not move.additional_move:
+            piece_at_destination = self.piece_from_position(move.position_to)
+            if piece_at_destination and piece_at_destination != piece_to_capture:
+                self.pieces.remove(piece_at_destination)
+
+        # Clear positions
         self.squares[initial_pos[0]][initial_pos[1]] = None
         self.squares[capture_pos[0]][capture_pos[1]] = None
 
-        if additional_initial_pos and additional_capture_pos:
-            self.squares[additional_initial_pos[0]][additional_initial_pos[1]] = None
-            self.squares[additional_capture_pos[0]][additional_capture_pos[1]] = None
-
-        # Handle transformation (promotion)
+        # Handle promotion
         if move.promote_to_type:
-            # Temporarily promote the pawn
-            original_piece.promote_to(move.promote_to_type)
+            piece.promote_to(move.promote_to_type)
 
-        # Place piece at target position
-        self.squares[target_pos[0]][target_pos[1]] = original_piece
-        original_piece.position = Position(target_pos[0], target_pos[1])
+        # Move the piece
+        self.squares[target_pos[0]][target_pos[1]] = piece
+        piece.position = Position(target_pos[0], target_pos[1])
 
-        # Handle additional moves (e.g., castling, teleport)
+        # Handle additional moves (castling, teleport)
         if move.additional_move:
-            self.squares[additional_capture_pos[0]][additional_capture_pos[1]] = (
-                additional_piece
-            )
-            additional_piece.position = Position(
-                additional_capture_pos[0], additional_capture_pos[1]
-            )
+            additional_piece = self.piece_from_position(move.additional_move[0])
+            if additional_piece:
+                additional_from = move.additional_move[0].coordinates()
+                additional_to = move.additional_move[1].coordinates()
 
-    def _check_king_safety(self, color: str) -> bool:
-        """Check if the king is in check after the temporary move."""
-        king_position = self._find_king_position(color)
-        return king_position and self._is_square_attacked(king_position, color)
-
-    def _restore_board_state(
-        self, position: Position, move: ChessMove, captured_piece, temp_piece
-    ):
-        """Restore the board to its original state using move data."""
-        original_piece = self.piece_from_position(move.position_to)
-        initial_pos = position.coordinates()
-        target_pos = move.position_to.coordinates()
-        capture_pos = move.position_to_capture.coordinates()
-        additional_from = None
-        additional_to = None
-        additional_piece = None
-
-        if move.additional_move:
-            additional_from = move.additional_move[0].coordinates()
-            additional_to = move.additional_move[1].coordinates()
-            additional_piece = self.squares[additional_to[0]][additional_to[1]]
-
-        self.squares[target_pos[0]][target_pos[1]] = temp_piece
-        self.squares[capture_pos[0]][capture_pos[1]] = captured_piece
-
-        if move.additional_move:
-            self.squares[additional_to[0]][additional_to[1]] = None
-
-        # Restore original board state
-        self.squares[initial_pos[0]][initial_pos[1]] = original_piece
-
-        original_piece.position = Position(initial_pos[0], initial_pos[1])
-
-        # Restore promotion state if it was temporarily changed
-        if move.promote_to_type and move.promote_from_type:
-            if hasattr(original_piece, "promoted_to"):
-                # Reset to original state (unpromoted pawn)
-                original_piece.promoted_to = None
-
-        # Restore additional move if it was made
-        if move.additional_move:
-            self.squares[additional_from[0]][additional_from[1]] = additional_piece
-            additional_piece.position = Position(additional_from[0], additional_from[1])
+                self.squares[additional_to[0]][additional_to[1]] = additional_piece
+                # Only clear if different from target position (for teleport swaps)
+                if additional_from != target_pos:
+                    self.squares[additional_from[0]][additional_from[1]] = None
+                additional_piece.position = Position(additional_to[0], additional_to[1])
 
     def _is_king_in_check_after_move(self, position: Position, move: ChessMove) -> bool:
         """
-        Check if the king would be in check after making the given move
+        Check if the king would be in check after making the given move.
+        Uses a cloned board to avoid bugs from manual state restoration.
         """
         original_piece = self.piece_from_position(position)
         if not original_piece:
             return False
 
-        # Store necessary data for restoration
-        capture_pos = move.position_to_capture.coordinates()
-        target_pos = move.position_to.coordinates()
-        captured_piece = self.squares[capture_pos[0]][capture_pos[1]]
-        temp_piece = self.squares[target_pos[0]][target_pos[1]]
+        # Clone the board
+        cloned_board = self.clone()
 
-        # Apply move temporarily
-        self._apply_move_temporarily(position, move)
+        # Apply the move to the cloned board
+        cloned_board._apply_move_to_board(position, move)
 
-        # Check if king is in check
-        in_check = self._check_king_safety(original_piece.color)
-
-        # Restore board state
-        self._restore_board_state(position, move, captured_piece, temp_piece)
-
-        return in_check
+        # Check if the king is in check on the cloned board
+        return cloned_board.is_king_in_check(original_piece.color)
 
     def _is_square_attacked(self, position: Position, color: str) -> bool:
         """
