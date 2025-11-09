@@ -12,10 +12,12 @@ export type GameStatus = "waiting" | "active" | "complete" | "not started" | "in
 export class ChessPiece {
   type: PieceType;
   color: PieceColor;
+  modifiers?: { type: string; score: number; applicable_piece: string; description: string; uses: number }[];
 
-  constructor(type: PieceType, color: PieceColor) {
+  constructor(type: PieceType, color: PieceColor, modifiers?: { type: string; score: number; applicable_piece: string; description: string; uses: number }[]) {
     this.type = type;
     this.color = color;
+    this.modifiers = modifiers;
   }
 }
 

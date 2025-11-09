@@ -31,7 +31,7 @@ export const Piece = React.memo(function Piece({
   onPieceDrop?: (x: number, y: number) => void;
   boardDimensions: { width: number; height: number };
   gameStatus?: string;
-  modifiers?: string[];
+  modifiers?: (string | { type: string })[];
 }) {
   const nodeRef = useRef(null);
   function getSvg(type: string, color: string) {
@@ -87,25 +87,29 @@ export const Piece = React.memo(function Piece({
             zIndex: 1002,
           }}
         >
-          {modifiers.map((modifierType, index) => (
-            <div
-              key={`${modifierType}-${index}`}
-              style={{
-                width: "16px",
-                height: "16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {React.cloneElement(
-                modifierIcons[modifierType] || modifierIcons["default"],
-                {
-                  style: { width: "14px", height: "14px" },
-                }
-              )}
-            </div>
-          ))}
+          {modifiers.map((modifier, index) => {
+            // Handle both string format (from Modifiers page) and object format (from game state)
+            const modifierType = typeof modifier === "string" ? modifier : (modifier as any).type || modifier;
+            return (
+              <div
+                key={`${modifierType}-${index}`}
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {React.cloneElement(
+                  modifierIcons[modifierType] || modifierIcons["default"],
+                  {
+                    style: { width: "14px", height: "14px" },
+                  }
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -265,6 +265,7 @@ export function Board({
                 }
                 boardDimensions={boardDimensions}
                 gameStatus={game.status}
+                modifiers={square?.modifiers}
                 key={`tile-${i}-${j}`}
               />
             </div>

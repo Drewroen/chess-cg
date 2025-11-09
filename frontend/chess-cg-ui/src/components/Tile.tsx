@@ -19,6 +19,7 @@ export const Tile = React.memo(function Tile({
   boardDimensions,
   gameStatus,
   isLastMove,
+  modifiers,
 }: {
   type?: string;
   color?: string;
@@ -34,6 +35,7 @@ export const Tile = React.memo(function Tile({
   boardDimensions: { width: number; height: number };
   gameStatus?: string;
   isLastMove?: boolean;
+  modifiers?: (string | { type: string })[];
 }) {
   const pieceStyle: CSSProperties = {
     position: "absolute",
@@ -80,6 +82,7 @@ export const Tile = React.memo(function Tile({
           onPieceDrop={onPieceDrop}
           boardDimensions={boardDimensions}
           gameStatus={gameStatus}
+          modifiers={modifiers}
           key={`piece-${x}-${y}`}
         />
       </div>
