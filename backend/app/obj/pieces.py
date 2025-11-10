@@ -105,6 +105,7 @@ class Piece(ABC):
         board: "Board",
         ignore_check: bool = False,
         ignore_illegal_moves: bool = False,
+        ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """
         Get all possible moves for this piece on the given board.
@@ -138,6 +139,7 @@ class Pawn(Piece):
         board: "Board",
         ignore_check: bool = False,
         ignore_illegal_moves: bool = False,
+        ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this pawn"""
         from .chess_move import (
@@ -343,6 +345,7 @@ class Rook(Piece):
         board: "Board",
         ignore_check: bool = False,
         ignore_illegal_moves: bool = False,
+        ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this rook"""
         # Rook moves horizontally and vertically
@@ -384,6 +387,7 @@ class Knight(Piece):
         board: "Board",
         ignore_check: bool = False,
         ignore_illegal_moves: bool = False,
+        ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this knight"""
         from .chess_move import ChessMove
@@ -451,6 +455,7 @@ class Bishop(Piece):
         board: "Board",
         ignore_check: bool = False,
         ignore_illegal_moves: bool = False,
+        ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this bishop"""
         # Bishop moves diagonally
@@ -503,6 +508,7 @@ class Queen(Piece):
         board: "Board",
         ignore_check: bool = False,
         ignore_illegal_moves: bool = False,
+        ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this queen"""
         from .chess_move import ChessMove
@@ -574,6 +580,7 @@ class King(Piece):
         board: "Board",
         ignore_check: bool = False,
         ignore_illegal_moves: bool = False,
+        ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this king"""
         from .chess_move import ChessMove
@@ -592,7 +599,7 @@ class King(Piece):
                     moves.append(ChessMove(self.position, Position(new_row, new_col)))
 
         # Castling logic
-        if (not ignore_check or ignore_illegal_moves) and not self.moved:
+        if not ignore_castling and not self.moved:
             moves.extend(self._get_castling_moves(board, ignore_illegal_moves))
 
         # Aggression: can move to any square within 2-square radius
@@ -661,7 +668,10 @@ class King(Piece):
         return moves
 
     def _get_castling_moves(
-        self, board: "Board", ignore_illegal_moves: bool = False
+        self,
+        board: "Board",
+        ignore_illegal_moves: bool = False,
+        ignore_check: bool = False,
     ) -> List["ChessMove"]:
         """Get castling moves for this king"""
         from .chess_move import ChessMove
@@ -670,13 +680,21 @@ class King(Piece):
         row, col = self.position.coordinates()
 
         # Kingside castling
-        if board.can_castle_kingside(row, col, self.color) or ignore_illegal_moves:
+        if (
+            ignore_illegal_moves
+            or ignore_check
+            or board.can_castle_kingside(row, col, self.color)
+        ):
             move = ChessMove(self.position, Position(row, col + 2))
             move.additional_move = (Position(row, col + 3), Position(row, col + 1))
             moves.append(move)
 
         # Queenside castling
-        if board.can_castle_queenside(row, col, self.color) or ignore_illegal_moves:
+        if (
+            ignore_illegal_moves
+            or ignore_check
+            or board.can_castle_queenside(row, col, self.color)
+        ):
             move = ChessMove(self.position, Position(row, col - 2))
             move.additional_move = (Position(row, col - 4), Position(row, col - 1))
             moves.append(move)

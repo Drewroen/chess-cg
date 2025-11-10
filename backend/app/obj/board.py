@@ -383,6 +383,7 @@ class Board:
         position: Position,
         ignore_check: bool = False,
         ignore_illegal_moves: bool = False,
+        ignore_castling: bool = False,
     ) -> list[ChessMove]:
         """
         Get the available moves for a piece in the given position
@@ -392,7 +393,9 @@ class Board:
             return []
 
         # Delegate to the piece's get_possible_moves method
-        moves = piece.get_possible_moves(self, ignore_check, ignore_illegal_moves)
+        moves = piece.get_possible_moves(
+            self, ignore_check, ignore_illegal_moves, ignore_castling
+        )
 
         # Filter out moves that would leave the king in check (unless ignoring check)
         if not ignore_check:
@@ -489,7 +492,10 @@ class Board:
                 piece = self.squares[r][c]
                 if piece and piece.color != color:
                     moves = self.get_available_moves(
-                        Position(r, c), ignore_check=True, ignore_illegal_moves=False
+                        Position(r, c),
+                        ignore_check=True,
+                        ignore_illegal_moves=False,
+                        ignore_castling=True,
                     )
                     for move in moves:
                         if move.position_to.coordinates() == (row, col):
