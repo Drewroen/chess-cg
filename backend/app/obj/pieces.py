@@ -142,9 +142,6 @@ class Pawn(Piece):
         ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this pawn"""
-        from .chess_move import (
-            ChessMove,
-        )  # Import at runtime to avoid circular dependency
 
         row, col = self.position.coordinates()
         color = self.color
@@ -284,11 +281,14 @@ class Pawn(Piece):
         for col_offset in [-1, 1]:
             target_col = col + col_offset
 
+            # if not ignore_illegal_moves:
             if not board.is_valid_position(target_row, target_col):
                 continue
 
             if not board.is_enemy_piece(target_row, target_col, color):
                 if not self.has_modifier("Kitty"):
+                    continue
+                if not board.is_empty_square(target_row, target_col):
                     continue
 
             # Handle promotion or regular capture

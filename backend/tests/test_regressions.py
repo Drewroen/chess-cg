@@ -1,5 +1,5 @@
-from app.obj.modifier import TELEPORT_MODIFIER
-from app.obj.pieces import King
+from app.obj.modifier import DIAGONAL_PAWN_MODIFIER, TELEPORT_MODIFIER
+from app.obj.pieces import King, Pawn
 from app.obj.position import position_from_notation
 from app.obj.game import Game
 
@@ -70,3 +70,36 @@ def test_teleport_doesnt_teleport_into_check():
     }
 
     assert (("e1", "e4")) not in moves["moves"]["white"]
+
+
+def test_kitty_doesnt_eat_your_own_pieces():
+    game = Game()
+    piece = game.board.piece_from_position(position_from_notation("d2"))
+    assert isinstance(piece, Pawn)
+
+    game.board.piece_from_position(position_from_notation("d2")).add_modifier(
+        DIAGONAL_PAWN_MODIFIER
+    )
+    moves = [
+        ("e2", "e3"),
+        ("e7", "e6"),
+    ]
+    for move in moves:
+        game.move(
+            position_from_notation(move[0]), position_from_notation(move[1]), game.turn
+        )
+
+    moves = {
+        "moves": {
+            "white": [
+                (x.position_from.notation(), x.position_to.notation())
+                for x in game.board.get_available_moves_for_color("white")
+            ],
+            "black": [
+                (x.position_from.notation(), x.position_to.notation())
+                for x in game.board.get_available_moves_for_color("black")
+            ],
+        },
+    }
+
+    assert (("d2", "e3")) not in moves["moves"]["white"]
