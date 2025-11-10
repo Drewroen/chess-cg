@@ -428,6 +428,11 @@ class Board:
         target_pos = move.position_to.coordinates()
         capture_pos = move.position_to_capture.coordinates()
 
+        # Get the additional piece BEFORE moving the main piece (for teleport swaps)
+        additional_piece = None
+        if move.additional_move:
+            additional_piece = self.piece_from_position(move.additional_move[0])
+
         # Handle piece capture
         piece_to_capture = self.piece_from_position(move.position_to_capture)
         if piece_to_capture:
@@ -452,17 +457,15 @@ class Board:
         piece.position = Position(target_pos[0], target_pos[1])
 
         # Handle additional moves (castling, teleport)
-        if move.additional_move:
-            additional_piece = self.piece_from_position(move.additional_move[0])
-            if additional_piece:
-                additional_from = move.additional_move[0].coordinates()
-                additional_to = move.additional_move[1].coordinates()
+        if move.additional_move and additional_piece:
+            additional_from = move.additional_move[0].coordinates()
+            additional_to = move.additional_move[1].coordinates()
 
-                self.squares[additional_to[0]][additional_to[1]] = additional_piece
-                # Only clear if different from target position (for teleport swaps)
-                if additional_from != target_pos:
-                    self.squares[additional_from[0]][additional_from[1]] = None
-                additional_piece.position = Position(additional_to[0], additional_to[1])
+            self.squares[additional_to[0]][additional_to[1]] = additional_piece
+            # Only clear if different from target position (for teleport swaps)
+            if additional_from != target_pos:
+                self.squares[additional_from[0]][additional_from[1]] = None
+            additional_piece.position = Position(additional_to[0], additional_to[1])
 
     def _is_king_in_check_after_move(self, position: Position, move: ChessMove) -> bool:
         """
