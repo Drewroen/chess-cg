@@ -44,9 +44,9 @@ def test_teleport_doesnt_teleport_into_check():
     piece = game.board.piece_from_position(position_from_notation("e1"))
     assert isinstance(piece, King)
 
-    game.board.piece_from_position(position_from_notation("e1")).add_modifier(
-        TELEPORT_MODIFIER
-    )
+    piece = game.board.piece_from_position(position_from_notation("e1"))
+    assert piece is not None
+    piece.add_modifier(TELEPORT_MODIFIER)
     moves = [
         ("e2", "e4"),
         ("g8", "f6"),
@@ -77,9 +77,9 @@ def test_kitty_doesnt_eat_your_own_pieces():
     piece = game.board.piece_from_position(position_from_notation("d2"))
     assert isinstance(piece, Pawn)
 
-    game.board.piece_from_position(position_from_notation("d2")).add_modifier(
-        DIAGONAL_PAWN_MODIFIER
-    )
+    piece = game.board.piece_from_position(position_from_notation("d2"))
+    assert piece is not None
+    piece.add_modifier(DIAGONAL_PAWN_MODIFIER)
     moves = [
         ("e2", "e3"),
         ("e7", "e6"),

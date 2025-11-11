@@ -1,3 +1,4 @@
+from typing import Optional
 from app.obj.pieces import Position
 
 
@@ -6,11 +7,11 @@ class ChessMove:
         self,
         position_from: Position,
         position_to: Position,
-        position_to_capture: Position = None,
-        promote_to_type: str = None,
-        promote_from_type: str = None,
-        additional_move: tuple[Position, Position] = None,
-        used_modifier: str = None,
+        position_to_capture: Optional[Position] = None,
+        promote_to_type: Optional[str] = None,
+        promote_from_type: Optional[str] = None,
+        additional_move: Optional[tuple[Position, Position]] = None,
+        used_modifier: Optional[str] = None,
     ):
         self.position_from = position_from
         self.position_to = position_to

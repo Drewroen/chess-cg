@@ -1,3 +1,4 @@
+from typing import Optional
 from app.obj.pieces import Piece, Position, Pawn, Rook, Knight, Bishop, Queen, King
 from app.obj.chess_move import ChessMove
 from app.obj.constants import (
@@ -14,10 +15,10 @@ import hashlib
 
 class Board:
     def __init__(self):
-        self.squares: list[list[Piece]] = [
+        self.squares: list[list[Optional[Piece]]] = [
             [None] * BOARD_SIZE for _ in range(BOARD_SIZE)
         ]
-        self.last_move: ChessMove = None
+        self.last_move: Optional[ChessMove] = None
         self.pieces: list[Piece] = []
         self.captured_pieces: list[Piece] = []  # Track captured pieces
         self.initialize_board()
@@ -58,7 +59,7 @@ class Board:
         Generate a unique hash for the current board position.
         This includes piece positions, turn, castling rights, and en passant.
         """
-        position_data = []
+        position_data: list[str] = []
 
         # Add piece positions
         for row in range(BOARD_SIZE):
@@ -167,7 +168,7 @@ class Board:
         position: Position,
         directions: list[tuple[int, int]],
         ignore_illegal_moves: bool = False,
-        limit=None,
+        limit: Optional[int] = None,
     ) -> list[ChessMove]:
         """Generate sliding moves in the given directions for pieces like rook, bishop, queen"""
         return self._get_sliding_moves(
@@ -181,7 +182,7 @@ class Board:
         ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         """Generate all possible knight moves from the given position"""
-        moves = []
+        moves: list[ChessMove] = []
         row, col = position.coordinates()
 
         for dr, dc in KNIGHT_MOVES:
@@ -256,7 +257,7 @@ class Board:
         position_from: Position,
         position_to: Position,
         turn: str,
-        promote_to: str = None,
+        promote_to: Optional[str] = None,
     ) -> bool:
         """
         Move a piece from the first position to the second position
@@ -269,7 +270,7 @@ class Board:
         available_moves: list[ChessMove] = self.get_available_moves(
             position_from, ignore_check=False, ignore_illegal_moves=False
         )
-        move: ChessMove = next(
+        move = next(
             filter(
                 lambda move: move.position_to.notation() == position_to.notation()
                 and (
@@ -281,74 +282,80 @@ class Board:
             None,
         )
 
+        if not move:
+            return False  # No valid move found
+
         if move:
             initial_position = position_from.coordinates()
-            position_to = move.position_to.coordinates()
+            position_to_move = move.position_to.coordinates()
             position_to_capture = move.position_to_capture.coordinates()
 
             piece = self.piece_from_position(position_from)
 
-            # For swap moves (teleport), save the piece at the destination before we overwrite it
-            saved_additional_piece = None
-            if move.additional_move:
-                saved_additional_piece = self.piece_from_position(
-                    move.additional_move[0]
-                )
-
-            # Check for piece at the capture position (e.g., en passant)
-            piece_to_capture = self.piece_from_position(move.position_to_capture)
-            if piece_to_capture:
-                self.captured_pieces.append(piece_to_capture)
-                self.pieces.remove(piece_to_capture)
-
-            # Also check for piece at the destination position (normal captures)
-            # But don't capture if this is a swap move (teleport) - the piece will be moved instead
-            if not piece_to_capture and not move.additional_move:
-                piece_at_destination = self.piece_from_position(move.position_to)
-                if piece_at_destination:
-                    self.captured_pieces.append(piece_at_destination)
-                    self.pieces.remove(piece_at_destination)
-
-            self.squares[position_to_capture[0]][position_to_capture[1]] = None
-            self.squares[position_to[0]][position_to[1]] = piece
-            if move.promote_to_type:
-                # Promote the pawn to act as the specified piece
-                piece.promote_to(move.promote_to_type)
-            piece.position = Position(position_to[0], position_to[1])
-            self.squares[initial_position[0]][initial_position[1]] = None
-            piece.mark_moved()
-            self.last_move = move
-
-            # Decrement modifier uses if this move used a limited-use modifier
-            if move.used_modifier:
-                piece.decrement_modifier_uses(move.used_modifier)
-
-            if move.additional_move:
-                # Use saved piece for swaps, or fetch for castling
-                additional_piece = (
-                    saved_additional_piece
-                    if saved_additional_piece
-                    else self.piece_from_position(move.additional_move[0])
-                )
-                if additional_piece:
-                    # Move the additional piece (like in castling or teleport)
-                    additional_initial_position = move.additional_move[0].coordinates()
-                    additional_position_to = move.additional_move[1].coordinates()
-                    self.squares[additional_position_to[0]][
-                        additional_position_to[1]
-                    ] = additional_piece
-                    # Only clear the additional piece's initial position if it's not where we just placed the main piece
-                    # (This matters for teleport where they swap positions)
-                    if additional_initial_position != position_to:
-                        self.squares[additional_initial_position[0]][
-                            additional_initial_position[1]
-                        ] = None
-                    additional_piece.mark_moved()
-                    additional_piece.position = Position(
-                        additional_position_to[0], additional_position_to[1]
+            if piece:
+                # For swap moves (teleport), save the piece at the destination before we overwrite it
+                saved_additional_piece = None
+                if move.additional_move:
+                    saved_additional_piece = self.piece_from_position(
+                        move.additional_move[0]
                     )
 
-            return True
+                # Check for piece at the capture position (e.g., en passant)
+                piece_to_capture = self.piece_from_position(move.position_to_capture)
+                if piece_to_capture:
+                    self.captured_pieces.append(piece_to_capture)
+                    self.pieces.remove(piece_to_capture)
+
+                # Also check for piece at the destination position (normal captures)
+                # But don't capture if this is a swap move (teleport) - the piece will be moved instead
+                if not piece_to_capture and not move.additional_move:
+                    piece_at_destination = self.piece_from_position(move.position_to)
+                    if piece_at_destination:
+                        self.captured_pieces.append(piece_at_destination)
+                        self.pieces.remove(piece_at_destination)
+
+                self.squares[position_to_capture[0]][position_to_capture[1]] = None
+                self.squares[position_to_move[0]][position_to_move[1]] = piece
+                if move.promote_to_type:
+                    # Promote the pawn to act as the specified piece
+                    piece.promote_to(move.promote_to_type)
+                piece.position = Position(position_to_move[0], position_to_move[1])
+                self.squares[initial_position[0]][initial_position[1]] = None
+                piece.mark_moved()
+                self.last_move = move
+
+                # Decrement modifier uses if this move used a limited-use modifier
+                if move.used_modifier:
+                    piece.decrement_modifier_uses(move.used_modifier)
+
+                if move.additional_move:
+                    # Use saved piece for swaps, or fetch for castling
+                    additional_piece = (
+                        saved_additional_piece
+                        if saved_additional_piece
+                        else self.piece_from_position(move.additional_move[0])
+                    )
+                    if additional_piece:
+                        # Move the additional piece (like in castling or teleport)
+                        additional_initial_position = move.additional_move[
+                            0
+                        ].coordinates()
+                        additional_position_to = move.additional_move[1].coordinates()
+                        self.squares[additional_position_to[0]][
+                            additional_position_to[1]
+                        ] = additional_piece
+                        # Only clear the additional piece's initial position if it's not where we just placed the main piece
+                        # (This matters for teleport where they swap positions)
+                        if additional_initial_position != position_to:
+                            self.squares[additional_initial_position[0]][
+                                additional_initial_position[1]
+                            ] = None
+                        additional_piece.mark_moved()
+                        additional_piece.position = Position(
+                            additional_position_to[0], additional_position_to[1]
+                        )
+
+                return True
 
         return False
 
@@ -356,7 +363,7 @@ class Board:
         """
         Get all available moves for all pieces of the given color
         """
-        moves = []
+        moves: list[ChessMove] = []
         for piece in self.pieces:
             if piece.color == color:
                 available_moves = self.get_available_moves(
@@ -369,7 +376,7 @@ class Board:
         """
         Get all available moves for all pieces of the given color
         """
-        moves = []
+        moves: list[ChessMove] = []
         for piece in self.pieces:
             if piece.color == color:
                 available_moves = self.get_available_moves(
@@ -405,7 +412,7 @@ class Board:
 
         return moves
 
-    def _find_king_position(self, color: str) -> Position:
+    def _find_king_position(self, color: str) -> Optional[Position]:
         """
         Find the position of the king for the given color.
         Returns the king's position or None if not found.
@@ -521,25 +528,27 @@ class Board:
         """
         piece = self.piece_from_position(position)
         row, col = position.coordinates()
-        color = piece.color
-        direction = PAWN_DIRECTIONS[color]
+        moves: list[ChessMove] = []
 
-        moves = []
-        moves.extend(
-            self._get_pawn_forward_moves(
-                position, row, col, color, direction, ignore_illegal_moves
+        if piece:
+            color = piece.color
+            direction = PAWN_DIRECTIONS[color]
+
+            moves.extend(
+                self._get_pawn_forward_moves(
+                    position, row, col, color, direction, ignore_illegal_moves
+                )
             )
-        )
-        moves.extend(
-            self._get_pawn_capture_moves(
-                position, row, col, color, direction, ignore_illegal_moves
+            moves.extend(
+                self._get_pawn_capture_moves(
+                    position, row, col, color, direction, ignore_illegal_moves
+                )
             )
-        )
-        moves.extend(
-            self._get_pawn_en_passant_moves(
-                position, row, col, color, direction, ignore_illegal_moves
+            moves.extend(
+                self._get_pawn_en_passant_moves(
+                    position, row, col, color, direction, ignore_illegal_moves
+                )
             )
-        )
 
         return moves
 
@@ -553,7 +562,7 @@ class Board:
         ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         """Get forward moves for a pawn (1 or 2 squares)"""
-        moves = []
+        moves: list[ChessMove] = []
         target_row = row + direction
 
         # Check if one square forward is valid and empty
@@ -592,7 +601,7 @@ class Board:
         ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         """Get diagonal capture moves for a pawn"""
-        moves = []
+        moves: list[ChessMove] = []
         target_row = row + direction
 
         # Check both diagonal directions
@@ -630,7 +639,7 @@ class Board:
         ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
         """Get en passant moves for a pawn"""
-        moves = []
+        moves: list[ChessMove] = []
 
         # En passant is only possible from specific rows
         if row != EN_PASSANT_ROWS[color]:
@@ -708,40 +717,41 @@ class Board:
         position: Position,
         directions: list[tuple[int, int]],
         ignore_illegal_moves: bool = False,
-        limit: int = None,
+        limit: Optional[int] = None,
     ) -> list[ChessMove]:
-        moves = []
+        moves: list[ChessMove] = []
         row, col = position.coordinates()
         piece = self.piece_from_position(position)
 
-        for dr, dc in directions:
-            current_row, current_col = row + dr, col + dc
-            distance = 1
-            while self._is_valid_position(current_row, current_col):
-                # Check limit constraint
-                if limit is not None and distance > limit:
-                    break
+        if piece:
+            for dr, dc in directions:
+                current_row, current_col = row + dr, col + dc
+                distance = 1
+                while self._is_valid_position(current_row, current_col):
+                    # Check limit constraint
+                    if limit is not None and distance > limit:
+                        break
 
-                target_piece = self.squares[current_row][current_col]
+                    target_piece = self.squares[current_row][current_col]
 
-                if ignore_illegal_moves:
-                    # When ignoring illegal moves, add all valid positions and continue sliding
-                    moves.append(
-                        ChessMove(position, Position(current_row, current_col))
-                    )
-                elif target_piece is None:
-                    moves.append(
-                        ChessMove(position, Position(current_row, current_col))
-                    )
-                else:
-                    if target_piece.color != piece.color:
+                    if ignore_illegal_moves:
+                        # When ignoring illegal moves, add all valid positions and continue sliding
                         moves.append(
                             ChessMove(position, Position(current_row, current_col))
                         )
-                    break
-                current_row += dr
-                current_col += dc
-                distance += 1
+                    elif target_piece is None:
+                        moves.append(
+                            ChessMove(position, Position(current_row, current_col))
+                        )
+                    else:
+                        if target_piece.color != piece.color:
+                            moves.append(
+                                ChessMove(position, Position(current_row, current_col))
+                            )
+                        break
+                    current_row += dr
+                    current_col += dc
+                    distance += 1
 
         return moves
 
@@ -755,18 +765,19 @@ class Board:
     def _get_knight_moves(
         self, position: Position, ignore_illegal_moves: bool = False
     ) -> list[ChessMove]:
-        moves = []
+        moves: list[ChessMove] = []
         row, col = position.coordinates()
         piece = self.piece_from_position(position)
 
-        for dr, dc in KNIGHT_MOVES:
-            new_row, new_col = row + dr, col + dc
-            if self._is_valid_position(new_row, new_col):
-                target_piece = self.squares[new_row][new_col]
-                if ignore_illegal_moves or (
-                    target_piece is None or target_piece.color != piece.color
-                ):
-                    moves.append(ChessMove(position, Position(new_row, new_col)))
+        if piece:
+            for dr, dc in KNIGHT_MOVES:
+                new_row, new_col = row + dr, col + dc
+                if self._is_valid_position(new_row, new_col):
+                    target_piece = self.squares[new_row][new_col]
+                    if ignore_illegal_moves or (
+                        target_piece is None or target_piece.color != piece.color
+                    ):
+                        moves.append(ChessMove(position, Position(new_row, new_col)))
 
         return moves
 
@@ -783,67 +794,81 @@ class Board:
         ignore_check: bool = False,
         ignore_illegal_moves: bool = False,
     ) -> list[ChessMove]:
-        moves = []
+        moves: list[ChessMove] = []
         row, col = position.coordinates()
         piece = self.piece_from_position(position)
 
-        # Standard king moves
-        for dr, dc in KING_MOVES:
-            new_row, new_col = row + dr, col + dc
-            if self._is_valid_position(new_row, new_col):
-                target_piece = self.squares[new_row][new_col]
-                if ignore_illegal_moves or (
-                    target_piece is None or target_piece.color != piece.color
-                ):
-                    moves.append(ChessMove(position, Position(new_row, new_col)))
+        if piece:
+            # Standard king moves
+            for dr, dc in KING_MOVES:
+                new_row, new_col = row + dr, col + dc
+                if self._is_valid_position(new_row, new_col):
+                    target_piece = self.squares[new_row][new_col]
+                    if ignore_illegal_moves or (
+                        target_piece is None or target_piece.color != piece.color
+                    ):
+                        moves.append(ChessMove(position, Position(new_row, new_col)))
 
-        # Castling logic
-        if not piece.moved:
-            moves.extend(self._get_castling_moves(position, ignore_illegal_moves))
+            # Castling logic
+            if not piece.moved:
+                moves.extend(self._get_castling_moves(position, ignore_illegal_moves))
 
         return moves
 
     def _get_castling_moves(
         self, position: Position, ignore_illegal_moves: bool = False
     ) -> list[ChessMove]:
-        moves = []
+        moves: list[ChessMove] = []
         row, col = position.coordinates()
         piece = self.piece_from_position(position)
 
-        # Kingside castling
-        if self._can_castle_kingside(row, col, piece.color) or ignore_illegal_moves:
-            move = ChessMove(position, Position(row, col + 2))
-            move.additional_move = (Position(row, col + 3), Position(row, col + 1))
-            moves.append(move)
+        if piece:
+            # Kingside castling
+            if self._can_castle_kingside(row, col, piece.color) or ignore_illegal_moves:
+                move = ChessMove(position, Position(row, col + 2))
+                move.additional_move = (Position(row, col + 3), Position(row, col + 1))
+                moves.append(move)
 
-        # Queenside castling
-        if self._can_castle_queenside(row, col, piece.color) or ignore_illegal_moves:
-            move = ChessMove(position, Position(row, col - 2))
-            move.additional_move = (Position(row, col - 4), Position(row, col - 1))
-            moves.append(move)
+            # Queenside castling
+            if (
+                self._can_castle_queenside(row, col, piece.color)
+                or ignore_illegal_moves
+            ):
+                move = ChessMove(position, Position(row, col - 2))
+                move.additional_move = (Position(row, col - 4), Position(row, col - 1))
+                moves.append(move)
 
         return moves
 
     def _can_castle_kingside(self, row: int, col: int, color: str) -> bool:
+        piece_one_over = self.squares[row][col + 1]
+        piece_two_over = self.squares[row][col + 2]
+        piece_three_over = self.squares[row][col + 3]
         return (
             col + 2 < BOARD_SIZE
-            and self.squares[row][col + 1] is None
-            and self.squares[row][col + 2] is None
-            and isinstance(self.squares[row][col + 3], Rook)
-            and not self.squares[row][col + 3].moved
+            and piece_one_over is None
+            and piece_two_over is None
+            and piece_three_over is not None
+            and isinstance(piece_three_over, Rook)
+            and not piece_three_over.moved
             and not self._is_square_attacked(Position(row, col), color)
             and not self._is_square_attacked(Position(row, col + 1), color)
             and not self._is_square_attacked(Position(row, col + 2), color)
         )
 
     def _can_castle_queenside(self, row: int, col: int, color: str) -> bool:
+        piece_one_over = self.squares[row][col - 1]
+        piece_two_over = self.squares[row][col - 2]
+        piece_three_over = self.squares[row][col - 3]
+        piece_four_over = self.squares[row][col - 4]
         return (
             col - 2 >= 0
-            and self.squares[row][col - 1] is None
-            and self.squares[row][col - 2] is None
-            and self.squares[row][col - 3] is None
-            and isinstance(self.squares[row][col - 4], Rook)
-            and not self.squares[row][col - 4].moved
+            and piece_one_over is None
+            and piece_two_over is None
+            and piece_three_over is None
+            and piece_four_over is not None
+            and isinstance(piece_four_over, Rook)
+            and not piece_four_over.moved
             and not self._is_square_attacked(Position(row, col), color)
             and not self._is_square_attacked(Position(row, col - 1), color)
             and not self._is_square_attacked(Position(row, col - 2), color)
@@ -887,7 +912,7 @@ class Board:
                 if piece:
                     self.pieces.append(piece)
 
-    def piece_from_position(self, position: Position):
+    def piece_from_position(self, position: Position) -> Optional[Piece]:
         """
         Get the piece from the given position object
         """
@@ -896,7 +921,7 @@ class Board:
             return self.squares[row][col]
         return None
 
-    def can_player_move(self, color):
+    def can_player_move(self, color: str) -> bool:
         """
         Check if the given player color (black or white) can make any valid moves.
         Return True if moves are available; otherwise, return False.

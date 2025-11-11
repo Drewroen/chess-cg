@@ -10,7 +10,6 @@ from .constants import (
     PAWN_PROMOTION_ROWS,
     EN_PASSANT_ROWS,
     KING_MOVES,
-    KNIGHT_MOVES,
 )
 
 if TYPE_CHECKING:

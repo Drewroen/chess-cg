@@ -1,5 +1,7 @@
 from enum import Enum
+from typing import Optional
 from app.obj.board import Board
+from app.obj.position import Position
 from app.svc.time_manager import TimeManager
 import time
 import logging
@@ -39,7 +41,13 @@ class Game:
         self.position_history = {}  # Hash -> count for threefold repetition detection
         self._record_position()
 
-    def move(self, start, end, player_color, promote_to=None):
+    def move(
+        self,
+        start: Position,
+        end: Position,
+        player_color: str,
+        promote_to: Optional[str] = None,
+    ) -> bool:
         if self.status == GameStatus.COMPLETE:
             return False
 
