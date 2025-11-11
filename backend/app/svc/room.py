@@ -1,6 +1,8 @@
 from uuid import UUID, uuid4
 from app.obj.game import Game, GameStatus
+from app.obj.board import Board
 from fastapi import WebSocket
+from typing import Any
 from ..auth import verify_jwt_token
 from ..database import get_db_session
 from ..svc.database_service import DatabaseService
@@ -43,11 +45,11 @@ class ConnectionManager:
         self.connection_id_to_user_id: dict[UUID, str] = {}
         self.user_id_to_name: dict[str, str] = {}
 
-    async def connect(self, websocket: WebSocket, jwt: str = None) -> str:
+    async def connect(self, websocket: WebSocket, jwt: str | None = None) -> UUID:
         await websocket.accept()
 
         # Extract name from JWT or generate guest name
-        token_data = verify_jwt_token(jwt)
+        token_data = verify_jwt_token(jwt) if jwt else None
         if token_data and "sub" in token_data:
             user_id = token_data["sub"]
             name = token_data["name"]
@@ -70,7 +72,7 @@ class ConnectionManager:
 
         return connection.id
 
-    def get_user_id_for_connection(self, connection_id) -> str:
+    def get_user_id_for_connection(self, connection_id: UUID) -> str | None:
         """Return user_id for a given connection ID"""
         return self.connection_id_to_user_id.get(connection_id)
 
@@ -146,11 +148,11 @@ class RoomService:
         black_loadout = await self._get_player_loadout(room.black)
 
         # Apply white's loadout
-        if white_loadout:
+        if white_loadout is not None:
             self._apply_loadout_to_board(room.game.board, white_loadout, "white")
 
         # Apply black's loadout
-        if black_loadout:
+        if black_loadout is not None:
             self._apply_loadout_to_board(room.game.board, black_loadout, "black")
 
     async def _get_player_loadout(self, player_id: str):
@@ -163,14 +165,14 @@ class RoomService:
             async for session in get_db_session():
                 db_service = DatabaseService(session)
                 user = await db_service.get_user_by_id(player_id)
-                if user and user.loadout:
+                if user and user.loadout is not None:
                     return user.loadout
                 return None
         except Exception as e:
             logging.error(f"Error loading loadout for player {player_id}: {e}")
             return None
 
-    def _apply_loadout_to_board(self, board, loadout_data, player_color):
+    def _apply_loadout_to_board(self, board: Board, loadout_data: Any, player_color: str):
         """Apply a loadout to the board for a specific player."""
         if not loadout_data:
             return
@@ -223,14 +225,14 @@ class RoomService:
                 else:
                     logging.warning(f"Unknown modifier: {modifier_name}")
 
-    def find_player_room(self, player_name: str) -> Room:
+    def find_player_room(self, player_name: str) -> Room | None:
         """Find the room ID for a given player."""
         room_id = self.player_to_room_map.get(player_name)
         if not room_id:
             return None
         return self.rooms[room_id]
 
-    def get_room(self, room_id: UUID) -> Room:
+    def get_room(self, room_id: UUID) -> Room | None:
         """Get a room by its ID."""
         return self.rooms.get(room_id)
 
@@ -268,8 +270,8 @@ class RoomService:
                     await db_service.create_chess_game(
                         white_player_id=white_db_id,
                         black_player_id=black_db_id,
-                        winner=winner,
-                        end_reason=end_reason,
+                        winner=winner or "aborted",
+                        end_reason=end_reason or "aborted",
                     )
 
                     status_text = (
@@ -301,7 +303,7 @@ class RoomManager:
         self.manager = manager
         self.elo_service = EloService()
 
-    async def get_user_info(self, user_id: str) -> dict:
+    async def get_user_info(self, user_id: str) -> dict[str, Any]:
         """Get user info (ELO and username) in a single query."""
         if not user_id or user_id.startswith("guest_"):
             return {"elo": None, "username": "Guest"}
@@ -313,7 +315,7 @@ class RoomManager:
                 user = await db_service.get_user_by_id(user_id)
                 return {
                     "elo": user.elo if user else None,
-                    "username": user.username if user and user.username else "Guest",
+                    "username": user.username if user and user.username is not None else "Guest",
                 }
         except Exception as e:
             logging.error(f"Error fetching user info for user {user_id}: {e}")
@@ -321,6 +323,8 @@ class RoomManager:
         finally:
             # Session cleanup is handled by get_db_session() context manager
             pass
+
+        return {"elo": None, "username": "Guest"}
 
     async def get_user_elo(self, user_id: str) -> int:
         """Get the ELO rating for a user."""
@@ -340,7 +344,7 @@ class RoomManager:
         room = self.room_service.rooms[room_id]
 
         # Update ELO ratings for completed games before cleanup
-        if room.game.status == GameStatus.COMPLETE:
+        if room.game.status == GameStatus.COMPLETE and room.game.winner:
             session = None
             try:
                 async for session in get_db_session():
@@ -362,21 +366,22 @@ class RoomManager:
         # Now clean up the room
         await self.room_service.cleanup_room(room_id)
 
-    async def connect(self, websocket, jwt: str = None) -> str:
+    async def connect(self, websocket: WebSocket, jwt: str | None = None) -> UUID:
         """Connect a player to the WebSocket and return their name."""
         connection_id = await self.manager.connect(websocket, jwt)
         name = self.manager.connection_id_to_user_id.get(connection_id)
-        existing_room = self.room_service.find_player_room(name)
-        if existing_room:
-            await self.emit_game_state_to_room(existing_room.id)
-        else:
-            # If the player is not already in a room, add them to the queue
-            self.room_service.add_to_queue(name)
-            if self.room_service.queue_length() >= 2:
-                room_id = await self.room_service.new_room(
-                    self.room_service.queue[0], self.room_service.queue[1]
-                )
-                await self.emit_game_state_to_room(room_id)
+        if name:
+            existing_room = self.room_service.find_player_room(name)
+            if existing_room:
+                await self.emit_game_state_to_room(existing_room.id)
+            else:
+                # If the player is not already in a room, add them to the queue
+                self.room_service.add_to_queue(name)
+                if self.room_service.queue_length() >= 2:
+                    room_id = await self.room_service.new_room(
+                        self.room_service.queue[0], self.room_service.queue[1]
+                    )
+                    await self.emit_game_state_to_room(room_id)
 
         return connection_id
 
@@ -400,38 +405,40 @@ class RoomManager:
             return
         room = self.room_service.rooms[room_id]
 
-        if room:
-            state = {
-                "squares": room.game.board.get_squares(),
-                "turn": room.game.turn,
-                "kings_in_check": room.game.board.kings_in_check(),
-                "status": room.game.status.value,
-                "winner": room.game.winner,
-                "end_reason": room.game.end_reason,
-                "time": {
-                    "white": self._get_current_time_remaining(room.game, "white"),
-                    "black": self._get_current_time_remaining(room.game, "black"),
-                },
-                "draw_requests": {
-                    "white": room.game.white_draw_requested,
-                    "black": room.game.black_draw_requested,
-                },
-                "captured_pieces": {
-                    "white": [
-                        {"type": piece.type, "color": piece.color}
-                        for piece in room.game.board.captured_pieces
-                        if piece.color == "white"
-                    ],
-                    "black": [
-                        {"type": piece.type, "color": piece.color}
-                        for piece in room.game.board.captured_pieces
-                        if piece.color == "black"
-                    ],
-                },
-                "last_move": room.game.last_move.to_dict()
-                if room.game.last_move
-                else None,
-            }
+        if not room:
+            return
+
+        state: dict[str, Any] = {
+            "squares": room.game.board.get_squares(),
+            "turn": room.game.turn,
+            "kings_in_check": room.game.board.kings_in_check(),
+            "status": room.game.status.value,
+            "winner": room.game.winner,
+            "end_reason": room.game.end_reason,
+            "time": {
+                "white": self._get_current_time_remaining(room.game, "white"),
+                "black": self._get_current_time_remaining(room.game, "black"),
+            },
+            "draw_requests": {
+                "white": room.game.white_draw_requested,
+                "black": room.game.black_draw_requested,
+            },
+            "captured_pieces": {
+                "white": [
+                    {"type": piece.type, "color": piece.color}
+                    for piece in room.game.board.captured_pieces
+                    if piece.color == "white"
+                ],
+                "black": [
+                    {"type": piece.type, "color": piece.color}
+                    for piece in room.game.board.captured_pieces
+                    if piece.color == "black"
+                ],
+            },
+            "last_move": room.game.last_move.to_dict()
+            if room.game.last_move
+            else None,
+        }
         for player_name in [room.white, room.black]:
             state["id"] = str(room.id)  # Room ID for fetching game info
             state["player_id"] = (
@@ -473,7 +480,7 @@ class RoomManager:
                     except Exception as e:
                         logging.error(f"Failed to send to {player_name}: {e}")
 
-    def _get_current_time_remaining(self, game, player_color):
+    def _get_current_time_remaining(self, game: Game, player_color: str) -> float:
         """Calculate the current time remaining for a player, accounting for elapsed time since last move."""
         base_time = (
             game.white_time_left if player_color == "white" else game.black_time_left

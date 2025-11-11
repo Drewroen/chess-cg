@@ -5,7 +5,7 @@ Script to read and parse PGN files step by step
 
 import os
 import re
-from typing import Dict, Generator
+from typing import Dict, Generator, List
 from app.obj.position import Position, position_from_notation
 from app.obj.game import Game, GameStatus
 import pytest
@@ -43,8 +43,8 @@ class PGNReader:
     def read_first_game(self) -> Dict[str, str]:
         """Read and parse the first game from the PGN file"""
         with open(self.pgn_file_path, "r", encoding="utf-8") as file:
-            game_data = {}
-            moves = []
+            game_data: Dict[str, str] = {}
+            moves: list[str] = []
 
             for line in file:
                 line = line.strip()
@@ -70,12 +70,12 @@ class PGNReader:
             return game_data
 
     def read_games_generator(
-        self, limit: int = None
+        self, limit: int | None = None
     ) -> Generator[Dict[str, str], None, None]:
         """Generator to read games one by one"""
         with open(self.pgn_file_path, "r", encoding="utf-8") as file:
-            game_data = {}
-            moves = []
+            game_data: Dict[str, str] = {}
+            moves: list[str] = []
             games_read = 0
 
             for line in file:
@@ -114,7 +114,7 @@ class PGNReader:
                     game_data["moves"] = self._clean_moves(raw_moves)
                 yield game_data
 
-    def get_file_stats(self) -> Dict[str, any]:
+    def get_file_stats(self) -> Dict[str, str | int | float]:
         """Get basic statistics about the PGN file"""
         file_size = os.path.getsize(self.pgn_file_path)
 
@@ -198,7 +198,7 @@ def get_notation_from_pgn_move(move: str, color: str) -> str:
     return move[-2:]
 
 
-def extract_pgn_move(move: str, color: str) -> Dict[str, str]:
+def extract_pgn_move(move: str, color: str) -> Dict[str, str | bool | None]:
     piece_type = get_piece_type_from_pgn_move(move)
     to_square = get_notation_from_pgn_move(move, color)
 
@@ -206,7 +206,7 @@ def extract_pgn_move(move: str, color: str) -> Dict[str, str]:
     is_check = "+" in move
     is_checkmate = "#" in move
 
-    promotion = None
+    promotion: str | None = None
     if "=" in move:
         promotion_letter = move.split("=")[1][0]
         promotion_map = {
@@ -217,8 +217,8 @@ def extract_pgn_move(move: str, color: str) -> Dict[str, str]:
         }
         promotion = promotion_map.get(promotion_letter, None)
 
-    from_hint_row = None
-    from_hint_column = None
+    from_hint_row: str | None = None
+    from_hint_column: str | None = None
 
     if piece_type != "pawn":
         # Allow optional capture "x" in the regex
@@ -266,7 +266,7 @@ def pgn_games():
 
 
 @pytest.mark.parametrize("board", range(1, 10001))
-def test_read_pgn(pgn_games, board):
+def test_read_pgn(pgn_games: List[Dict[str, str]], board: int) -> None:
     # Get a specific game based on the 'board' parameter (with index bounds checking)
     index = (board - 1) % len(pgn_games)  # Ensure we don't go out of bounds
     pgn_game = pgn_games[index]
@@ -278,11 +278,21 @@ def test_read_pgn(pgn_games, board):
         turn = chess_game.turn
         extracted_pgn = extract_pgn_move(move, chess_game.turn)
         position = find_position_that_can_move_to_position(chess_game, extracted_pgn)
+
+        to_square_val = extracted_pgn["to_square"]
+        assert isinstance(to_square_val, str), "to_square must be a string"
+
+        promotion_val = extracted_pgn["promotion"]
+        promotion: str | None = None
+        if promotion_val is not None:
+            assert isinstance(promotion_val, str), "promotion must be a string or None"
+            promotion = promotion_val
+
         chess_game.move(
             position,
-            position_from_notation(extracted_pgn["to_square"]),
+            position_from_notation(to_square_val),
             chess_game.turn,
-            promote_to=extracted_pgn["promotion"],
+            promote_to=promotion,
         )
         if chess_game.end_reason != "threefold_repetition":
             break
@@ -300,6 +310,7 @@ def test_read_pgn(pgn_games, board):
                         if tracked_piece == piece:
                             found = True
                             # Verify position is correct
+                            assert tracked_piece.position is not None, "Piece position should not be None"
                             assert (
                                 tracked_piece.position.row == row
                                 and tracked_piece.position.col == col
@@ -314,7 +325,7 @@ def test_read_pgn(pgn_games, board):
 
 
 def find_position_that_can_move_to_position(
-    game: Game, extracted_pgn: Dict[str, str]
+    game: Game, extracted_pgn: Dict[str, str | bool | None]
 ) -> Position:
     """
     Find the initial position of the piece that can move to the target position.
@@ -326,20 +337,26 @@ def find_position_that_can_move_to_position(
     Returns:
         The position of the piece that can make the move
     """
-    piece_type = extracted_pgn["piece_type"]
-    to_square = position_from_notation(extracted_pgn["to_square"])
+    piece_type_val = extracted_pgn["piece_type"]
+    assert isinstance(piece_type_val, str), "piece_type must be a string"
+    piece_type = piece_type_val
+
+    to_square_val = extracted_pgn["to_square"]
+    assert isinstance(to_square_val, str), "to_square must be a string"
+    to_square = position_from_notation(to_square_val)
+
     from_hint_column = extracted_pgn["from_hint_column"]
     from_hint_row = extracted_pgn["from_hint_row"]
 
     # Determine the search space based on hints
-    if from_hint_column is not None:
+    if from_hint_column is not None and isinstance(from_hint_column, str):
         # If we have a column hint, only search that column
         cols_to_search = [ord(from_hint_column) - ord("a")]
     else:
         # Otherwise search all columns
         cols_to_search = list(range(8))
 
-    if from_hint_row is not None:
+    if from_hint_row is not None and isinstance(from_hint_row, str):
         # If we have a row hint, only search that row
         rows_to_search = [8 - int(from_hint_row)]
     else:
@@ -347,7 +364,7 @@ def find_position_that_can_move_to_position(
         rows_to_search = list(range(8))
 
     # Get all pieces of the current player's turn that match the piece type
-    candidates = []
+    candidates: List[Position] = []
     for row in rows_to_search:
         for col in cols_to_search:
             pos = Position(row=row, col=col)

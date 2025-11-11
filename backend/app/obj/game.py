@@ -38,7 +38,9 @@ class Game:
         self.white_draw_requested = False
         self.black_draw_requested = False
         self.last_move = None
-        self.position_history = {}  # Hash -> count for threefold repetition detection
+        self.position_history: dict[
+            str, int
+        ] = {}  # Hash -> count for threefold repetition detection
         self._record_position()
 
     def move(
@@ -149,12 +151,12 @@ class Game:
         self.winner = winner
         self.end_reason = end_reason
 
-    def mark_player_forfeit(self, color):
+    def mark_player_forfeit(self, color: str) -> None:
         if self.status != GameStatus.COMPLETE:
             winner = "black" if color == "white" else "white"
             self._finalize_game_end(winner, "resignation")
 
-    def request_draw(self, color):
+    def request_draw(self, color: str) -> bool:
         """Request a draw from the specified player"""
         if self.status not in [GameStatus.IN_PROGRESS]:
             return False

@@ -204,7 +204,10 @@ class Pawn(Piece):
         """Get forward moves for a pawn (1 or 2 squares)"""
         from .chess_move import ChessMove
 
-        moves = []
+        if self.position is None:
+            return []
+
+        moves: List[ChessMove] = []
         target_row = row + direction
 
         # Check if one square forward is valid and empty
@@ -263,8 +266,10 @@ class Pawn(Piece):
         ignore_illegal_moves: bool,
     ) -> List["ChessMove"]:
         """Get backward moves for a pawn if it has the Reverse modifier"""
+        if self.position is None:
+            return []
 
-        moves = []
+        moves: List[ChessMove] = []
 
         target_row = row - direction
 
@@ -286,9 +291,10 @@ class Pawn(Piece):
         ignore_illegal_moves: bool,
     ) -> List["ChessMove"]:
         """Get diagonal capture moves for a pawn"""
-        from .chess_move import ChessMove
+        if self.position is None:
+            return []
 
-        moves = []
+        moves: List[ChessMove] = []
         target_row = row + direction
 
         # Check both diagonal directions
@@ -327,9 +333,10 @@ class Pawn(Piece):
         ignore_illegal_moves: bool,
     ) -> List["ChessMove"]:
         """Get en passant moves for a pawn"""
-        from .chess_move import ChessMove
+        if self.position is None:
+            return []
 
-        moves = []
+        moves: List[ChessMove] = []
 
         # En passant is only possible from specific rows
         if row != EN_PASSANT_ROWS[color]:
@@ -351,7 +358,7 @@ class Pawn(Piece):
 
 
 class Rook(Piece):
-    def __init__(self, color, position: Position = None):
+    def __init__(self, color: str, position: Optional[Position] = None):
         super().__init__(color, "rook", position=position)
 
     def get_possible_moves(
@@ -362,6 +369,9 @@ class Rook(Piece):
         ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this rook"""
+        if self.position is None:
+            return []
+
         # Rook moves horizontally and vertically
         rook_directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
         bishop_directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
@@ -393,7 +403,7 @@ class Rook(Piece):
 
 
 class Knight(Piece):
-    def __init__(self, color, position: Position = None):
+    def __init__(self, color: str, position: Optional[Position] = None):
         super().__init__(color, "knight", position=position)
 
     def get_possible_moves(
@@ -404,7 +414,8 @@ class Knight(Piece):
         ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this knight"""
-        from .chess_move import ChessMove
+        if self.position is None:
+            return []
 
         moves = board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
 
@@ -461,7 +472,7 @@ class Knight(Piece):
 
 
 class Bishop(Piece):
-    def __init__(self, color, position: Position = None):
+    def __init__(self, color: str, position: Optional[Position] = None):
         super().__init__(color, "bishop", position=position)
 
     def get_possible_moves(
@@ -472,6 +483,9 @@ class Bishop(Piece):
         ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this bishop"""
+        if self.position is None:
+            return []
+
         # Bishop moves diagonally
         directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
         moves = board.get_sliding_moves(self.position, directions, ignore_illegal_moves)
@@ -514,7 +528,7 @@ class Bishop(Piece):
 
 
 class Queen(Piece):
-    def __init__(self, color, position: Position = None):
+    def __init__(self, color: str, position: Optional[Position] = None):
         super().__init__(color, "queen", position=position)
 
     def get_possible_moves(
@@ -525,7 +539,8 @@ class Queen(Piece):
         ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this queen"""
-        from .chess_move import ChessMove
+        if self.position is None:
+            return []
 
         # Queen combines rook and bishop moves (horizontal, vertical, and diagonal)
         rook_directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
@@ -586,7 +601,7 @@ class Queen(Piece):
 
 
 class King(Piece):
-    def __init__(self, color, position: Position = None):
+    def __init__(self, color: str, position: Optional[Position] = None):
         super().__init__(color, "king", position=position)
 
     def get_possible_moves(
@@ -597,9 +612,10 @@ class King(Piece):
         ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this king"""
-        from .chess_move import ChessMove
+        if self.position is None:
+            return []
 
-        moves = []
+        moves: List[ChessMove] = []
         row, col = self.position.coordinates()
 
         # Standard king moves
@@ -635,7 +651,7 @@ class King(Piece):
                         moves.append(move)
 
             # Also add knight moves (covers remaining squares in 2-square radius)
-            moves.append(
+            moves.extend(
                 board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
             )
 
@@ -688,9 +704,10 @@ class King(Piece):
         ignore_check: bool = False,
     ) -> List["ChessMove"]:
         """Get castling moves for this king"""
-        from .chess_move import ChessMove
+        if self.position is None:
+            return []
 
-        moves = []
+        moves: List[ChessMove] = []
         row, col = self.position.coordinates()
 
         # Kingside castling

@@ -1,7 +1,7 @@
 """ELO rating calculation service."""
 
 import logging
-from typing import Optional
+from typing import Optional, Callable, Coroutine, Any
 
 from .database_service import DatabaseService
 
@@ -46,11 +46,11 @@ class EloService:
         return round(rating_change)
 
     async def update_ratings(
-        self, 
-        white_id: str, 
-        black_id: str, 
+        self,
+        white_id: str,
+        black_id: str,
         winner: str,
-        get_user_info_func,
+        get_user_info_func: Callable[[str], Coroutine[Any, Any, dict[str, int | str | None]]],
         db_service: DatabaseService
     ) -> Optional[tuple[int, int]]:
         """
@@ -75,8 +75,10 @@ class EloService:
             # Get current ratings
             white_info = await get_user_info_func(white_id)
             black_info = await get_user_info_func(black_id)
-            white_elo = white_info["elo"] or self.DEFAULT_RATING
-            black_elo = black_info["elo"] or self.DEFAULT_RATING
+            white_elo_raw = white_info["elo"]
+            black_elo_raw = black_info["elo"]
+            white_elo: int = white_elo_raw if isinstance(white_elo_raw, int) else self.DEFAULT_RATING
+            black_elo: int = black_elo_raw if isinstance(black_elo_raw, int) else self.DEFAULT_RATING
 
             # Determine results for each player
             if winner == "white":

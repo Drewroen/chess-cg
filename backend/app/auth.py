@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 import httpx
 from jose import JWTError, jwt
 from dotenv import load_dotenv
@@ -253,7 +253,7 @@ async def cleanup_inactive_guest_users(hours: int = 24):
         return await db_service.cleanup_inactive_guest_users(hours=hours)
 
 
-def verify_jwt_token(token: str) -> Optional[dict]:
+def verify_jwt_token(token: str) -> Optional[dict[str, Any]]:
     """Verify and decode JWT token"""
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
