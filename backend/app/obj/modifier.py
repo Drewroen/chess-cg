@@ -1,9 +1,20 @@
+from typing import TypedDict, Optional
+
+
+class ModifierDict(TypedDict):
+    type: str
+    score: int
+    applicable_piece: Optional[str]
+    description: str
+    uses: int
+
+
 class Modifier:
     def __init__(
         self,
         modifier_type: str,
         score: int = 0,
-        applicable_piece: str = None,
+        applicable_piece: Optional[str] = None,
         description: str = "",
         uses: int = 0,  # Number of times this modifier can be used (0 for unlimited)
     ):
@@ -19,7 +30,7 @@ class Modifier:
             return True  # No restrictions
         return piece_type == self.applicable_piece
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> ModifierDict:
         return {
             "type": self.modifier_type,
             "score": self.score,

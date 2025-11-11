@@ -1,3 +1,11 @@
+from typing import TypedDict
+
+
+class PositionDict(TypedDict):
+    row: int
+    col: int
+
+
 class Position:
     def __init__(self, row: int, col: int):
         self.row = row
@@ -9,7 +17,7 @@ class Position:
     def coordinates(self) -> tuple[int, int]:
         return self.row, self.col
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> PositionDict:
         return {"row": self.row, "col": self.col}
 
 

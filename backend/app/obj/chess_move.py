@@ -1,5 +1,11 @@
-from typing import Optional
+from typing import Optional, TypedDict
 from app.obj.pieces import Position
+from app.obj.position import PositionDict
+
+
+class ChessMoveDict(TypedDict):
+    position_from: PositionDict
+    position_to: PositionDict
 
 
 class ChessMove:
@@ -25,8 +31,8 @@ class ChessMove:
         self.additional_move = additional_move
         self.used_modifier = used_modifier  # Track which modifier enabled this move
 
-    def to_dict(self):
+    def to_dict(self) -> ChessMoveDict:
         return {
-            "from": self.position_from.to_dict(),
-            "to": self.position_to.to_dict(),
+            "position_from": self.position_from.to_dict(),
+            "position_to": self.position_to.to_dict(),
         }

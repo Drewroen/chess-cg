@@ -1,7 +1,7 @@
 from .position import Position
 from .modifier import Modifier
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 from .chess_move import ChessMove
 
 from .constants import (
@@ -26,7 +26,12 @@ class Piece(ABC):
         "king": 0,
     }
 
-    def __init__(self, color: str, type: str = None, position: Position = None):
+    def __init__(
+        self,
+        color: str,
+        type: Optional[str] = None,
+        position: Optional[Position] = None,
+    ):
         self.color = color
         self.moved = False
         self.type = type
@@ -37,11 +42,11 @@ class Piece(ABC):
     def mark_moved(self):
         self.moved = True
 
-    def get_acting_type(self) -> str:
+    def get_acting_type(self) -> Optional[str]:
         return self.type
 
     def get_base_value(self) -> int:
-        return self.PIECE_VALUES.get(self.get_acting_type(), 0)
+        return self.PIECE_VALUES.get(self.get_acting_type() or "", 0)
 
     def get_total_value(self) -> int:
         """Get the total value including base value and all modifier scores"""
@@ -52,7 +57,10 @@ class Piece(ABC):
     def add_modifier(self, modifier: Modifier) -> bool:
         """Add a modifier to this piece if valid and not already present"""
         # Check if modifier can be applied to this piece type
-        if not modifier.can_apply_to_piece(self.get_acting_type()):
+        type = self.get_acting_type()
+        if type is None:
+            return False
+        if not modifier.can_apply_to_piece(type):
             return False
 
         # Check if modifier is already present
@@ -66,7 +74,10 @@ class Piece(ABC):
 
     def can_add_modifier(self, modifier: Modifier) -> bool:
         """Check if a modifier can be added to this piece without adding it"""
-        return modifier.can_apply_to_piece(self.get_acting_type()) and not any(
+        type = self.get_acting_type()
+        if type is None:
+            return False
+        return modifier.can_apply_to_piece(type) and not any(
             m.modifier_type == modifier.modifier_type for m in self.modifiers
         )
 
@@ -80,7 +91,7 @@ class Piece(ABC):
     def has_modifier(self, modifier_type: str) -> bool:
         return any(m.modifier_type == modifier_type for m in self.modifiers)
 
-    def get_modifier(self, modifier_type: str) -> Modifier:
+    def get_modifier(self, modifier_type: str) -> Optional[Modifier]:
         for modifier in self.modifiers:
             if modifier.modifier_type == modifier_type:
                 return modifier
@@ -121,7 +132,7 @@ class Piece(ABC):
 
 
 class Pawn(Piece):
-    def __init__(self, color, position: Position = None):
+    def __init__(self, color: str, position: Optional[Position] = None):
         super().__init__(color, "pawn", position=position)
         self.promoted_to = None  # Track what piece this pawn is acting as
 
@@ -142,10 +153,14 @@ class Pawn(Piece):
     ) -> List["ChessMove"]:
         """Get all possible moves for this pawn"""
 
-        row, col = self.position.coordinates()
+        position = self.position
+        if position is None:
+            return []
+
+        row, col = position.coordinates()
         color = self.color
         direction = PAWN_DIRECTIONS[color]
-        moves = []
+        moves: List[ChessMove] = []
 
         # Forward moves (1 or 2 squares from starting position)
         moves.extend(
