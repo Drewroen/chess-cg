@@ -394,6 +394,10 @@ class RoomManager:
             del self.manager.id_to_websocket_connection[connection_id]
             del self.manager.connection_id_to_user_id[connection_id]
 
+            # Remove from queue if present
+            if user_id in self.room_service.queue:
+                self.room_service.queue.remove(user_id)
+
     async def emit_game_state_to_room(self, room_id: UUID):
         """Emit the current game state to all players in the room."""
         if not room_id:
