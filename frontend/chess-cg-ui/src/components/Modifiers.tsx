@@ -46,7 +46,7 @@ export const Modifiers = ({ isMobile, onBack }: ModifiersProps) => {
   const squareSize = isMobile ? 40 : 60;
   const boardDimensions = { width: squareSize * 8, height: squareSize * 2 };
 
-  // Toggle modifier selection for current piece
+  // Toggle modifier selection for current piece (single modifier per piece)
   const toggleModifier = (modifierType: string) => {
     if (!selectedPiece) return;
 
@@ -57,13 +57,13 @@ export const Modifiers = ({ isMobile, onBack }: ModifiersProps) => {
       // Remove modifier
       setSelectedModifiers({
         ...selectedModifiers,
-        [pieceKey]: currentSelections.filter((m) => m !== modifierType),
+        [pieceKey]: [],
       });
     } else {
-      // Add modifier
+      // Replace with new modifier (enforces single-modifier constraint)
       setSelectedModifiers({
         ...selectedModifiers,
-        [pieceKey]: [...currentSelections, modifierType],
+        [pieceKey]: [modifierType],
       });
     }
   };
@@ -76,42 +76,38 @@ export const Modifiers = ({ isMobile, onBack }: ModifiersProps) => {
   };
 
   const handleSaveLoadout = async () => {
-    const loadout = Object.entries(selectedModifiers).map(
-      ([pieceKey, modifiers]) => {
-        const [color, rowStr, colStr] = pieceKey.split("-");
-        const uiRow = parseInt(rowStr);
-        const col = parseInt(colStr);
+    const white: Array<{ pos: [number, number]; modifier: string }> = [];
+    const black: Array<{ pos: [number, number]; modifier: string }> = [];
 
-        // Determine piece type based on row and col
-        let pieceType: string;
-        if (uiRow === 0) {
-          pieceType = "pawn";
-        } else {
-          const piece = initialWhitePieces.find((p) => p.col === col);
-          pieceType = piece?.type || "pawn";
-        }
+    Object.entries(selectedModifiers).forEach(([pieceKey, modifiers]) => {
+      const [color, rowStr, colStr] = pieceKey.split("-");
+      const uiRow = parseInt(rowStr);
+      const col = parseInt(colStr);
 
-        // Map UI rows to backend board positions
-        // UI: row 0 = pawns, row 1 = pieces
-        // Backend white: row 6 = pawns, row 7 = pieces
-        // Backend black: row 1 = pawns, row 0 = pieces
-        let backendRow: number;
-        if (color === "white") {
-          backendRow = uiRow === 0 ? 6 : 7;
-        } else {
-          backendRow = uiRow === 0 ? 1 : 0;
-        }
-
-        return {
-          color,
-          piece_type: pieceType,
-          position: { row: backendRow, col },
-          modifiers,
-        };
+      // Map UI rows to backend board positions
+      // UI: row 0 = pawns, row 1 = pieces
+      // Backend white: row 6 = pawns, row 7 = pieces
+      // Backend black: row 1 = pawns, row 0 = pieces
+      let backendRow: number;
+      if (color === "white") {
+        backendRow = uiRow === 0 ? 6 : 7;
+      } else {
+        backendRow = uiRow === 0 ? 1 : 0;
       }
-    );
 
-    const payload = { loadout };
+      // Only take FIRST modifier (single modifier constraint)
+      const firstModifier = modifiers[0];
+      if (firstModifier) {
+        const pieceData = { pos: [backendRow, col] as [number, number], modifier: firstModifier };
+        if (color === "white") {
+          white.push(pieceData);
+        } else {
+          black.push(pieceData);
+        }
+      }
+    });
+
+    const payload = { white, black };
     console.log("Sending loadout to backend:");
     console.log(JSON.stringify(payload, null, 2));
 
@@ -167,26 +163,40 @@ export const Modifiers = ({ isMobile, onBack }: ModifiersProps) => {
         if (response.ok) {
           const data = await response.json();
 
-          if (data.loadout && data.loadout.loadout) {
+          if (data.loadout) {
             // Convert backend loadout format to frontend selectedModifiers format
+            const loadoutData = data.loadout;
+            const white = loadoutData.white || [];
+            const black = loadoutData.black || [];
+
             const modifiersMap: Record<string, string[]> = {};
 
-            data.loadout.loadout.forEach((piece: any) => {
-              const { color, position, modifiers } = piece;
+            // Process white pieces
+            white.forEach((piece: any) => {
+              const [row, col] = piece.pos;
 
               // Map backend positions to UI rows
               // Backend white: row 6 = pawns, row 7 = pieces
+              // UI: row 0 = pawns, row 1 = pieces
+              const uiRow = row === 6 ? 0 : 1;
+
+              const pieceKey = `white-${uiRow}-${col}`;
+              // Store as array with single item for compatibility
+              modifiersMap[pieceKey] = piece.modifier ? [piece.modifier] : [];
+            });
+
+            // Process black pieces
+            black.forEach((piece: any) => {
+              const [row, col] = piece.pos;
+
+              // Map backend positions to UI rows
               // Backend black: row 1 = pawns, row 0 = pieces
               // UI: row 0 = pawns, row 1 = pieces
-              let uiRow: number;
-              if (color === "white") {
-                uiRow = position.row === 6 ? 0 : 1;
-              } else {
-                uiRow = position.row === 1 ? 0 : 1;
-              }
+              const uiRow = row === 1 ? 0 : 1;
 
-              const pieceKey = `${color}-${uiRow}-${position.col}`;
-              modifiersMap[pieceKey] = modifiers;
+              const pieceKey = `black-${uiRow}-${col}`;
+              // Store as array with single item for compatibility
+              modifiersMap[pieceKey] = piece.modifier ? [piece.modifier] : [];
             });
 
             setSelectedModifiers(modifiersMap);

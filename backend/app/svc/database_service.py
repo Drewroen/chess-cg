@@ -1,9 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from app.db_models import User, ChessGame, RefreshToken
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
+
+if TYPE_CHECKING:
+    from app.routers.game import Loadout
 
 
 class DatabaseService:
@@ -83,13 +86,17 @@ class DatabaseService:
         await self.session.refresh(user)
         return user
 
-    async def update_user_loadout(self, user_id: str, loadout: dict) -> Optional[User]:
+    async def update_user_loadout(self, user_id: str, loadout: "Loadout | dict") -> Optional[User]:
         """Update a user's piece modifiers loadout."""
         user = await self.get_user_by_id(user_id)
         if not user:
             return None
 
-        user.loadout = loadout
+        # Convert Loadout model to dict if needed
+        if hasattr(loadout, "model_dump"):
+            user.loadout = loadout.model_dump()
+        else:
+            user.loadout = loadout
         await self.session.commit()
         await self.session.refresh(user)
         return user

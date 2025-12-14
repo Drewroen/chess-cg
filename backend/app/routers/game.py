@@ -34,20 +34,21 @@ room_manager: RoomManager = None
 
 
 # Pydantic models for loadout endpoint
-class PiecePosition(BaseModel):
-    row: int
-    col: int
+class PieceModifier(BaseModel):
+    pos: list[int]  # [row, col]
+    modifier: str  # Single modifier string
 
 
-class PieceLoadout(BaseModel):
-    color: str
-    piece_type: str
-    position: PiecePosition
-    modifiers: list[str]
+class Loadout(BaseModel):
+    """Model for loadout data structure stored in database and used throughout the app"""
+
+    white: list[PieceModifier] = []
+    black: list[PieceModifier] = []
 
 
 class LoadoutRequest(BaseModel):
-    loadout: list[PieceLoadout]
+    white: list[PieceModifier] = []
+    black: list[PieceModifier] = []
 
 
 @router.get("/{room_id}/info")
@@ -115,6 +116,16 @@ async def get_available_modifiers():
     return {"modifiers": [modifier.to_dict() for modifier in all_modifiers]}
 
 
+def infer_piece_type(
+    valid_positions: dict, color: str, row: int, col: int
+) -> str | None:
+    """Returns piece type for given position, or None if invalid"""
+    for piece_type, positions in valid_positions[color].items():
+        if (row, col) in positions:
+            return piece_type
+    return None
+
+
 @router.post("/loadout/validate")
 async def validate_loadout(loadout_request: LoadoutRequest):
     """Validate a piece loadout with modifiers."""
@@ -171,31 +182,40 @@ async def validate_loadout(loadout_request: LoadoutRequest):
 
     errors = []
 
-    for piece_loadout in loadout_request.loadout:
-        color = piece_loadout.color
-        piece_type = piece_loadout.piece_type
-        position = (piece_loadout.position.row, piece_loadout.position.col)
-        modifiers = piece_loadout.modifiers
+    # Combine white and black pieces with their colors for validation
+    all_pieces = []
+    for piece in loadout_request.white:
+        all_pieces.append((piece, "white"))
+    for piece in loadout_request.black:
+        all_pieces.append((piece, "black"))
 
-        # Validate color
-        if color not in ["white", "black"]:
-            errors.append(f"Invalid color '{color}' for piece at {position}")
+    for piece_loadout, color in all_pieces:
+        # Validate pos format
+        if not isinstance(piece_loadout.pos, list) or len(piece_loadout.pos) != 2:
+            errors.append(f"Invalid position format for {color} piece")
             continue
 
-        # Validate piece type
-        if piece_type not in valid_positions[color]:
-            errors.append(f"Invalid piece type '{piece_type}' for color '{color}'")
+        row, col = piece_loadout.pos
+
+        # Validate position is in board range
+        if not (0 <= row < 8 and 0 <= col < 8):
+            errors.append(f"Position ({row}, {col}) out of board range for {color}")
             continue
 
-        # Validate position
-        if position not in valid_positions[color][piece_type]:
+        position = (row, col)
+
+        # Infer piece_type from position
+        piece_type = infer_piece_type(valid_positions, color, row, col)
+        if not piece_type:
             errors.append(
-                f"{color.capitalize()} {piece_type} cannot be at position {position}. "
-                f"Valid positions: {valid_positions[color][piece_type]}"
+                f"No valid {color} piece at position {position}. "
+                f"Position must be a valid starting position."
             )
+            continue
 
-        # Validate modifiers
-        for modifier_type in modifiers:
+        # Validate single modifier
+        modifier_type = piece_loadout.modifier
+        if modifier_type:
             if modifier_type not in all_modifiers_map:
                 errors.append(f"Unknown modifier '{modifier_type}'")
                 continue
@@ -224,7 +244,7 @@ async def validate_loadout(loadout_request: LoadoutRequest):
 @router.get("/loadout")
 async def get_loadout(
     request: Request, db_session: AsyncSession = Depends(get_db_session)
-):
+) -> dict[str, Loadout | None]:
     """Get the piece loadout with modifiers for the authenticated user."""
 
     # Get access token from cookie
@@ -247,7 +267,8 @@ async def get_loadout(
         raise HTTPException(status_code=404, detail="User not found")
 
     # Return the loadout (or null if not set)
-    return {"loadout": user.loadout}
+    loadout = user.get_loadout_model()
+    return {"loadout": loadout}
 
 
 @router.post("/loadout/save")
@@ -270,7 +291,7 @@ async def save_loadout(
 
     user_id = payload["sub"]
 
-    # Validate the loadout first (reuse validation logic from validate endpoint)
+    # Validate the loadout first using same logic as validate endpoint
     all_modifiers_map = {
         # Rook modifiers
         "Knook": KNOOK_MODIFIER,
@@ -319,31 +340,40 @@ async def save_loadout(
 
     errors = []
 
-    for piece_loadout in loadout_request.loadout:
-        color = piece_loadout.color
-        piece_type = piece_loadout.piece_type
-        position = (piece_loadout.position.row, piece_loadout.position.col)
-        modifiers = piece_loadout.modifiers
+    # Combine white and black pieces with their colors for validation
+    all_pieces = []
+    for piece in loadout_request.white:
+        all_pieces.append((piece, "white"))
+    for piece in loadout_request.black:
+        all_pieces.append((piece, "black"))
 
-        # Validate color
-        if color not in ["white", "black"]:
-            errors.append(f"Invalid color '{color}' for piece at {position}")
+    for piece_loadout, color in all_pieces:
+        # Validate pos format
+        if not isinstance(piece_loadout.pos, list) or len(piece_loadout.pos) != 2:
+            errors.append(f"Invalid position format for {color} piece")
             continue
 
-        # Validate piece type
-        if piece_type not in valid_positions[color]:
-            errors.append(f"Invalid piece type '{piece_type}' for color '{color}'")
+        row, col = piece_loadout.pos
+
+        # Validate position is in board range
+        if not (0 <= row < 8 and 0 <= col < 8):
+            errors.append(f"Position ({row}, {col}) out of board range for {color}")
             continue
 
-        # Validate position
-        if position not in valid_positions[color][piece_type]:
+        position = (row, col)
+
+        # Infer piece_type from position
+        piece_type = infer_piece_type(valid_positions, color, row, col)
+        if not piece_type:
             errors.append(
-                f"{color.capitalize()} {piece_type} cannot be at position {position}. "
-                f"Valid positions: {valid_positions[color][piece_type]}"
+                f"No valid {color} piece at position {position}. "
+                f"Position must be a valid starting position."
             )
+            continue
 
-        # Validate modifiers
-        for modifier_type in modifiers:
+        # Validate single modifier
+        modifier_type = piece_loadout.modifier
+        if modifier_type:
             if modifier_type not in all_modifiers_map:
                 errors.append(f"Unknown modifier '{modifier_type}'")
                 continue

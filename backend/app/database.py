@@ -37,6 +37,8 @@ async def get_db_session(max_retries: int = 3) -> AsyncGenerator[AsyncSession, N
     """Get database session with connection retry logic"""
     for attempt in range(max_retries):
         try:
+            if db_manager.async_session_maker is None:
+                raise RuntimeError("DatabaseManager is not initialized.")
             async with db_manager.async_session_maker() as session:
                 yield session
                 return

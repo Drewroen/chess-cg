@@ -28,6 +28,10 @@ from ..obj.modifier import (
 from ..obj.position import Position
 import time
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.routers.game import Loadout
 
 
 class WebSocketConnection:
@@ -153,7 +157,7 @@ class RoomService:
         if black_loadout:
             self._apply_loadout_to_board(room.game.board, black_loadout, "black")
 
-    async def _get_player_loadout(self, player_id: str):
+    async def _get_player_loadout(self, player_id: str) -> "Loadout | dict | None":
         """Get the loadout for a player from the database."""
         # Skip guest players
         if not player_id or player_id.startswith("guest_"):
@@ -170,27 +174,31 @@ class RoomService:
             logging.error(f"Error loading loadout for player {player_id}: {e}")
             return None
 
-    def _apply_loadout_to_board(self, board, loadout_data, player_color):
+    def _apply_loadout_to_board(
+        self, board, loadout_data: "Loadout | dict | None", player_color: str
+    ) -> None:
         """Apply a loadout to the board for a specific player."""
         if not loadout_data:
             return
 
-        # Extract the loadout array from the data structure
-        # The loadout is stored as {"loadout": [...]}
-        loadout = loadout_data.get("loadout", []) if isinstance(loadout_data, dict) else loadout_data
+        # Convert Loadout model to dict if needed
+        if hasattr(loadout_data, "model_dump"):
+            loadout_dict = loadout_data.model_dump()
+        else:
+            loadout_dict = loadout_data
+
+        # Extract the loadout array for this player's color
+        # The loadout is stored as {"white": [...], "black": [...]}
+        loadout = loadout_dict.get(player_color, [])
 
         for piece_loadout in loadout:
-            # Validate the piece belongs to this player
-            if piece_loadout.get("color") != player_color:
+            # Get the position as [row, col] array
+            pos = piece_loadout.get("pos", [0, 0])
+            if not isinstance(pos, list) or len(pos) != 2:
+                logging.warning(f"Invalid pos format for {player_color}")
                 continue
 
-            # Get the position
-            position_data = piece_loadout.get("position")
-            if not position_data:
-                continue
-
-            row = position_data.get("row")
-            col = position_data.get("col")
+            row, col = pos
 
             # Mirror column for black pieces
             # Black's a-file should be at column 0, but from black's perspective
@@ -206,22 +214,24 @@ class RoomService:
                 )
                 continue
 
-            # Apply modifiers to the piece
-            modifiers = piece_loadout.get("modifiers", [])
-            for modifier_name in modifiers:
-                modifier = self.MODIFIERS_MAP.get(modifier_name)
-                if modifier:
-                    success = piece.add_modifier(modifier)
-                    if success:
-                        logging.info(
-                            f"Applied {modifier_name} to {player_color} {piece.type} at ({row}, {col})"
-                        )
-                    else:
-                        logging.warning(
-                            f"Failed to apply {modifier_name} to {player_color} {piece.type} at ({row}, {col})"
-                        )
+            # Apply single modifier to the piece
+            modifier_name = piece_loadout.get("modifier")
+            if not modifier_name:
+                continue
+
+            modifier = self.MODIFIERS_MAP.get(modifier_name)
+            if modifier:
+                success = piece.add_modifier(modifier)
+                if success:
+                    logging.info(
+                        f"Applied {modifier_name} to {player_color} {piece.type} at ({row}, {col})"
+                    )
                 else:
-                    logging.warning(f"Unknown modifier: {modifier_name}")
+                    logging.warning(
+                        f"Failed to apply {modifier_name} to {player_color} {piece.type} at ({row}, {col})"
+                    )
+            else:
+                logging.warning(f"Unknown modifier: {modifier_name}")
 
     def find_player_room(self, player_name: str) -> Room:
         """Find the room ID for a given player."""
