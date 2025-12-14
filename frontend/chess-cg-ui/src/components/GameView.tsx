@@ -7,7 +7,12 @@ import { DrawResignButtons } from "./DrawResignButtons";
 import { GameOver } from "./GameOver";
 import { fetchGameInfo, GameInfo } from "../services/gameService";
 import { websocketUrl, backendUrl } from "../config/environment";
-import { getOpponentInfo, getCurrentPlayerInfo, getTimerInitialTime, isTimerActive } from "../utils";
+import {
+  getOpponentInfo,
+  getCurrentPlayerInfo,
+  getTimerInitialTime,
+  isTimerActive,
+} from "../utils";
 import styles from "./GameView.module.css";
 import utilities from "../styles/utilities.module.css";
 
@@ -16,7 +21,6 @@ type ConnectionStatusType =
   | "connected"
   | "disconnected"
   | "error";
-
 
 // Custom hook for auth token management
 function useAuthToken() {
@@ -173,7 +177,6 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
   const playerColor =
     gameInfo?.players.white.id === chessGame.playerId ? "white" : "black";
 
-
   const handleLocalMove = useCallback(
     (from: [number, number], to: [number, number]) => {
       setChessGame((prevGame) => {
@@ -190,27 +193,39 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
           ...prevGame,
           board: { squares: newSquares },
           turn: prevGame.turn === "white" ? "black" : "white",
-          lastMove: { from: { row: from[0], col: from[1] }, to: { row: to[0], col: to[1] } },
+          lastMove: {
+            from: { row: from[0], col: from[1] },
+            to: { row: to[0], col: to[1] },
+          },
         };
       });
     },
     []
   );
 
-
   return (
-    <div className={`${utilities.flexCenter} ${utilities.minHeight100vh} ${utilities.bgDark} ${utilities.margin0} ${isMobile ? styles.gameContainerMobile : styles.gameContainer}`}>
+    <div
+      className={`${utilities.flexCenter} ${utilities.minHeight100vh} ${
+        utilities.bgDark
+      } ${utilities.margin0} ${
+        isMobile ? styles.gameContainerMobile : styles.gameContainer
+      }`}
+    >
       {chessGame.board?.squares && gameInfo ? (
         <>
           {/* Mobile layout - player info above and below board */}
           {isMobile ? (
             <>
               {/* Opponent info at top */}
-              <div className={`${styles.playerInfoContainer} ${styles.opponentInfo}`}>
+              <div
+                className={`${styles.playerInfoContainer} ${styles.opponentInfo}`}
+              >
                 <div className={styles.playerDetails}>
                   <div
                     className={`${styles.connectionDot} ${
-                      chessGame.opponentConnected ? styles.connected : styles.disconnected
+                      chessGame.opponentConnected
+                        ? styles.connected
+                        : styles.disconnected
                     }`}
                   />
                   <span className={styles.playerName}>
@@ -221,7 +236,11 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
                   </span>
                 </div>
                 <Timer
-                  initialTime={getTimerInitialTime(chessGame, playerColor, true)}
+                  initialTime={getTimerInitialTime(
+                    chessGame,
+                    playerColor,
+                    true
+                  )}
                   isActive={isTimerActive(chessGame, playerColor, true)}
                   isMobile={true}
                 />
@@ -239,9 +258,13 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
               )}
 
               {/* Current player timer right under the board */}
-              <div className={`${styles.playerInfoContainer} ${styles.currentPlayerInfo}`}>
+              <div
+                className={`${styles.playerInfoContainer} ${styles.currentPlayerInfo}`}
+              >
                 <div className={styles.playerDetails}>
-                  <div className={`${styles.connectionDot} ${styles.connected}`} />
+                  <div
+                    className={`${styles.connectionDot} ${styles.connected}`}
+                  />
                   <span className={styles.playerName}>
                     {getCurrentPlayerInfo(gameInfo, playerColor).name}
                   </span>
@@ -250,7 +273,11 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
                   </span>
                 </div>
                 <Timer
-                  initialTime={getTimerInitialTime(chessGame, playerColor, false)}
+                  initialTime={getTimerInitialTime(
+                    chessGame,
+                    playerColor,
+                    false
+                  )}
                   isActive={isTimerActive(chessGame, playerColor, false)}
                   isMobile={true}
                 />
@@ -296,7 +323,10 @@ export function GameView({ isMobile }: { isMobile: boolean }) {
           )}
         </>
       ) : (
-        <div className={styles.loading}>Loading...</div>
+        <div className={styles.loading}>
+          <div className={styles.spinner}></div>
+          <p>Searching for opponent...</p>
+        </div>
       )}
     </div>
   );

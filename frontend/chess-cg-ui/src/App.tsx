@@ -144,12 +144,12 @@ export default function App() {
           <Route path="/auth/error" element={<AuthError />} />
           <Route path="/" element={
             showGame ? <GameView isMobile={isMobile} /> :
-            showModifiers ? <Modifiers isMobile={isMobile} /> :
+            showModifiers ? <Modifiers isMobile={isMobile} onBack={() => setShowModifiers(false)} /> :
             <LandingPage />
           } />
           <Route path="*" element={
             showGame ? <GameView isMobile={isMobile} /> :
-            showModifiers ? <Modifiers isMobile={isMobile} /> :
+            showModifiers ? <Modifiers isMobile={isMobile} onBack={() => setShowModifiers(false)} /> :
             <LandingPage />
           } />
         </Routes>
