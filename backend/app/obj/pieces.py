@@ -129,6 +129,9 @@ class Pawn(Piece):
     def promote_to(self, piece_type: str):
         """Promote the pawn to act as the specified piece type"""
         self.promoted_to = piece_type
+        # Clear all modifiers when promoting
+        self.modifiers = []
+        self.modifier_uses_remaining = {}
 
     def get_acting_type(self) -> str:
         """Get the type this pawn is currently acting as"""
@@ -142,6 +145,10 @@ class Pawn(Piece):
         ignore_castling: bool = False,
     ) -> List["ChessMove"]:
         """Get all possible moves for this pawn"""
+
+        # If pawn has been promoted, delegate to promoted piece move generation
+        if self.promoted_to:
+            return self._get_promoted_piece_moves(board, ignore_illegal_moves)
 
         row, col = self.position.coordinates()
         color = self.color
@@ -281,15 +288,15 @@ class Pawn(Piece):
         for col_offset in [-1, 1]:
             target_col = col + col_offset
 
-            # if not ignore_illegal_moves:
-            if not board.is_valid_position(target_row, target_col):
-                continue
+            if not ignore_illegal_moves:
+                if not board.is_valid_position(target_row, target_col):
+                    continue
 
-            if not board.is_enemy_piece(target_row, target_col, color):
-                if not self.has_modifier("Kitty"):
-                    continue
-                if not board.is_empty_square(target_row, target_col):
-                    continue
+                if not board.is_enemy_piece(target_row, target_col, color):
+                    if not self.has_modifier("Kitty"):
+                        continue
+                    if not board.is_empty_square(target_row, target_col):
+                        continue
 
             # Handle promotion or regular capture
             if target_row == PAWN_PROMOTION_ROWS[color]:
@@ -334,6 +341,41 @@ class Pawn(Piece):
                 moves.append(ChessMove(self.position, move_position, capture_position))
 
         return moves
+
+    def _get_promoted_piece_moves(
+        self, board: "Board", ignore_illegal_moves: bool = False
+    ) -> List["ChessMove"]:
+        """Generate moves for a promoted pawn based on its promoted_to type"""
+
+        # Queen: rook + bishop directions (8 total)
+        if self.promoted_to == "queen":
+            rook_directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+            bishop_directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
+            all_directions = rook_directions + bishop_directions
+            return board.get_sliding_moves(
+                self.position, all_directions, ignore_illegal_moves
+            )
+
+        # Rook: horizontal and vertical
+        elif self.promoted_to == "rook":
+            rook_directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+            return board.get_sliding_moves(
+                self.position, rook_directions, ignore_illegal_moves
+            )
+
+        # Bishop: diagonal
+        elif self.promoted_to == "bishop":
+            bishop_directions = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
+            return board.get_sliding_moves(
+                self.position, bishop_directions, ignore_illegal_moves
+            )
+
+        # Knight: L-shaped moves
+        elif self.promoted_to == "knight":
+            return board.get_knight_moves(self.position, self.color, ignore_illegal_moves)
+
+        # Fallback (should never happen)
+        return []
 
 
 class Rook(Piece):
