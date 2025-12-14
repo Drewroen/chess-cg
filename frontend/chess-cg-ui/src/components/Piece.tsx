@@ -10,8 +10,7 @@ import WhiteRook from "../assets/white_rook.svg";
 import WhiteBishop from "../assets/white_bishop.svg";
 import WhiteKnight from "../assets/white_knight.svg";
 import WhitePawn from "../assets/white_pawn.svg";
-import React, { CSSProperties, useRef } from "react";
-import Draggable from "react-draggable";
+import React, { CSSProperties, useRef, useState, useEffect } from "react";
 import { modifierIcons } from "../utils/modifierIcons";
 
 export const Piece = React.memo(function Piece({
@@ -33,7 +32,12 @@ export const Piece = React.memo(function Piece({
   gameStatus?: string;
   modifiers?: (string | { type: string })[];
 }) {
-  const nodeRef = useRef(null);
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const hasMoved = useRef(false);
+
   function getSvg(type: string, color: string) {
     if (type === "pawn" && color === "white") return WhitePawn;
     if (type === "knight" && color === "white") return WhiteKnight;
@@ -51,6 +55,63 @@ export const Piece = React.memo(function Piece({
     return WhitePawn;
   }
 
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const offsetX = e.clientX - startPos.x;
+      const offsetY = e.clientY - startPos.y;
+
+      // Consider it a drag if moved more than 5 pixels
+      if (Math.abs(offsetX) > 5 || Math.abs(offsetY) > 5) {
+        hasMoved.current = true;
+      }
+
+      setDragOffset({
+        x: offsetX,
+        y: offsetY,
+      });
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      setIsDragging(false);
+      setDragOffset({ x: 0, y: 0 });
+
+      // Only trigger drop if the piece was actually dragged
+      if (hasMoved.current) {
+        const boardSquareWidth = boardDimensions.width / 8;
+        const boardSquareHeight = boardDimensions.height / 8;
+        const offset = boardSquareWidth / 2;
+
+        const x = Math.floor((dragOffset.x + offset) / boardSquareWidth);
+        const y = Math.floor((dragOffset.y + offset) / boardSquareHeight);
+
+        onPieceDrop?.(x, y);
+      }
+
+      hasMoved.current = false;
+    };
+
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isDragging, startPos, dragOffset, boardDimensions, onPieceDrop]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (color !== playerColor || (gameStatus !== "in progress" && gameStatus !== "not started")) {
+      return;
+    }
+
+    setIsDragging(true);
+    setStartPos({ x: e.clientX, y: e.clientY });
+    setDragOffset({ x: 0, y: 0 });
+    hasMoved.current = false;
+  };
+
   if (!type || !color) {
     return null;
   }
@@ -60,16 +121,28 @@ export const Piece = React.memo(function Piece({
     return null;
   }
 
+  const canDrag = color === playerColor && (gameStatus === "in progress" || gameStatus === "not started");
+
   const pieceImage = (
-    <div style={{ position: "relative", ...style }}>
+    <div
+      ref={nodeRef}
+      style={{
+        position: "relative",
+        ...style,
+        transform: isDragging ? `translate(${dragOffset.x}px, ${dragOffset.y}px)` : undefined,
+        cursor: canDrag ? "grab" : "default",
+        touchAction: "none",
+        zIndex: isDragging ? 1002 : (color === playerColor ? 1001 : 1000),
+      }}
+      onPointerDown={handlePointerDown}
+    >
       <img
-        ref={nodeRef}
         src={svgSrc}
         alt=""
         style={{
           width: "100%",
           height: "100%",
-          zIndex: color === playerColor ? 1001 : 1000,
+          pointerEvents: "none",
         }}
         draggable={false}
       />
@@ -89,7 +162,10 @@ export const Piece = React.memo(function Piece({
         >
           {modifiers.map((modifier, index) => {
             // Handle both string format (from Modifiers page) and object format (from game state)
-            const modifierType = typeof modifier === "string" ? modifier : (modifier as any).type || modifier;
+            const modifierType =
+              typeof modifier === "string"
+                ? modifier
+                : (modifier as any).type || modifier;
             return (
               <div
                 key={`${modifierType}-${index}`}
@@ -115,25 +191,5 @@ export const Piece = React.memo(function Piece({
     </div>
   );
 
-  return color === playerColor &&
-    (gameStatus === "in progress" || gameStatus === "not started") ? (
-    <Draggable
-      nodeRef={nodeRef}
-      position={{ x: 0, y: 0 }}
-      onStop={(_e, data) => {
-        const boardSquareWidth = boardDimensions.width / 8;
-        const boardSquareHeight = boardDimensions.height / 8;
-        const offset = boardSquareWidth / 2;
-
-        const x = Math.floor((data.x + offset) / boardSquareWidth);
-        const y = Math.floor((data.y + offset) / boardSquareHeight);
-
-        onPieceDrop?.(x, y);
-      }}
-    >
-      {pieceImage}
-    </Draggable>
-  ) : (
-    pieceImage
-  );
+  return pieceImage;
 });
