@@ -3,6 +3,7 @@ import styles from "./Modifiers.module.css";
 import { Square } from "./Square";
 import { Piece } from "./Piece";
 import { modifierIcons } from "../utils/modifierIcons";
+import { backendUrl } from "../config/environment";
 
 interface ModifiersProps {
   isMobile?: boolean;
@@ -119,7 +120,7 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
 
     try {
       const response = await fetch(
-        'http://localhost:8000/api/game/loadout/save',
+        `${backendUrl}/api/game/loadout/save`,
         {
           method: 'POST',
           headers: {
@@ -151,7 +152,7 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
     const fetchModifiers = async () => {
       try {
         const response = await fetch(
-          "http://localhost:8000/api/game/modifiers"
+          `${backendUrl}/api/game/modifiers`
         );
         const data = await response.json();
         setModifiers(data.modifiers);
@@ -163,7 +164,7 @@ export const Modifiers = ({ isMobile }: ModifiersProps) => {
     const fetchLoadout = async () => {
       try {
         const response = await fetch(
-          "http://localhost:8000/api/game/loadout",
+          `${backendUrl}/api/game/loadout`,
           {
             credentials: "include", // Include cookies for authentication
           }
