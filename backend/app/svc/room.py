@@ -1,6 +1,8 @@
 from uuid import UUID, uuid4
+from app.obj.board import Board
 from app.obj.game import Game, GameStatus
 from fastapi import WebSocket
+from pydantic import BaseModel
 from ..auth import verify_jwt_token
 from ..database import get_db_session
 from ..svc.database_service import DatabaseService
@@ -32,6 +34,11 @@ from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from app.routers.game import Loadout
+
+
+class UserInfo(BaseModel):
+    elo: Optional[int]
+    username: str
 
 
 class WebSocketConnection:
@@ -179,7 +186,7 @@ class RoomService:
             return None
 
     def _apply_loadout_to_board(
-        self, board, loadout_data: "Loadout | dict | None", player_color: str
+        self, board: Board, loadout_data: "Loadout | dict | None", player_color: str
     ) -> None:
         """Apply a loadout to the board for a specific player."""
         if not loadout_data:
@@ -237,7 +244,7 @@ class RoomService:
             else:
                 logging.warning(f"Unknown modifier: {modifier_name}")
 
-    def find_player_room(self, player_name: str) -> Room:
+    def find_player_room(self, player_name: str) -> Optional[Room]:
         """Find the room ID for a given player."""
         room_id = self.player_to_room_map.get(player_name)
         if not room_id:
@@ -315,36 +322,33 @@ class RoomManager:
         self.manager = manager
         self.elo_service = EloService()
 
-    async def get_user_info(self, user_id: str) -> dict:
+    async def get_user_info(self, user_id: str) -> UserInfo:
         """Get user info (ELO and username) in a single query."""
         if not user_id or user_id.startswith("guest_"):
-            return {"elo": None, "username": "Guest"}
+            return UserInfo(elo=None, username="Guest")
 
         session = None
         try:
             async for session in get_db_session():
                 db_service = DatabaseService(session)
                 user = await db_service.get_user_by_id(user_id)
-                return {
-                    "elo": user.elo if user else None,
-                    "username": user.username if user and user.username else "Guest",
-                }
+                return UserInfo(
+                    elo=user.elo if user else None,
+                    username=user.username if user and user.username else "Guest",
+                )
         except Exception as e:
             logging.error(f"Error fetching user info for user {user_id}: {e}")
-            return {"elo": None, "username": "Guest"}
-        finally:
-            # Session cleanup is handled by get_db_session() context manager
-            pass
+        return UserInfo(elo=None, username="Guest")
 
-    async def get_user_elo(self, user_id: str) -> int:
+    async def get_user_elo(self, user_id: str) -> Optional[int]:
         """Get the ELO rating for a user."""
         user_info = await self.get_user_info(user_id)
-        return user_info["elo"]
+        return user_info.elo
 
     async def get_user_username(self, user_id: str) -> str:
         """Get the username for a user."""
         user_info = await self.get_user_info(user_id)
-        return user_info["username"]
+        return user_info.username
 
     async def cleanup_room_with_elo_update(self, room_id: UUID):
         """Clean up a room and update ELO ratings if the game was completed."""

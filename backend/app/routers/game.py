@@ -61,10 +61,10 @@ async def get_game_info(room_id: UUID):
     # Get user info for both players in optimized queries
     white_info = await room_manager.get_user_info(room.white)
     black_info = await room_manager.get_user_info(room.black)
-    white_elo = white_info["elo"]
-    black_elo = black_info["elo"]
-    white_username = white_info["username"]
-    black_username = black_info["username"]
+    white_elo = white_info.elo
+    black_elo = black_info.elo
+    white_username = white_info.username
+    black_username = black_info.username
 
     return {
         "room_id": str(room.id),
