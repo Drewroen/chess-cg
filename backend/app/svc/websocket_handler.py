@@ -1,19 +1,21 @@
 """WebSocket message handler for chess game messages."""
 
-from typing import Dict, Callable, Any
+from typing import Dict, Callable, Any, Awaitable
 import logging
 
-from app.svc.room import RoomManager
+from app.svc.room import Room, RoomManager
 from app.svc.game_service import GameService
 
 
 class WebSocketMessageHandler:
     """Handles different types of WebSocket messages using strategy pattern."""
 
-    def __init__(self, room_manager):
+    def __init__(self, room_manager: RoomManager):
         self.room_manager: RoomManager = room_manager
         self.game_service = GameService()
-        self.handlers: Dict[str, Callable] = {
+        self.handlers: Dict[
+            str, Callable[[Dict[str, Any], Room, str], Awaitable[None]]
+        ] = {
             "move": self._handle_move,
             "reset_premove": self._handle_reset_premove,
             "resign": self._handle_resign,
@@ -21,7 +23,7 @@ class WebSocketMessageHandler:
         }
 
     async def handle_message(
-        self, data: Dict[str, Any], room, player_color: str
+        self, data: Dict[str, Any], room: Room, player_color: str
     ) -> None:
         """
         Route message to appropriate handler based on type.
@@ -32,14 +34,19 @@ class WebSocketMessageHandler:
             player_color: The player's color ("white" or "black")
         """
         message_type = data.get("type")
-        handler = self.handlers.get(message_type)
+        if not isinstance(message_type, str):
+            logging.warning(f"Invalid or missing message type: {message_type}")
+            return
 
+        handler = self.handlers.get(message_type)
         if handler:
             await handler(data, room, player_color)
         else:
             logging.warning(f"Unknown message type: {message_type}")
 
-    async def _handle_move(self, data: Dict[str, Any], room, player_color: str) -> None:
+    async def _handle_move(
+        self, data: Dict[str, Any], room: Room, player_color: str
+    ) -> None:
         """Handle move message."""
         from_pos = data["from"]
         to_pos = data["to"]
@@ -55,7 +62,7 @@ class WebSocketMessageHandler:
                 await self.room_manager.cleanup_room_with_elo_update(room.id)
 
     async def _handle_reset_premove(
-        self, _data: Dict[str, Any], room, player_color: str
+        self, _data: Dict[str, Any], room: Room, player_color: str
     ) -> None:
         """Handle reset premove message."""
         await self.game_service.reset_premove(room, player_color)
@@ -63,7 +70,7 @@ class WebSocketMessageHandler:
         await self.room_manager.emit_game_state_to_room(room.id)
 
     async def _handle_resign(
-        self, _data: Dict[str, Any], room, player_color: str
+        self, _data: Dict[str, Any], room: Room, player_color: str
     ) -> None:
         """Handle resignation message."""
         game_completed = await self.game_service.process_resignation(room, player_color)
@@ -73,7 +80,7 @@ class WebSocketMessageHandler:
             await self.room_manager.cleanup_room_with_elo_update(room.id)
 
     async def _handle_draw_request(
-        self, _data: Dict[str, Any], room, player_color: str
+        self, _data: Dict[str, Any], room: Room, player_color: str
     ) -> None:
         """Handle draw request message."""
         game_ended = await self.game_service.process_draw_request(room, player_color)

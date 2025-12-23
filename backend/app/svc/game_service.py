@@ -2,6 +2,8 @@
 
 from typing import Optional, Tuple
 
+from app.svc.room import Room
+
 from ..obj.game import GameStatus
 from ..obj.position import Position
 
@@ -11,7 +13,7 @@ class GameService:
 
     async def process_move(
         self,
-        room,
+        room: Room,
         player_color: str,
         from_pos: Tuple[int, int],
         to_pos: Tuple[int, int],
@@ -35,7 +37,7 @@ class GameService:
 
         return room.game.move(start, end, player_color, promotion)
 
-    async def process_resignation(self, room, player_color: str) -> bool:
+    async def process_resignation(self, room: Room, player_color: str) -> bool:
         """
         Process a player resignation.
 
@@ -50,9 +52,9 @@ class GameService:
             return False
 
         room.game.mark_player_forfeit(player_color)
-        return room.game.status == GameStatus.COMPLETE
+        return True
 
-    async def process_draw_request(self, room, player_color: str) -> bool:
+    async def process_draw_request(self, room: Room, player_color: str) -> bool:
         """
         Process a draw request from a player.
 
@@ -67,9 +69,9 @@ class GameService:
             return False
 
         game_ended = room.game.request_draw(player_color)
-        return game_ended and room.game.status == GameStatus.COMPLETE
+        return game_ended
 
-    async def reset_premove(self, room, player_color: str) -> None:
+    async def reset_premove(self, room: Room, player_color: str) -> None:
         """
         Reset the premove for a player.
 
@@ -82,7 +84,7 @@ class GameService:
         else:
             room.game.black_premove = None
 
-    def is_game_complete(self, room) -> bool:
+    def is_game_complete(self, room: Room) -> bool:
         """
         Check if the game is complete.
 

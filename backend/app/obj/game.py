@@ -22,7 +22,7 @@ class Game:
     def __init__(self):
         self.turn = "white"
         self.board = Board()
-        self.status = GameStatus.NOT_STARTED
+        self.status: GameStatus = GameStatus.IN_PROGRESS
         self.white_time_left = STARTING_TIME_IN_SECONDS
         self.black_time_left = STARTING_TIME_IN_SECONDS
         self.last_move_time = time.time()
