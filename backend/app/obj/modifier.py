@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class Modifier:
     def __init__(
         self,
@@ -19,7 +22,7 @@ class Modifier:
             return True  # No restrictions
         return piece_type == self.applicable_piece
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "type": self.modifier_type,
             "score": self.score,

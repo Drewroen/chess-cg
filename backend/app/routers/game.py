@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import UUID
 from app.svc.room import RoomManager
 from fastapi import APIRouter, HTTPException, Request, Depends
@@ -30,7 +31,55 @@ from app.obj.modifier import (
 router = APIRouter(prefix="/api/game", tags=["game"])
 
 # This will be set by main.py
-room_manager: RoomManager = None
+room_manager: RoomManager = None  # type: ignore
+
+# Valid starting positions for each piece type and color
+VALID_STARTING_POSITIONS = {
+    "white": {
+        "pawn": [(6, col) for col in range(8)],
+        "rook": [(7, 0), (7, 7)],
+        "knight": [(7, 1), (7, 6)],
+        "bishop": [(7, 2), (7, 5)],
+        "queen": [(7, 3)],
+        "king": [(7, 4)],
+    },
+    "black": {
+        "pawn": [(1, col) for col in range(8)],
+        "rook": [(0, 0), (0, 7)],
+        "knight": [(0, 1), (0, 6)],
+        "bishop": [(0, 2), (0, 5)],
+        "queen": [(0, 3)],
+        "king": [(0, 4)],
+    },
+}
+
+# Map of all modifiers by type for quick lookup
+ALL_MODIFIERS_MAP = {
+    # Rook modifiers
+    "Knook": KNOOK_MODIFIER,
+    "Kitty Castle": DIAGONAL_ROOK_MODIFIER,
+    "Quook": QUOOK_MODIFIER,
+    # Pawn modifiers
+    "Reverse": BACKWARDS_PAWN_MODIFIER,
+    "Kitty": DIAGONAL_PAWN_MODIFIER,
+    "Long Leaper": LONG_LEAP_PAWN_MODIFIER,
+    # Bishop modifiers
+    "Sidestepper": SIDESTEP_BISHOP_MODIFIER,
+    "Unicorn": UNICORN_MODIFIER,
+    "Corner Hop": CORNER_HOP_MODIFIER,
+    # Knight modifiers
+    "Longhorn": LONGHORN_MODIFIER,
+    "Pegasus": PEGASUS_MODIFIER,
+    "Royal Guard": ROYAL_GUARD_MODIFIER,
+    # Queen modifiers
+    "Sacrificial Lamb": SACRIFICIAL_QUEEN_MODIFIER,
+    "Kneen": KNEEN_MODIFIER,
+    "Infiltration": INFILTRATION_MODIFIER,
+    # King modifiers
+    "Escape Hatch": ESCAPE_HATCH_MODIFIER,
+    "Aggression": AGGRESSIVE_KING_MODIFIER,
+    "Teleport": TELEPORT_MODIFIER,
+}
 
 
 # Pydantic models for loadout endpoint
@@ -116,11 +165,9 @@ async def get_available_modifiers():
     return {"modifiers": [modifier.to_dict() for modifier in all_modifiers]}
 
 
-def infer_piece_type(
-    valid_positions: dict, color: str, row: int, col: int
-) -> str | None:
+def infer_piece_type(color: str, row: int, col: int) -> Optional[str]:
     """Returns piece type for given position, or None if invalid"""
-    for piece_type, positions in valid_positions[color].items():
+    for piece_type, positions in VALID_STARTING_POSITIONS[color].items():
         if (row, col) in positions:
             return piece_type
     return None
@@ -130,60 +177,10 @@ def infer_piece_type(
 async def validate_loadout(loadout_request: LoadoutRequest):
     """Validate a piece loadout with modifiers."""
 
-    # Map of all modifiers by type for quick lookup
-    all_modifiers_map = {
-        # Rook modifiers
-        "Knook": KNOOK_MODIFIER,
-        "Kitty Castle": DIAGONAL_ROOK_MODIFIER,
-        "Quook": QUOOK_MODIFIER,
-        # Pawn modifiers
-        "Reverse": BACKWARDS_PAWN_MODIFIER,
-        "Kitty": DIAGONAL_PAWN_MODIFIER,
-        "Long Leaper": LONG_LEAP_PAWN_MODIFIER,
-        # Bishop modifiers
-        "Sidestepper": SIDESTEP_BISHOP_MODIFIER,
-        "Unicorn": UNICORN_MODIFIER,
-        "Corner Hop": CORNER_HOP_MODIFIER,
-        # Knight modifiers
-        "Longhorn": LONGHORN_MODIFIER,
-        "Pegasus": PEGASUS_MODIFIER,
-        "Royal Guard": ROYAL_GUARD_MODIFIER,
-        # Queen modifiers
-        "Sacrificial Lamb": SACRIFICIAL_QUEEN_MODIFIER,
-        "Kneen": KNEEN_MODIFIER,
-        "Infiltration": INFILTRATION_MODIFIER,
-        # King modifiers
-        "Escape Hatch": ESCAPE_HATCH_MODIFIER,
-        "Aggression": AGGRESSIVE_KING_MODIFIER,
-        "Teleport": TELEPORT_MODIFIER,
-    }
-
-    # Valid starting positions for each piece type and color
-    # White: row 7 (back rank), row 6 (pawns)
-    # Black: row 0 (back rank), row 1 (pawns)
-    valid_positions = {
-        "white": {
-            "pawn": [(6, col) for col in range(8)],
-            "rook": [(7, 0), (7, 7)],
-            "knight": [(7, 1), (7, 6)],
-            "bishop": [(7, 2), (7, 5)],
-            "queen": [(7, 3)],
-            "king": [(7, 4)],
-        },
-        "black": {
-            "pawn": [(1, col) for col in range(8)],
-            "rook": [(0, 0), (0, 7)],
-            "knight": [(0, 1), (0, 6)],
-            "bishop": [(0, 2), (0, 5)],
-            "queen": [(0, 3)],
-            "king": [(0, 4)],
-        },
-    }
-
-    errors = []
+    errors: list[str] = []
 
     # Combine white and black pieces with their colors for validation
-    all_pieces = []
+    all_pieces: list[tuple[PieceModifier, str]] = []
     for piece in loadout_request.white:
         all_pieces.append((piece, "white"))
     for piece in loadout_request.black:
@@ -191,7 +188,7 @@ async def validate_loadout(loadout_request: LoadoutRequest):
 
     for piece_loadout, color in all_pieces:
         # Validate pos format
-        if not isinstance(piece_loadout.pos, list) or len(piece_loadout.pos) != 2:
+        if len(piece_loadout.pos) != 2:
             errors.append(f"Invalid position format for {color} piece")
             continue
 
@@ -205,7 +202,7 @@ async def validate_loadout(loadout_request: LoadoutRequest):
         position = (row, col)
 
         # Infer piece_type from position
-        piece_type = infer_piece_type(valid_positions, color, row, col)
+        piece_type = infer_piece_type(color, row, col)
         if not piece_type:
             errors.append(
                 f"No valid {color} piece at position {position}. "
@@ -216,11 +213,11 @@ async def validate_loadout(loadout_request: LoadoutRequest):
         # Validate single modifier
         modifier_type = piece_loadout.modifier
         if modifier_type:
-            if modifier_type not in all_modifiers_map:
+            if modifier_type not in ALL_MODIFIERS_MAP:
                 errors.append(f"Unknown modifier '{modifier_type}'")
                 continue
 
-            modifier = all_modifiers_map[modifier_type]
+            modifier = ALL_MODIFIERS_MAP[modifier_type]
             if not modifier.can_apply_to_piece(piece_type):
                 errors.append(
                     f"Modifier '{modifier_type}' cannot be applied to {piece_type}. "
@@ -244,7 +241,7 @@ async def validate_loadout(loadout_request: LoadoutRequest):
 @router.get("/loadout")
 async def get_loadout(
     request: Request, db_session: AsyncSession = Depends(get_db_session)
-) -> dict[str, Loadout | None]:
+) -> dict[str, Optional[Loadout]]:
     """Get the piece loadout with modifiers for the authenticated user."""
 
     # Get access token from cookie
@@ -291,57 +288,10 @@ async def save_loadout(
 
     user_id = payload.sub
 
-    # Validate the loadout first using same logic as validate endpoint
-    all_modifiers_map = {
-        # Rook modifiers
-        "Knook": KNOOK_MODIFIER,
-        "Kitty Castle": DIAGONAL_ROOK_MODIFIER,
-        "Quook": QUOOK_MODIFIER,
-        # Pawn modifiers
-        "Reverse": BACKWARDS_PAWN_MODIFIER,
-        "Kitty": DIAGONAL_PAWN_MODIFIER,
-        "Long Leaper": LONG_LEAP_PAWN_MODIFIER,
-        # Bishop modifiers
-        "Sidestepper": SIDESTEP_BISHOP_MODIFIER,
-        "Unicorn": UNICORN_MODIFIER,
-        "Corner Hop": CORNER_HOP_MODIFIER,
-        # Knight modifiers
-        "Longhorn": LONGHORN_MODIFIER,
-        "Pegasus": PEGASUS_MODIFIER,
-        "Royal Guard": ROYAL_GUARD_MODIFIER,
-        # Queen modifiers
-        "Sacrificial Lamb": SACRIFICIAL_QUEEN_MODIFIER,
-        "Kneen": KNEEN_MODIFIER,
-        "Infiltration": INFILTRATION_MODIFIER,
-        # King modifiers
-        "Escape Hatch": ESCAPE_HATCH_MODIFIER,
-        "Aggression": AGGRESSIVE_KING_MODIFIER,
-        "Teleport": TELEPORT_MODIFIER,
-    }
-
-    valid_positions = {
-        "white": {
-            "pawn": [(6, col) for col in range(8)],
-            "rook": [(7, 0), (7, 7)],
-            "knight": [(7, 1), (7, 6)],
-            "bishop": [(7, 2), (7, 5)],
-            "queen": [(7, 3)],
-            "king": [(7, 4)],
-        },
-        "black": {
-            "pawn": [(1, col) for col in range(8)],
-            "rook": [(0, 0), (0, 7)],
-            "knight": [(0, 1), (0, 6)],
-            "bishop": [(0, 2), (0, 5)],
-            "queen": [(0, 3)],
-            "king": [(0, 4)],
-        },
-    }
-
-    errors = []
+    errors: list[str] = []
 
     # Combine white and black pieces with their colors for validation
-    all_pieces: list = []
+    all_pieces: list[tuple[PieceModifier, str]] = []
     for piece in loadout_request.white:
         all_pieces.append((piece, "white"))
     for piece in loadout_request.black:
@@ -349,7 +299,7 @@ async def save_loadout(
 
     for piece_loadout, color in all_pieces:
         # Validate pos format
-        if not isinstance(piece_loadout.pos, list) or len(piece_loadout.pos) != 2:
+        if len(piece_loadout.pos) != 2:
             errors.append(f"Invalid position format for {color} piece")
             continue
 
@@ -363,7 +313,7 @@ async def save_loadout(
         position = (row, col)
 
         # Infer piece_type from position
-        piece_type = infer_piece_type(valid_positions, color, row, col)
+        piece_type = infer_piece_type(color, row, col)
         if not piece_type:
             errors.append(
                 f"No valid {color} piece at position {position}. "
@@ -374,11 +324,11 @@ async def save_loadout(
         # Validate single modifier
         modifier_type = piece_loadout.modifier
         if modifier_type:
-            if modifier_type not in all_modifiers_map:
+            if modifier_type not in ALL_MODIFIERS_MAP:
                 errors.append(f"Unknown modifier '{modifier_type}'")
                 continue
 
-            modifier = all_modifiers_map[modifier_type]
+            modifier = ALL_MODIFIERS_MAP[modifier_type]
             if not modifier.can_apply_to_piece(piece_type):
                 errors.append(
                     f"Modifier '{modifier_type}' cannot be applied to {piece_type}. "
