@@ -28,7 +28,7 @@ from ..obj.modifier import (
 from ..obj.position import Position
 import time
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from app.routers.game import Loadout
@@ -47,14 +47,18 @@ class ConnectionManager:
         self.connection_id_to_user_id: dict[UUID, str] = {}
         self.user_id_to_name: dict[str, str] = {}
 
-    async def connect(self, websocket: WebSocket, jwt: str = None) -> str:
+    async def connect(self, websocket: WebSocket, jwt: Optional[str]) -> str:
         await websocket.accept()
 
         # Extract name from JWT or generate guest name
-        token_data = verify_jwt_token(jwt)
-        if token_data and "sub" in token_data:
-            user_id = token_data["sub"]
-            name = token_data["name"]
+        if jwt:
+            token_data = verify_jwt_token(jwt)
+            if token_data and token_data.sub:
+                user_id = token_data.sub
+                name = token_data.name
+            else:
+                user_id = "guest_" + str(uuid4())
+                name = "Guest"
         else:
             user_id = "guest_" + str(uuid4())
             name = "Guest"
@@ -372,7 +376,7 @@ class RoomManager:
         # Now clean up the room
         await self.room_service.cleanup_room(room_id)
 
-    async def connect(self, websocket, jwt: str = None) -> str:
+    async def connect(self, websocket, jwt: Optional[str] = None) -> str:
         """Connect a player to the WebSocket and return their name."""
         connection_id = await self.manager.connect(websocket, jwt)
         name = self.manager.connection_id_to_user_id.get(connection_id)

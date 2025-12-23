@@ -257,7 +257,7 @@ async def get_loadout(
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    user_id = payload["sub"]
+    user_id = payload.sub
 
     # Fetch the user's loadout from the database
     db_service = DatabaseService(db_session)
@@ -289,7 +289,7 @@ async def save_loadout(
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    user_id = payload["sub"]
+    user_id = payload.sub
 
     # Validate the loadout first using same logic as validate endpoint
     all_modifiers_map = {
@@ -341,7 +341,7 @@ async def save_loadout(
     errors = []
 
     # Combine white and black pieces with their colors for validation
-    all_pieces = []
+    all_pieces: list = []
     for piece in loadout_request.white:
         all_pieces.append((piece, "white"))
     for piece in loadout_request.black:

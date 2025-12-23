@@ -109,7 +109,7 @@ async def google_auth(request: Request):
 
 
 @router.get("/callback")
-@limiter.limit("10/minute")
+@limiter.limit("10/minute")  # type: ignore
 async def auth_callback(
     request: Request,
     code: Optional[str] = Query(None, description="Authorization code from Google"),
@@ -147,7 +147,7 @@ async def auth_callback(
 
 
 @router.get("/me", response_model=UserResponse)
-@limiter.limit("60/minute")
+@limiter.limit("60/minute")  # type: ignore
 async def get_current_user(
     request: Request, db_session: AsyncSession = Depends(get_db_session)
 ):
@@ -180,11 +180,11 @@ async def get_current_user(
             payload = verify_jwt_token(new_access_token)
             if payload:
                 # Get user data with refreshed token
-                user = await db_service.get_user_by_id(payload["sub"])
+                user = await db_service.get_user_by_id(payload.sub)
 
                 if user:
                     # Update last activity timestamp for token refresh
-                    await db_service.update_user_last_activity(payload["sub"])
+                    await db_service.update_user_last_activity(payload.sub)
 
                     response = JSONResponse(
                         content={
@@ -205,8 +205,8 @@ async def get_current_user(
         guest_access_token, guest_refresh_token = await create_guest_tokens()
 
         token_payload = verify_jwt_token(guest_access_token)
-        if token_payload and token_payload.get("user_type") == "guest":
-            guest_id = token_payload["sub"]
+        if token_payload and token_payload.sub.startswith("guest_"):
+            guest_id = token_payload.sub
 
             # Store guest user in database
             try:
@@ -244,7 +244,7 @@ async def get_current_user(
 
     # If we have a valid payload, get user from database
     if payload:
-        user = await db_service.get_user_by_id(payload["sub"])
+        user = await db_service.get_user_by_id(payload.sub)
 
         if not user:
             # Clear cookies when user not found
@@ -341,19 +341,17 @@ async def update_usernamename(
         return response
 
     # Check if user is a guest - guests cannot change their username
-    if payload.get("user_type") == "guest":
+    if payload.sub.startswith("guest_"):
         raise HTTPException(
             status_code=403, detail="Guest users cannot change their username"
         )
 
     db_service = DatabaseService(db_session)
-    user = await db_service.update_user_username(
-        payload["sub"], update_request.username
-    )
+    user = await db_service.update_user_username(payload.sub, update_request.username)
 
     if not user:
         # Check if user exists at all
-        existing_user = await db_service.get_user_by_id(payload["sub"])
+        existing_user = await db_service.get_user_by_id(payload.sub)
         if not existing_user:
             raise HTTPException(status_code=404, detail="User not found")
         else:

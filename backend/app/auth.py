@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 from dotenv import load_dotenv
 import secrets
 from uuid import uuid4
+from pydantic import BaseModel
 from app.database import get_db_session
 from app.svc.database_service import DatabaseService
 
@@ -16,8 +17,8 @@ load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not JWT_SECRET_KEY:
+JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "")
+if JWT_SECRET_KEY == "":
     raise ValueError("JWT_SECRET_KEY environment variable must be set")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_HOURS = int(
@@ -31,6 +32,16 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 # Google OAuth URLs
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+
+
+class JWTPayload(BaseModel):
+    """JWT token payload model"""
+
+    sub: str  # User ID or Guest ID
+    email: str
+    name: Optional[str]
+    exp: datetime
+    type: str  # "access"
 
 
 class GoogleOAuthError(Exception):
@@ -236,7 +247,7 @@ async def revoke_refresh_token(refresh_token: str) -> bool:
         if token_obj:
             await db_service.delete_refresh_token(token_obj)
             return True
-        return False
+    return False
 
 
 async def cleanup_expired_refresh_tokens():
@@ -253,12 +264,12 @@ async def cleanup_inactive_guest_users(hours: int = 24):
         return await db_service.cleanup_inactive_guest_users(hours=hours)
 
 
-def verify_jwt_token(token: str) -> Optional[dict]:
+def verify_jwt_token(token: str) -> Optional[JWTPayload]:
     """Verify and decode JWT token"""
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        return payload
-    except JWTError:
+        return JWTPayload(**payload)
+    except (JWTError, ValueError):
         return None
 
 
@@ -298,7 +309,6 @@ async def create_guest_tokens(guest_name: str = None) -> Tuple[str, str]:
             "sub": guest_id,
             "email": "guest@local",
             "name": None,
-            "user_type": "guest",
         },
         expires_minutes=60,
     )
@@ -356,7 +366,6 @@ async def refresh_guest_access_token(guest_refresh_token: str) -> Optional[str]:
                 "sub": guest_id,
                 "email": "guest@local",
                 "name": guest_name,
-                "user_type": "guest",
             },
             expires_minutes=60,
         )
