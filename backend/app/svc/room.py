@@ -54,7 +54,7 @@ class ConnectionManager:
         self.connection_id_to_user_id: dict[UUID, str] = {}
         self.user_id_to_name: dict[str, str] = {}
 
-    async def connect(self, websocket: WebSocket, jwt: Optional[str]) -> str:
+    async def connect(self, websocket: WebSocket, jwt: Optional[str]) -> UUID:
         await websocket.accept()
 
         # Extract name from JWT or generate guest name
@@ -62,7 +62,7 @@ class ConnectionManager:
             token_data = verify_jwt_token(jwt)
             if token_data and token_data.sub:
                 user_id = token_data.sub
-                name = token_data.name
+                name = token_data.name if token_data.name else "Player"
             else:
                 user_id = "guest_" + str(uuid4())
                 name = "Guest"
@@ -85,7 +85,7 @@ class ConnectionManager:
 
         return connection.id
 
-    def get_user_id_for_connection(self, connection_id) -> str:
+    def get_user_id_for_connection(self, connection_id: UUID) -> Optional[str]:
         """Return user_id for a given connection ID"""
         return self.connection_id_to_user_id.get(connection_id)
 

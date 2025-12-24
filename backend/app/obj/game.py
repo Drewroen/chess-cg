@@ -68,9 +68,16 @@ class Game:
             self.reset_draw_requests()
 
             if self.status == GameStatus.IN_PROGRESS:
+                # First, deduct the time consumed during this move
+                current_time = time.time()
+                elapsed = current_time - self.last_move_time
                 if self.turn == "white":
+                    self.white_time_left = max(0, round(self.white_time_left - elapsed, 2))
+                    # Then add the increment
                     self.white_time_left += MOVE_INCREMENT_IN_SECONDS
                 else:
+                    self.black_time_left = max(0, round(self.black_time_left - elapsed, 2))
+                    # Then add the increment
                     self.black_time_left += MOVE_INCREMENT_IN_SECONDS
 
             if self.status == GameStatus.NOT_STARTED and self.turn == "black":
